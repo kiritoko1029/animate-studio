@@ -1,5 +1,7 @@
 # Third-party notices
 
+Animate Studio's project license is in [LICENSE.md](LICENSE.md). The notice below preserves the upstream terms for the embedded Animate UI source; other dependencies retain their respective licenses.
+
 ## Animate UI
 
 Animate Studio embeds the following official Animate UI v1 registry primitives and their helper modules as part of this application. These files are original upstream source with local import paths adapted. The accordion import uses the equivalent individual `@radix-ui/react-accordion` package. Styling and the simplified public API in `src/components/animate-ui/index.tsx` are application-specific wrappers.
@@ -27,7 +29,7 @@ Additional official v1 registry components used by the workbench (2026-10-20):
 - `components/radix/dropdown-menu.tsx`: https://animate-ui.com/r/components-radix-dropdown-menu.json
 - `components/radix/switch.tsx`: https://animate-ui.com/r/components-radix-switch.json
 - `components/radix/tooltip.tsx`: https://animate-ui.com/r/components-radix-tooltip.json
-- Corresponding `primitives/radix/` modules, `primitives/effects/highlight.tsx`, `primitives/effects/auto-height.tsx`, and hooks `use-auto-height.tsx` / `use-data-state.tsx` come from the registry dependencies. Full source URLs are in their file headers and `artifacts/monochrome/registry-sources.json`.
+- Corresponding `primitives/radix/` modules, `primitives/effects/highlight.tsx`, `primitives/effects/auto-height.tsx`, and hooks `use-auto-height.tsx` / `use-data-state.tsx` come from the registry dependencies. Full source URLs are retained in their file headers.
 
 New registry sources preserve their upstream interaction model. Switch state props are kept on Radix Root rather than forwarded to the DOM button (avoids a React unknown-handler warning). Local utility/helper imports are adapted; `WithAsChild` uses a type-only import for this project's strict TypeScript configuration. The application wrapper supplies its own monochrome tokens, editor spacing, restrained animation, and Escape handling for code/expression editors. These are source-distributed v1 components, not the v2 npm package. Existing portable HTML/Vue/React exports do not include these platform controls.
 

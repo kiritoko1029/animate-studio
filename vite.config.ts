@@ -4,7 +4,12 @@ import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
 import { voidPlugin } from 'void';
 
-export default defineConfig(({ mode }) => ({
-  plugins: [mode === 'cloudflare' && voidPlugin(), react(), tailwindcss()],
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-}));
+export default defineConfig(({ mode }) => {
+  // Void's direct deploy invokes Vite in production mode; Node builds opt out.
+  const cloudflare = mode === 'cloudflare' || mode === 'production';
+  return {
+    plugins: [cloudflare && voidPlugin(), react(), tailwindcss()],
+    define: { 'import.meta.env.VITE_STUDIO_CLOUD': JSON.stringify(cloudflare) },
+    resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  };
+});

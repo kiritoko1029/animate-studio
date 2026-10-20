@@ -24,7 +24,9 @@
           "PageStoreDurableObject"
         ]
       }
-    ]
+    ],
+    "account_id": "154e524c717271f31f39c0c8ad67cf3e",
+    "compatibility_date": "2026-02-24"
   },
-  "text": "{\n  \"name\": \"animate-studio\",\n  \"workers_dev\": true,\n  \"preview_urls\": true,\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"PAGE_STORE\",\n        \"class_name\": \"PageStoreDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-page-store-v1\",\n      \"new_sqlite_classes\": [\n        \"PageStoreDurableObject\"\n      ]\n    }\n  ]\n}\n"
+  "text": "{\n  \"name\": \"animate-studio\",\n  \"workers_dev\": true,\n  \"preview_urls\": true,\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"PAGE_STORE\",\n        \"class_name\": \"PageStoreDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-page-store-v1\",\n      \"new_sqlite_classes\": [\n        \"PageStoreDurableObject\"\n      ]\n    }\n  ],\n  \"account_id\": \"154e524c717271f31f39c0c8ad67cf3e\",\n  \"compatibility_date\": \"2026-02-24\"\n}\n"
 }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { JSDOM } from 'jsdom';
 
-for (const mode of ['cloudflare', 'production']) {
+for (const mode of ['cloudflare', 'production', 'node', 'development']) {
   test(`${mode}: page requests preserve browser identity and request options`, async t => {
     const dom = new JSDOM('', { url: 'https://studio.test', runScripts: 'dangerously' });
     t.after(() => dom.window.close());
@@ -12,7 +12,7 @@ for (const mode of ['cloudflare', 'production']) {
     dom.window.fetch = async (path, options) => { calls.push({ path, ...options }); return { ok: true }; };
     const { outputFiles } = await build({
       entryPoints: ['src/lib/page-api.ts'], bundle: true, write: false, format: 'iife', globalName: 'PageApi',
-      define: { 'import.meta.env.MODE': JSON.stringify(mode) },
+      define: { 'import.meta.env.VITE_STUDIO_CLOUD': String(mode === 'cloudflare' || mode === 'production') },
       footer: { js: 'window.PageApi = PageApi;' },
     });
     dom.window.eval(outputFiles[0].text);
@@ -26,7 +26,7 @@ for (const mode of ['cloudflare', 'production']) {
     dom.window.eval(outputFiles[0].text);
     await dom.window.PageApi.fetchPageApi('/api/page');
     for (const call of calls) assert.equal(call.headers.get('x-studio-workspace'), savedKey);
-    if (mode === 'cloudflare') {
+    if (mode === 'cloudflare' || mode === 'production') {
       assert.match(savedKey, /^[0-9a-f-]{36}$/);
       dom.window.localStorage.clear();
       await dom.window.PageApi.fetchPageApi('/api/page');

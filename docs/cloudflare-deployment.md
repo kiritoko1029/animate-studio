@@ -17,6 +17,8 @@
 
 两种构建共用 `dist/`，运行预览前应先执行对应的构建。`npm run dev` 始终使用原来的本地文件数据，不会把本地页面上传到云端。
 
+Void 直接发布会调用默认的 Vite production 构建，因此 production 和 cloudflare 模式均启用云端插件；`npm run build` 显式使用 node 模式，输出供 Express 运行的本地版本。前端工作区开关由 Vite 配置自动注入，无需手动设置环境变量。
+
 云端模式使用浏览器 `localStorage` 中随机生成的工作区标识，通过 `X-Studio-Workspace` 请求头选择一个独立的 Durable Object。相同浏览器、相同站点下的刷新和重新部署会恢复同一份页面；不同浏览器或不同站点地址各自独立。
 
 这是匿名浏览器工作区，不提供账号登录、跨设备同步或协作。清除站点数据、使用无痕窗口，或切换域名都会改变工作区。工作区标识具有访问该页面的能力，请勿分享。重要页面应通过 **导出 → 页面 JSON** 备份，并通过导入迁移到另一浏览器或域名。
@@ -69,8 +71,9 @@ Token 需要目标账号的 **Workers Scripts: Edit**，以及 Void 所需的账
 打开实际发布地址，添加组件，等待“已保存”后刷新确认恢复。再用另一个浏览器打开，确认它显示独立页面。`/api/health` 应返回 `{"status":"ok"}`。
 
 ```sh
-npx void project status --platform cloudflare
-npx void project logs --platform cloudflare
+npx void connect --platform cloudflare
+npx void project status
+npx void project logs
 ```
 
 发布失败时先检查错误及状态，不要删除持久化资源或 `void.lock.json`。如果 Cloudflare 明确提示现有 Durable Object Worker 无法暂存部署，按 [官方说明](https://void.cloud/integrations/cloudflare#readiness-and-rollback) 检查迁移后使用 `npm run deploy:cloudflare -- --atomic`；这会先切换流量再检查就绪，不能跨 Durable Object 类迁移边界回滚。

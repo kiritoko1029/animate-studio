@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "node server/index.mjs",
     "start": "node server/index.mjs",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --mode node",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.cloudflare.json",
     "test": "node --test tests/*.test.mjs",
     "dev:cloudflare": "vite --mode cloudflare --host 127.0.0.1 --port 4174",
-    "build:cloudflare": "void prepare && npm run typecheck && vite build --mode cloudflare",
+    "build:cloudflare": "void prepare && npm run typecheck && vite build",
     "preview:cloudflare": "vite preview --mode cloudflare --host 127.0.0.1 --port 4174",
-    "deploy:cloudflare": "void deploy --platform cloudflare",
+    "deploy:cloudflare": "void prepare && npm run typecheck && void deploy --platform cloudflare",
     "cloudflare:login": "void cloudflare login",
     "cloudflare:status": "void cloudflare status"
   },
@@ -57,5 +57,6 @@
   },
   "engines": {
     "node": ">=24.21.0"
-  }
+  },
+  "license": "SEE LICENSE IN LICENSE.md"
 }

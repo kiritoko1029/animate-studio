@@ -6,7 +6,6 @@ export default defineConfig({
   routing: { notFound: 'none' },
   inference: {
     appType: 'void',
-    build: 'npm run build:cloudflare',
   },
   worker: {
     compatibility_date: '2026-10-19',
