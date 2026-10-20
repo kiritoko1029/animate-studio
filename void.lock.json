@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "source": {
+    "name": "animate-studio",
+    "workers_dev": true,
+    "preview_urls": true
+  },
+  "resolved": {
+    "name": "animate-studio",
+    "workers_dev": true,
+    "preview_urls": true,
+    "durable_objects": {
+      "bindings": [
+        {
+          "name": "PAGE_STORE",
+          "class_name": "PageStoreDurableObject"
+        }
+      ]
+    },
+    "migrations": [
+      {
+        "tag": "void-durable-page-store-v1",
+        "new_sqlite_classes": [
+          "PageStoreDurableObject"
+        ]
+      }
+    ]
+  },
+  "text": "{\n  \"name\": \"animate-studio\",\n  \"workers_dev\": true,\n  \"preview_urls\": true,\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"PAGE_STORE\",\n        \"class_name\": \"PageStoreDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-page-store-v1\",\n      \"new_sqlite_classes\": [\n        \"PageStoreDurableObject\"\n      ]\n    }\n  ]\n}\n"
+}

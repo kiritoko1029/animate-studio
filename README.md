@@ -4,7 +4,7 @@
 
 ## 运行
 
-建议使用 **Node.js 24 或更新版本**，测试会直接加载项目中的 TypeScript 文件。
+使用 **Node.js 24.21.0 或更新版本**（`.nvmrc` 使用 24.22.0），满足 Void 的运行要求；测试会直接加载项目中的 TypeScript 文件。
 
 ```sh
 npm install
@@ -25,6 +25,18 @@ NODE_ENV=production npm start
 ```
 
 在运行服务的终端按 `Ctrl+C` 关闭。服务会先关闭 Vite/HMR，再结束 HTTP 连接，释放开发端口。
+
+## Cloudflare 发布
+
+已接入 Void，支持将前端、页面 API 和持久化存储一起发布到 Cloudflare Workers。云端每个浏览器拥有独立工作区，本地模式继续使用 `data/page.json`。
+
+```sh
+npm run build:cloudflare
+npm run cloudflare:login
+npm run deploy:cloudflare
+```
+
+云端本地开发使用 `npm run dev:cloudflare`，端口为 4174。GitHub Actions 已提供测试、构建和 `main` 自动发布；需要配置 Cloudflare API Token 后启用发布。完整说明见 [Void 与 Cloudflare 发布指南](docs/cloudflare-deployment.md)。
 
 ## 编辑页面
 
@@ -132,7 +144,7 @@ NODE_ENV=production npm start
 
 ## 保存与迁移
 
-修改会自动保存到项目目录中的 **`data/page.json`**。刷新页面或重启服务后会恢复已保存内容。保存失败时画布保留当前修改，并显示重试入口；只有服务确认保存成功后才会标记“已保存”。停止服务前可确认顶部保存状态，或使用立即保存快捷键。
+本地模式的修改会自动保存到项目目录中的 **`data/page.json`**；Cloudflare 模式保存到各浏览器独立的 Durable Object。刷新页面或重启服务后会恢复已保存内容。保存失败时画布保留当前修改，并显示重试入口；只有服务确认保存成功后才会标记“已保存”。停止服务前可确认顶部保存状态，或使用立即保存快捷键。云端工作区依赖浏览器保存的标识，清除站点数据或切换域名前请导出页面 JSON 备份。
 
 通过顶部“导出”菜单可以下载完整页面 JSON，也可以导入已有 JSON 继续编辑。导入先经过服务校验，格式错误不会替换当前页面；成功导入、新建空白页面和载入模板都可以撤销。JSON 保存组件内容、布局、位置、尺寸和页面设置；外部图片保存的是 URL，不会打包图片文件。
 

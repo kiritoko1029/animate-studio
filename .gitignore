@@ -17,3 +17,10 @@ artifacts/
 .agents/
 qa-page-backup.json
 .studio-*.html
+
+# Void / Cloudflare generated code, local state, and credentials
+.void/
+.void-wrangler.jsonc
+.wrangler/
+.dev.vars
+.dev.vars.*

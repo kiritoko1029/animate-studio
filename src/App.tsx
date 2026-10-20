@@ -20,6 +20,7 @@ import { PageRenderer } from './components/PageRenderer';
 import { FreeCanvas } from './components/FreeCanvas';
 import { createAutosave } from './lib/autosave';
 import { canvasModifierLabel } from './lib/canvas-shortcuts';
+import { fetchPageApi } from './lib/page-api';
 import { placeBlock, insertBlockAfter } from './lib/layout';
 import { downloadCode } from './lib/code-export/download';
 import type { Format } from './lib/code-export/generate';
@@ -193,7 +194,7 @@ export default function App() {
     const request=++loadVersion.current;
     setLoadError('');setSaveState('loading');
     try {
-      const response=await fetch('/api/page');
+      const response=await fetchPageApi('/api/page');
       if(!response.ok)throw new Error('暂时无法读取页面，请确认服务正在运行。');
       const data=await response.json();
       if(request!==loadVersion.current)return;
@@ -202,7 +203,7 @@ export default function App() {
       autosave.current=createAutosave<PageDocument>({
         ...(data.page?{initialSaved:data.page}:{}),
         write:async page=>{
-          const response=await fetch('/api/page',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page})});
+          const response=await fetchPageApi('/api/page',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page})});
           const data=await response.json();
           if(!response.ok)throw new Error(data.error||'保存失败，请重试。');
           setSavedAt(data.savedAt);
@@ -302,7 +303,7 @@ export default function App() {
     try {
       if(file.size>500*1024)throw new Error('文件不能超过 500 KB');
       const page=JSON.parse(await file.text());
-      const response=await fetch('/api/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page})});
+      const response=await fetchPageApi('/api/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page})});
       const data=await response.json();if(!response.ok)throw new Error(data.error||'页面格式不正确');
       update(toFreeDocument(data.page));setSelected(null);setInsertAfterId(null);notify(`已导入「${data.page.name}」`);
     } catch(error){notify(`导入失败：${error instanceof Error?error.message:'文件格式不正确'}`);}
