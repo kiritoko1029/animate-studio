@@ -1,0 +1,11 @@
+.layout-toggle{display:flex;gap:2px;padding:3px;background:var(--studio-50);border:1px solid var(--studio-100);border-radius:5px}
+.layout-toggle button{font-size:10px;padding:4px 7px;color:var(--studio-600);border-radius:3px;white-space:nowrap}
+.layout-toggle button.active{background:var(--studio-0);color:var(--studio-600);box-shadow:0 1px 3px rgb(0 0 0 / 6.3%)}
+.geometry-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.geometry-fields .field{margin-bottom:10px}
+.precision-label{font-size:9px;font-weight:400;margin-left:auto;color:var(--studio-500)}
+.insert-notice{display:flex;align-items:center;gap:7px;background:var(--studio-100);border:1px solid var(--studio-300);border-radius:5px;padding:9px 7px;font-size:11px;color:var(--studio-600);line-height:1.7;margin:3px 0 13px}
+.insert-notice button{display:flex;padding:0;margin-left:auto;flex-shrink:0;color:var(--studio-600)}
+.property-section>p.field-hint{font-size:13px;line-height:1.75;color:var(--studio-600)}.library-section-heading>span:last-child{color:var(--studio-600)}
+@media(max-width:1150px){.workspace-breadcrumb strong{display:none}.workspace-breadcrumb>svg:nth-of-type(2){display:none}.layout-toggle button{font-size:9px;padding:4px 5px}}
+@media(max-width:600px){.layout-toggle button{font-size:10px}.workspace-breadcrumb{display:none!important}.toolbar-end{width:100%;justify-content:space-between}.layout-toggle{margin-right:auto}}

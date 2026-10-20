@@ -1,0 +1,169 @@
+/* Interaction authoring uses the shared monochrome platform palette. */
+.interaction-studio { width: min(1440px, calc(100vw - 48px)); max-width: none; height: min(960px, calc(100dvh - 48px)); max-height: none; overflow: hidden; border: 1px solid var(--studio-200); border-radius: 12px; padding: 0; color: var(--studio-950); background: var(--studio-0); box-shadow: 0 28px 100px rgb(0 0 0 / 22.0%); }
+.interaction-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 12px 18px; border-bottom: 1px solid var(--studio-100); }
+.interaction-header h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 16px; font-weight: 600; }
+.interaction-body { display: grid; grid-template-columns: minmax(360px, 46%) minmax(0, 1fr); flex: 1; min-height: 0; }
+.interaction-studio--scripts .interaction-body { grid-template-columns: minmax(420px, 62%) minmax(0, 1fr); }
+.interaction-config { min-width: 0; overflow: auto; border-right: 1px solid var(--studio-100); }
+.interaction-config--scripts { display: flex; flex-direction: column; }
+.variables-editor, .scripts-editor { padding: 12px 14px; }
+.scripts-editor { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.logic-description { font-size: 11px; line-height: 1.7; color: var(--studio-600); margin: 0 0 10px; }
+.variable-create { display: flex; gap: 8px; margin-bottom: 10px; }
+.variable-create > input { min-width: 0; flex: 1; }
+.interaction-studio input, .interaction-studio select, .interaction-studio textarea, .component-interactions input, .component-interactions select, .component-interactions textarea { box-sizing: border-box; width: 100%; padding: 9px 10px; border: 1px solid var(--studio-200); border-radius: 7px; color: var(--studio-950); background: var(--studio-0); font-family: inherit; font-size: 12px; line-height: 1.5; outline: none; }
+.interaction-studio input:focus, .interaction-studio select:focus, .interaction-studio textarea:focus, .component-interactions input:focus, .component-interactions select:focus, .component-interactions textarea:focus { border-color: var(--studio-600); box-shadow: 0 0 0 2px var(--studio-100); }
+.variable-create > select { width: 84px; }
+.variable-create > button { flex-shrink: 0; }
+.variable-card, .variables-columns { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) 24px; gap: 10px; align-items: center; }
+.variables-columns { padding: 5px 10px; color: var(--studio-500); font-size: 10px; }
+.variable-card { border-bottom: 1px solid var(--studio-100); padding: 8px 10px; min-height: 53px; }
+.variable-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.variable-card code { font-size: 12px; font-weight: 600; color: var(--studio-600); overflow: hidden; text-overflow: ellipsis; }
+.variable-identity > span { font-size: 10px; background: var(--studio-50); color: var(--studio-500); padding: 2px 5px; border-radius: 4px; }
+.variable-delete { display: flex; align-items: center; justify-content: center; padding: 4px; background: transparent; border: 0; color: var(--studio-500); cursor: pointer; }
+.variable-value { min-width: 0; }
+.variable-value .logic-field { margin: 0; gap: 0; }
+.variable-value .logic-field > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.variables-editor input, .variables-editor select, .variables-editor textarea { padding: 6px 8px; }
+.variable-card button:disabled { opacity: .3; cursor: not-allowed; }
+.logic-field { display: grid; gap: 7px; margin: 10px 0; min-width: 0; }
+.logic-field > span { font-size: 11px; color: var(--studio-600); }
+.logic-field textarea { resize: vertical; font-family: ui-monospace, monospace; }
+.logic-resource-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.logic-resource-actions .secondary-button { flex: 1; justify-content: center; white-space: nowrap; padding: 7px 8px; font-size: 11px; }
+.logic-script-field { position: relative; }
+.logic-script-field .logic-field > span { padding-right: 72px; }
+.logic-script-field > .text-button { position: absolute; top: -5px; right: 0; margin: 0; min-height: 26px; font-size: 11px; color: var(--studio-600); }
+.logic-script-field > .text-button:disabled { opacity: .4; cursor: not-allowed; }
+.logic-error { color: var(--studio-600); font-size: 11px; line-height: 1.6; padding: 8px 10px; background: var(--studio-50); border-radius: 6px; overflow-wrap: anywhere; }
+.logic-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 46px 12px; color: var(--studio-500); }
+.logic-empty h3 { color: var(--studio-600); font-size: 15px; font-weight: 500; margin: 18px 0 0; }
+.logic-empty p { font-size: 12px; line-height: 1.8; }
+.logic-empty button { margin: 14px 0 10px; }
+.logic-empty small { font-size: 10px; }
+.interaction-live { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--studio-50); }
+.interaction-preview-heading { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 15px 16px; color: var(--studio-600); }
+.interaction-preview-heading > span { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.interaction-preview-heading small { color: var(--studio-500); font-size: 10px; }
+.interaction-preview-scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; padding: 0 14px 16px; flex: 1; }
+.interactive-preview { width: 100%; min-width: 0; background: var(--studio-0); }
+.interactive-preview > iframe { display: block; width: 100%; border: 0; }
+.interaction-live .interactive-preview { border: 1px solid var(--studio-200); border-radius: 10px; overflow: hidden; box-shadow: 0 5px 20px rgb(0 0 0 / 2.4%); }
+.runtime-debug { border-top: 1px solid var(--studio-200); background: var(--studio-0); text-align: left; color: var(--studio-600); }
+.runtime-debug-heading { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; gap: 6px; }
+.runtime-debug-heading button { border: 0; padding: 3px; background: transparent; color: inherit; display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; }
+.logic-status { color: var(--studio-500); font-size: 9px; margin-left: 4px; }
+.logic-status.ready { color: var(--studio-500); }
+.runtime-debug-content { padding: 0 14px 14px; font-size: 11px; }
+.runtime-debug-content h4 { display: flex; align-items: center; gap: 6px; color: var(--studio-500); font-size: 10px; font-weight: 500; margin: 12px 0 8px; }
+.runtime-debug-content h4 button { margin-left: auto; border: 0; background: none; color: var(--studio-500); cursor: pointer; font-size: 10px; }
+.runtime-variable { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--studio-100); }
+.runtime-variable span { color: var(--studio-600); overflow-wrap: anywhere; max-width: 65%; white-space: pre-wrap; }
+.runtime-logs { max-height: 190px; overflow: auto; }
+.runtime-log { display: flex; gap: 8px; padding: 4px 0; font-family: ui-monospace, monospace; font-size: 10px; line-height: 1.7; }
+.runtime-log time { color: var(--studio-500); flex-shrink: 0; }
+.runtime-log span { overflow-wrap: anywhere; white-space: pre-wrap; }
+.runtime-log.error { color: var(--studio-600); }
+.runtime-log.state { color: var(--studio-600); }
+.interaction-footer { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 8px 16px; border-top: 1px solid var(--studio-100); }
+.interaction-footer > span { color: var(--studio-500); font-size: 11px; }
+.script-selector { display: flex; flex-shrink: 0; gap: 8px; margin-bottom: 8px; }
+.script-selector button { flex-shrink: 0; }
+.script-picker { position: relative; flex: 1; min-width: 0; }
+.script-picker-field { position: relative; display: flex; align-items: center; }
+.script-picker-field > svg { position: absolute; left: 10px; color: var(--studio-500); pointer-events: none; }
+.script-picker-field input { padding: 7px 32px; }
+.script-picker-field > button { position: absolute; right: 3px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 4px; color: var(--studio-600); }
+.script-picker-field > button:hover { background: var(--studio-50); }
+.script-picker-options { position: absolute; top: calc(100% + 4px); z-index: 6; width: 100%; max-height: 240px; overflow: auto; padding: 4px; border: 1px solid var(--studio-200); border-radius: 7px; background: var(--studio-0); box-shadow: 0 8px 24px rgb(0 0 0 / 10.2%); }
+.script-picker-options button { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 8px; border-radius: 4px; font-size: 12px; text-align: left; }
+.script-picker-options button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.script-picker-options button[aria-selected="true"] { color: var(--studio-600); background: var(--studio-50); }
+.script-workspace { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.script-code-editor { flex: 1; min-height: 120px; border: 1px solid var(--studio-100); border-radius: 0 0 8px 8px; overflow: hidden; }
+.script-editor-tools { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 5px 10px; border: 1px solid var(--studio-100); border-bottom: 0; border-radius: 7px 7px 0 0; background: var(--studio-50); font-size: 10px; color: var(--studio-500); }
+.script-editor-tools button { color: var(--studio-600); padding: 3px 6px; border: 1px solid var(--studio-200); border-radius: 4px; background: var(--studio-0); font-size: 11px; }
+.script-editor-shortcuts { flex-shrink: 0; margin: 5px 0; color: var(--studio-500); font-size: 10px; line-height: 1.6; }
+.script-help { flex-shrink: 0; border-top: 1px solid var(--studio-100); }
+.script-help > summary { cursor: pointer; padding: 8px 0; font-size: 11px; color: var(--studio-600); }
+.script-help > summary > span { float: right; color: var(--studio-500); font-size: 10px; }
+.script-help-content { max-height: min(240px, 25dvh); overflow: auto; padding-right: 6px; }
+.script-examples { padding-top: 12px; border-top: 1px solid var(--studio-100); margin-top: 16px; }
+.script-examples h4 { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin: 0 0 10px; font-weight: 500; }
+.script-examples h4 span { color: var(--studio-500); font-size: 10px; }
+.script-examples > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.script-examples button { font-size: 11px; padding: 6px 9px; }
+.script-examples > p { font-size: 11px; line-height: 1.8; color: var(--studio-500); }
+.script-toolbar { display: flex; align-items: center; flex-wrap: wrap; flex-shrink: 0; gap: 7px; margin: 0 0 8px; }
+.script-toolbar button { font-size: 11px; }
+.script-save-state { margin-left: auto; color: var(--studio-500); font-size: 10px; }
+.script-save-state.dirty { color: var(--studio-600); }
+.logic-delete { border: none; background: none; color: var(--studio-500); padding: 6px; cursor: pointer; }
+.script-api { margin-top: 24px; border-top: 1px solid var(--studio-100); padding-top: 10px; }
+.script-api h4 { font-size: 12px; font-weight: 500; display: flex; justify-content: space-between; }
+.script-api h4 span { color: var(--studio-500); font-size: 10px; }
+.script-api code { font-size: 11px; color: var(--studio-600); }
+.script-api p { font-size: 11px; color: var(--studio-500); margin: 4px 0 14px; }
+.component-interactions { padding-bottom: 24px; }
+.logic-intro { padding: 18px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: var(--studio-500); }
+.logic-intro strong { font-size: 13px; font-weight: 600; color: var(--studio-600); }
+.logic-intro p { font-size: 11px; margin: 0; color: var(--studio-500); }
+.logic-intro button { margin-top: 4px; }
+.logic-segments { display: flex; background: var(--studio-50); padding: 3px; border-radius: 7px; margin-bottom: 15px; }
+.logic-segments button { width: 50%; padding: 7px; background: none; border: 0; border-radius: 5px; color: var(--studio-500); font-size: 11px; cursor: pointer; }
+.logic-segments button.active { color: var(--studio-600); background: var(--studio-0); box-shadow: 0 1px 4px rgb(0 0 0 / 3.5%); }
+.binding-row { border-bottom: 1px solid var(--studio-100); padding: 14px 0; }
+.binding-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.binding-heading strong { flex: 1; font-size: 11px; font-weight: 500; }
+.binding-heading select { width: 102px; padding: 5px 6px; font-size: 10px; }
+.logic-action { border: 1px solid var(--studio-200); border-radius: 8px; padding: 10px; margin: 10px 0; background: var(--studio-0); }
+.logic-action-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.logic-action-heading > span { background: var(--studio-50); border-radius: 4px; font-size: 10px; padding: 2px 5px; color: var(--studio-500); }
+.logic-action-heading strong { font-size: 11px; font-weight: 500; flex: 1; }
+.logic-action-heading button { border: 0; padding: 2px; background: transparent; color: var(--studio-500); cursor: pointer; }
+.logic-action-heading button:disabled { opacity: .25; }
+.action-add { display: flex; gap: 6px; margin-top: 10px; }
+.action-add select { min-width: 0; flex: 1; font-size: 10px; }
+.action-add button { flex-shrink: 0; font-size: 10px; padding: 6px 8px; }
+.condition-branches { padding-left: 8px; border-left: 2px solid var(--studio-200); }
+.condition-branches h5 { margin: 14px 0 5px; font-size: 10px; font-weight: 500; color: var(--studio-500); }
+.expression-editor { min-width: 0; }
+.expression-editor .logic-field { margin-bottom: 8px; }
+.component-interactions input.expression-source { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+.expression-source[aria-invalid="true"] { border-color: var(--studio-600); }
+.expression-result { padding: 9px 10px; border-radius: 6px; background: var(--studio-50); color: var(--studio-600); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.expression-result-label { display: flex; justify-content: space-between; gap: 8px; color: var(--studio-600); font-size: 10px; }
+.expression-result output { display: block; margin-top: 3px; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+.expression-result p { margin: 3px 0; }
+.expression-result small { font-size: 10px; }
+.expression-result.invalid { background: var(--studio-50); color: var(--studio-600); }
+.expression-result.warning { background: var(--studio-50); color: var(--studio-600); }
+.expression-event-sample { display: block; margin-top: 6px; }
+.expression-toolbar { display: flex; justify-content: space-between; gap: 6px; margin-top: 9px; }
+.expression-toolbar button { display: inline-flex; align-items: center; gap: 5px; padding: 4px 0; border: 0; color: var(--studio-600); background: none; font-size: 11px; cursor: pointer; }
+.expression-toolbar .expanded { transform: rotate(180deg); }
+.expression-save-hint { font-size: 10px; color: var(--studio-500); line-height: 1.6; margin: 4px 0 0; }
+.expression-help { margin-top: 12px; padding-top: 2px; border-top: 1px solid var(--studio-100); }
+.expression-help-tabs { display: flex; gap: 2px; margin-top: 10px; }
+.expression-help-tabs button { flex: 1; padding: 6px 2px; border: 0; border-radius: 4px; background: none; color: var(--studio-500); font-size: 11px; cursor: pointer; }
+.expression-help-tabs button[aria-pressed="true"] { background: var(--studio-100); color: var(--studio-600); }
+.expression-help p { font-size: 11px; line-height: 1.7; color: var(--studio-600); }
+.expression-variable-list { max-height: 240px; overflow: auto; border: 1px solid var(--studio-100); border-radius: 6px; }
+.expression-variable-list button, .expression-examples button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; width: 100%; min-width: 0; padding: 8px 9px; border: 0; border-bottom: 1px solid var(--studio-100); background: var(--studio-0); color: var(--studio-600); cursor: pointer; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.expression-variable-list button:last-child, .expression-examples button:last-child { border-bottom: 0; }
+.expression-variable-list button:hover, .expression-examples button:hover { background: var(--studio-50); }
+.expression-variable-list small, .expression-options small { display: block; color: var(--studio-500); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.expression-examples { border: 1px solid var(--studio-100); border-radius: 6px; overflow: auto; max-height: 240px; }
+.expression-examples code { margin-top: 3px; color: var(--studio-500); font-size: 10px; }
+.expression-help code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.expression-syntax { margin-top: 12px; color: var(--studio-600); font-size: 11px; line-height: 1.7; }
+.expression-syntax dt { color: var(--studio-600); margin-top: 10px; }
+.expression-syntax dd { margin: 2px 0 0; }
+.expression-completion { margin: -2px 0 8px; border: 1px solid var(--studio-200); border-radius: 7px; overflow: hidden; box-shadow: 0 3px 10px rgb(0 0 0 / 6.3%); }
+.expression-completion-hint { background: var(--studio-50); padding: 6px 8px; color: var(--studio-500); font-size: 10px; }
+.expression-options { max-height: 170px; overflow: auto; }
+.expression-options [role="option"] { padding: 7px 9px; cursor: pointer; font-size: 11px; overflow-wrap: anywhere; }
+.expression-options [aria-selected="true"] { background: var(--studio-100); color: var(--studio-600); }
+.expression-editor button:focus-visible { outline: 2px solid var(--studio-600); outline-offset: 2px; }
+@media (max-width: 800px) { .interaction-studio { width: calc(100vw - 20px); height: calc(100dvh - 20px); } .interaction-body, .interaction-studio--scripts .interaction-body { grid-template-columns: minmax(0, 1fr); overflow: auto; } .interaction-config { overflow: visible; } .interaction-config--scripts { min-height: 600px; } .interaction-config--scripts .scripts-editor { min-height: 540px; } .interaction-live { min-height: 400px; } .interaction-preview-scroll { overflow: visible; } .interaction-footer > span { display: none; } .interaction-footer { justify-content: flex-end; } .script-help > summary > span { display: none; } .script-save-state { display: none; } .logic-delete { margin-left: auto; } }

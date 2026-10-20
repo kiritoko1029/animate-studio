@@ -1,0 +1,1045 @@
+{
+  "dialog": {
+    "name": "对话框",
+    "english": "Dialog",
+    "group": "浮层",
+    "description": "对话框 · Dialog",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/dialog",
+    "props": {
+      "padding": 20,
+      "label": "打开对话框",
+      "title": "准备好继续了吗？",
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "variant": "center"
+    },
+    "frame": {
+      "width": 360,
+      "height": 110
+    },
+    "variants": [
+      [
+        "center",
+        "居中"
+      ],
+      [
+        "right",
+        "右侧"
+      ],
+      [
+        "left",
+        "左侧"
+      ],
+      [
+        "bottom",
+        "底部"
+      ]
+    ]
+  },
+  "alertDialog": {
+    "name": "确认对话框",
+    "english": "Alert Dialog",
+    "group": "浮层",
+    "description": "确认对话框 · Alert Dialog",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/alert-dialog",
+    "props": {
+      "padding": 20,
+      "label": "打开确认对话框",
+      "title": "准备好继续了吗？",
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "variant": "center"
+    },
+    "frame": {
+      "width": 360,
+      "height": 110
+    },
+    "variants": [
+      [
+        "center",
+        "居中"
+      ],
+      [
+        "right",
+        "右侧"
+      ],
+      [
+        "left",
+        "左侧"
+      ],
+      [
+        "bottom",
+        "底部"
+      ]
+    ]
+  },
+  "sheet": {
+    "name": "侧边面板",
+    "english": "Sheet",
+    "group": "浮层",
+    "description": "侧边面板 · Sheet",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/sheet",
+    "props": {
+      "padding": 20,
+      "label": "打开侧边面板",
+      "title": "准备好继续了吗？",
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "variant": "right"
+    },
+    "frame": {
+      "width": 360,
+      "height": 110
+    },
+    "variants": [
+      [
+        "center",
+        "居中"
+      ],
+      [
+        "right",
+        "右侧"
+      ],
+      [
+        "left",
+        "左侧"
+      ],
+      [
+        "bottom",
+        "底部"
+      ]
+    ]
+  },
+  "drawer": {
+    "name": "抽屉",
+    "english": "Drawer",
+    "group": "浮层",
+    "description": "抽屉 · Drawer",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/drawer",
+    "props": {
+      "padding": 20,
+      "label": "打开抽屉",
+      "title": "准备好继续了吗？",
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "variant": "bottom"
+    },
+    "frame": {
+      "width": 360,
+      "height": 110
+    },
+    "variants": [
+      [
+        "center",
+        "居中"
+      ],
+      [
+        "right",
+        "右侧"
+      ],
+      [
+        "left",
+        "左侧"
+      ],
+      [
+        "bottom",
+        "底部"
+      ]
+    ]
+  },
+  "popover": {
+    "name": "气泡面板",
+    "english": "Popover",
+    "group": "浮层",
+    "description": "气泡面板 · Popover",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/popover",
+    "props": {
+      "padding": 20,
+      "label": "了解更多",
+      "title": "让想法发生",
+      "text": "补充说明会在这里展开。"
+    },
+    "frame": {
+      "width": 360,
+      "height": 240
+    }
+  },
+  "hoverCard": {
+    "name": "悬浮卡片",
+    "english": "Hover Card",
+    "group": "浮层",
+    "description": "悬浮卡片 · Hover Card",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/hover-card",
+    "props": {
+      "padding": 20,
+      "label": "了解更多",
+      "title": "让想法发生",
+      "text": "补充说明会在这里展开。"
+    },
+    "frame": {
+      "width": 360,
+      "height": 240
+    }
+  },
+  "tooltip": {
+    "name": "文字提示",
+    "english": "Tooltip",
+    "group": "浮层",
+    "description": "文字提示 · Tooltip",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/tooltip",
+    "props": {
+      "padding": 20,
+      "label": "了解更多",
+      "title": "让想法发生",
+      "text": "补充说明会在这里展开。"
+    },
+    "frame": {
+      "width": 360,
+      "height": 240
+    }
+  },
+  "previewLinkCard": {
+    "name": "链接预览",
+    "english": "Preview Link Card",
+    "group": "浮层",
+    "description": "链接预览 · Preview Link Card",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/preview-link-card",
+    "props": {
+      "padding": 20,
+      "label": "了解更多",
+      "title": "让想法发生",
+      "text": "补充说明会在这里展开。",
+      "url": "https://animate-ui.com"
+    },
+    "frame": {
+      "width": 360,
+      "height": 240
+    }
+  },
+  "collapsible": {
+    "name": "可折叠内容",
+    "english": "Collapsible",
+    "group": "交互",
+    "description": "可折叠内容 · Collapsible",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/collapsible",
+    "props": {
+      "padding": 20,
+      "label": "展开详情",
+      "title": "项目详情",
+      "text": "点击标题展开或收起这段内容。",
+      "checked": false
+    },
+    "frame": {
+      "width": 400,
+      "height": 230
+    }
+  },
+  "dropdownMenu": {
+    "name": "下拉菜单",
+    "english": "Dropdown Menu",
+    "group": "导航",
+    "description": "下拉菜单 · Dropdown Menu",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/dropdown-menu",
+    "props": {
+      "padding": 20,
+      "label": "更多操作",
+      "items": "查看作品|#features\n关于我们|#about\n联系我们|#contact"
+    },
+    "frame": {
+      "width": 360,
+      "height": 250
+    },
+    "itemsHint": "每行一项：名称 | 安全链接（可选）。菜单栏和导航菜单会把这些项目显示为入口。"
+  },
+  "contextMenu": {
+    "name": "右键菜单",
+    "english": "Context Menu",
+    "group": "导航",
+    "description": "右键菜单 · Context Menu",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/context-menu",
+    "props": {
+      "padding": 20,
+      "label": "更多操作",
+      "items": "查看作品|#features\n关于我们|#about\n联系我们|#contact"
+    },
+    "frame": {
+      "width": 360,
+      "height": 250
+    },
+    "itemsHint": "每行一项：名称 | 安全链接（可选）。菜单栏和导航菜单会把这些项目显示为入口。"
+  },
+  "menubar": {
+    "name": "菜单栏",
+    "english": "Menubar",
+    "group": "导航",
+    "description": "菜单栏 · Menubar",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/menubar",
+    "props": {
+      "padding": 20,
+      "label": "更多操作",
+      "items": "产品|组件库|#features\n产品|动效|#effects\n资源|使用指南|#docs\n资源|关于我们|#about"
+    },
+    "frame": {
+      "width": 440,
+      "height": 250
+    },
+    "itemsHint": "每行一项：菜单名称 | 子项名称 | 链接；同名菜单的子项会自动分组。"
+  },
+  "navigationMenu": {
+    "name": "导航菜单",
+    "english": "Navigation Menu",
+    "group": "导航",
+    "description": "导航菜单 · Navigation Menu",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/navigation-menu",
+    "props": {
+      "padding": 20,
+      "label": "更多操作",
+      "items": "产品|组件库|#features\n产品|动效|#effects\n资源|使用指南|#docs\n资源|关于我们|#about"
+    },
+    "frame": {
+      "width": 440,
+      "height": 250
+    },
+    "itemsHint": "每行一项：菜单名称 | 子项名称 | 链接；同名菜单的子项会自动分组。"
+  },
+  "sidebar": {
+    "name": "页面侧栏",
+    "english": "Sidebar",
+    "group": "导航",
+    "description": "页面侧栏 · Sidebar",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/sidebar",
+    "props": {
+      "padding": 20,
+      "title": "创作空间",
+      "label": "展开导航",
+      "items": "概览|#\n我的作品|#features\n设置|#settings",
+      "checked": true
+    },
+    "frame": {
+      "width": 280,
+      "height": 400
+    },
+    "itemsHint": "每行一项：名称 | 链接"
+  },
+  "combobox": {
+    "name": "可搜索选择",
+    "english": "Combobox",
+    "group": "表单",
+    "description": "可搜索选择 · Combobox",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/combobox",
+    "props": {
+      "padding": 20,
+      "label": "选择方向",
+      "text": "搜索或选择…",
+      "items": "界面设计\n产品开发\n品牌创意"
+    },
+    "frame": {
+      "width": 380,
+      "height": 160
+    },
+    "itemsHint": "每行一个候选选项，支持输入筛选。"
+  },
+  "toggle": {
+    "name": "切换按钮",
+    "english": "Toggle",
+    "group": "表单",
+    "description": "切换按钮 · Toggle",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/toggle",
+    "props": {
+      "padding": 20,
+      "label": "收藏",
+      "checked": false
+    },
+    "frame": {
+      "width": 240,
+      "height": 100
+    }
+  },
+  "toggleGroup": {
+    "name": "切换按钮组",
+    "english": "Toggle Group",
+    "group": "表单",
+    "description": "切换按钮组 · Toggle Group",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/toggle-group",
+    "props": {
+      "padding": 20,
+      "label": "视图排列",
+      "items": "列表\n网格\n紧凑",
+      "value": 0
+    },
+    "frame": {
+      "width": 380,
+      "height": 140
+    },
+    "itemsHint": "每行一个按钮，单选。"
+  },
+  "toast": {
+    "name": "通知消息",
+    "english": "Toast",
+    "group": "浮层",
+    "description": "通知消息 · Toast",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/toast",
+    "props": {
+      "padding": 20,
+      "label": "显示通知",
+      "title": "保存成功",
+      "text": "你的修改已经保存。",
+      "duration": 3000
+    },
+    "frame": {
+      "width": 320,
+      "height": 110
+    }
+  },
+  "questionnaire": {
+    "name": "分步问卷",
+    "english": "Questionnaire",
+    "group": "表单",
+    "description": "分步问卷 · Questionnaire",
+    "docs": "https://animate-ui.com/docs/primitives/base-ui/questionnaire",
+    "props": {
+      "padding": 20,
+      "title": "了解你的想法",
+      "label": "提交",
+      "text": "感谢你的回答！",
+      "items": "你关注哪个方向？|界面设计,产品开发,品牌创意\n有什么想告诉我们？|"
+    },
+    "frame": {
+      "width": 500,
+      "height": 340
+    },
+    "itemsHint": "每行一题：问题 | 选项1,选项2；不填选项时使用文本回答。"
+  },
+  "inputOtp": {
+    "name": "验证码输入",
+    "english": "Input OTP",
+    "group": "表单",
+    "description": "验证码输入 · Input OTP",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/input-otp",
+    "props": {
+      "padding": 20,
+      "label": "验证码",
+      "text": "请输入 6 位数字",
+      "max": 6
+    },
+    "frame": {
+      "width": 360,
+      "height": 150
+    }
+  },
+  "avatarGroup": {
+    "name": "头像组",
+    "english": "Avatar Group",
+    "group": "展示",
+    "description": "头像组 · Avatar Group",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/avatar-group",
+    "props": {
+      "padding": 20,
+      "label": "一起创作",
+      "items": "林晓\n陈辰\n小雨\n阿杰"
+    },
+    "frame": {
+      "width": 360,
+      "height": 140
+    },
+    "itemsHint": "每行一个成员姓名。"
+  },
+  "codeBlock": {
+    "name": "代码展示",
+    "english": "Code Block",
+    "group": "展示",
+    "description": "代码展示 · Code Block",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/code-block",
+    "props": {
+      "padding": 20,
+      "title": "hello.js",
+      "text": "const message = \"Hello, world!\";\nconsole.log(message);",
+      "label": "复制代码"
+    },
+    "frame": {
+      "width": 500,
+      "height": 260
+    }
+  },
+  "githubStars": {
+    "name": "GitHub 星标",
+    "english": "GitHub Stars",
+    "group": "展示",
+    "description": "GitHub 星标 · GitHub Stars",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/github-stars",
+    "props": {
+      "padding": 20,
+      "title": "Animate UI",
+      "url": "https://github.com/imskyleen/animate-ui",
+      "value": 0
+    },
+    "frame": {
+      "width": 350,
+      "height": 120
+    }
+  },
+  "motionGrid": {
+    "name": "动效网格",
+    "english": "Motion Grid",
+    "group": "展示",
+    "description": "动效网格 · Motion Grid",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/motion-grid",
+    "props": {
+      "padding": 20,
+      "title": "探索创作方向",
+      "items": "设计\n开发\n动效\n品牌\n产品\n灵感"
+    },
+    "frame": {
+      "width": 480,
+      "height": 300
+    },
+    "itemsHint": "每行一张卡片；点击卡片切换强调状态。"
+  },
+  "pinnedList": {
+    "name": "可置顶列表",
+    "english": "Pinned List",
+    "group": "交互",
+    "description": "可置顶列表 · Pinned List",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/pinned-list",
+    "props": {
+      "padding": 20,
+      "title": "工作清单",
+      "items": "收件箱\n草稿\n项目\n归档"
+    },
+    "frame": {
+      "width": 380,
+      "height": 360
+    },
+    "itemsHint": "每行一项；点击图钉在置顶和全部之间移动。"
+  },
+  "scrollProgress": {
+    "name": "滚动进度",
+    "english": "Scroll Progress",
+    "group": "展示",
+    "description": "滚动进度 · Scroll Progress",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/scroll-progress",
+    "props": {
+      "padding": 20,
+      "title": "阅读进度",
+      "text": "向下滚动页面，查看阅读进度。"
+    },
+    "frame": {
+      "width": 420,
+      "height": 120
+    }
+  },
+  "copyButton": {
+    "name": "复制按钮",
+    "english": "Copy Button",
+    "group": "按钮",
+    "description": "复制按钮 · Copy Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/copy-button",
+    "props": {
+      "padding": 20,
+      "label": "复制内容",
+      "text": "欢迎使用 Animate Studio"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "flipButton": {
+    "name": "翻转按钮",
+    "english": "Flip Button",
+    "group": "按钮",
+    "description": "翻转按钮 · Flip Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/flip-button",
+    "props": {
+      "padding": 20,
+      "label": "翻转按钮",
+      "url": "#features",
+      "text": "开始体验"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "githubStarsButton": {
+    "name": "GitHub 星标按钮",
+    "english": "GitHub Stars Button",
+    "group": "按钮",
+    "description": "GitHub 星标按钮 · GitHub Stars Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/github-stars-button",
+    "props": {
+      "padding": 20,
+      "label": "GitHub 星标按钮",
+      "url": "https://github.com/imskyleen/animate-ui",
+      "value": 0
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "iconButton": {
+    "name": "图标按钮",
+    "english": "Icon Button",
+    "group": "按钮",
+    "description": "图标按钮 · Icon Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/icon-button",
+    "props": {
+      "padding": 20,
+      "label": "图标按钮",
+      "url": "#features",
+      "variant": "star"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    },
+    "variants": [
+      [
+        "star",
+        "星星"
+      ],
+      [
+        "heart",
+        "爱心"
+      ],
+      [
+        "plus",
+        "加号"
+      ],
+      [
+        "arrow",
+        "箭头"
+      ]
+    ]
+  },
+  "liquidButton": {
+    "name": "流体按钮",
+    "english": "Liquid Button",
+    "group": "按钮",
+    "description": "流体按钮 · Liquid Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/liquid-button",
+    "props": {
+      "padding": 20,
+      "label": "流体按钮",
+      "url": "#features"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "rippleButton": {
+    "name": "涟漪按钮",
+    "english": "Ripple Button",
+    "group": "按钮",
+    "description": "涟漪按钮 · Ripple Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/ripple-button",
+    "props": {
+      "padding": 20,
+      "label": "涟漪按钮",
+      "url": "#features"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "themeTogglerButton": {
+    "name": "主题切换按钮",
+    "english": "Theme Toggler Button",
+    "group": "按钮",
+    "description": "主题切换按钮 · Theme Toggler Button",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/theme-toggler-button",
+    "props": {
+      "padding": 20,
+      "label": "切换明暗主题"
+    },
+    "frame": {
+      "width": 280,
+      "height": 110
+    }
+  },
+  "gradientText": {
+    "name": "渐变文字",
+    "english": "Gradient Text",
+    "group": "文字动效",
+    "description": "渐变文字 · Gradient Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/gradient-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "morphingText": {
+    "name": "变形文字",
+    "english": "Morphing Text",
+    "group": "文字动效",
+    "description": "变形文字 · Morphing Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/morphing-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800,
+      "items": "灵感\n设计\n创造"
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    },
+    "itemsHint": "每行一条轮播文字。"
+  },
+  "rollingText": {
+    "name": "滚动文字",
+    "english": "Rolling Text",
+    "group": "文字动效",
+    "description": "滚动文字 · Rolling Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/rolling-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "rotatingText": {
+    "name": "旋转文字",
+    "english": "Rotating Text",
+    "group": "文字动效",
+    "description": "旋转文字 · Rotating Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/rotating-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800,
+      "items": "灵感\n设计\n创造"
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    },
+    "itemsHint": "每行一条轮播文字。"
+  },
+  "shimmeringText": {
+    "name": "流光文字",
+    "english": "Shimmering Text",
+    "group": "文字动效",
+    "description": "流光文字 · Shimmering Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/shimmering-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "slidingText": {
+    "name": "滑入文字",
+    "english": "Sliding Text",
+    "group": "文字动效",
+    "description": "滑入文字 · Sliding Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/sliding-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "splittingText": {
+    "name": "拆分文字",
+    "english": "Splitting Text",
+    "group": "文字动效",
+    "description": "拆分文字 · Splitting Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/splitting-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "swappingText": {
+    "name": "交替文字",
+    "english": "Swapping Text",
+    "group": "文字动效",
+    "description": "交替文字 · Swapping Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/swapping-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800,
+      "items": "灵感\n设计\n创造"
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    },
+    "itemsHint": "每行一条轮播文字。"
+  },
+  "typingText": {
+    "name": "打字文字",
+    "english": "Typing Text",
+    "group": "文字动效",
+    "description": "打字文字 · Typing Text",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/typing-text",
+    "props": {
+      "padding": 20,
+      "title": "让灵感自由生长",
+      "fontSize": 32,
+      "duration": 1800
+    },
+    "frame": {
+      "width": 460,
+      "height": 150
+    }
+  },
+  "countingNumber": {
+    "name": "递增数字",
+    "english": "Counting Number",
+    "group": "文字动效",
+    "description": "递增数字 · Counting Number",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/counting-number",
+    "props": {
+      "padding": 20,
+      "label": "累计创作",
+      "value": 86,
+      "max": 100,
+      "fontSize": 44,
+      "duration": 1600
+    },
+    "frame": {
+      "width": 320,
+      "height": 180
+    }
+  },
+  "scrollingNumber": {
+    "name": "滚动数字",
+    "english": "Scrolling Number",
+    "group": "文字动效",
+    "description": "滚动数字 · Scrolling Number",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/scrolling-number",
+    "props": {
+      "padding": 20,
+      "label": "累计创作",
+      "value": 86,
+      "max": 100,
+      "fontSize": 44,
+      "duration": 1600
+    },
+    "frame": {
+      "width": 320,
+      "height": 180
+    }
+  },
+  "slidingNumber": {
+    "name": "滑动数字",
+    "english": "Sliding Number",
+    "group": "文字动效",
+    "description": "滑动数字 · Sliding Number",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/sliding-number",
+    "props": {
+      "padding": 20,
+      "label": "累计创作",
+      "value": 86,
+      "max": 100,
+      "fontSize": 44,
+      "duration": 1600
+    },
+    "frame": {
+      "width": 320,
+      "height": 180
+    }
+  },
+  "imageZoom": {
+    "name": "图片放大",
+    "english": "Image Zoom",
+    "group": "展示",
+    "description": "图片放大 · Image Zoom",
+    "docs": "https://animate-ui.com/docs/primitives/animate-ui/image-zoom",
+    "props": {
+      "padding": 20,
+      "title": "点击探索更多细节",
+      "imageUrl": "/landscape.svg",
+      "radius": 12
+    },
+    "frame": {
+      "width": 440,
+      "height": 300
+    }
+  },
+  "bubbleBackground": {
+    "name": "气泡背景",
+    "english": "Bubble Background",
+    "group": "动态背景",
+    "description": "气泡背景 · Bubble Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/bubble",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "fireworksBackground": {
+    "name": "烟花背景",
+    "english": "Fireworks Background",
+    "group": "动态背景",
+    "description": "烟花背景 · Fireworks Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/fireworks",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "glyphBackground": {
+    "name": "字符背景",
+    "english": "Glyph Background",
+    "group": "动态背景",
+    "description": "字符背景 · Glyph Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/glyph",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "gradientBackground": {
+    "name": "渐变背景",
+    "english": "Gradient Background",
+    "group": "动态背景",
+    "description": "渐变背景 · Gradient Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/gradient",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "gravityStarsBackground": {
+    "name": "引力星空",
+    "english": "Gravity Stars Background",
+    "group": "动态背景",
+    "description": "引力星空 · Gravity Stars Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/gravity-stars",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "hexagonBackground": {
+    "name": "六边形背景",
+    "english": "Hexagon Background",
+    "group": "动态背景",
+    "description": "六边形背景 · Hexagon Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/hexagon",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "holeBackground": {
+    "name": "黑洞背景",
+    "english": "Hole Background",
+    "group": "动态背景",
+    "description": "黑洞背景 · Hole Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/hole",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "starsBackground": {
+    "name": "星空背景",
+    "english": "Stars Background",
+    "group": "动态背景",
+    "description": "星空背景 · Stars Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/stars",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  },
+  "topographyBackground": {
+    "name": "等高线背景",
+    "english": "Topography Background",
+    "group": "动态背景",
+    "description": "等高线背景 · Topography Background",
+    "docs": "https://animate-ui.com/docs/backgrounds/topography",
+    "props": {
+      "padding": 0,
+      "title": "让创意流动",
+      "text": "用动态背景，创造新的视觉体验。",
+      "duration": 6000
+    },
+    "frame": {
+      "width": 600,
+      "height": 360
+    }
+  }
+}

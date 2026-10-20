@@ -1,0 +1,19 @@
+node_modules/
+dist/
+data/
+*.log
+.DS_Store
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build cache and local development / verification files
+*.tsbuildinfo
+artifacts/
+.agents/
+qa-page-backup.json
+.studio-*.html

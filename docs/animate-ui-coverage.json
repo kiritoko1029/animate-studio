@@ -1,0 +1,476 @@
+{
+  "checkedOn": "2026-10-20",
+  "source": "https://animate-ui.com/docs",
+  "entries": [
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/bubble",
+      "kind": "组件",
+      "target": "气泡背景",
+      "type": "bubbleBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/fireworks",
+      "kind": "组件",
+      "target": "烟花背景",
+      "type": "fireworksBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/glyph",
+      "kind": "组件",
+      "target": "字符背景",
+      "type": "glyphBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/gradient",
+      "kind": "组件",
+      "target": "渐变背景",
+      "type": "gradientBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/gravity-stars",
+      "kind": "组件",
+      "target": "引力星空",
+      "type": "gravityStarsBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/hexagon",
+      "kind": "组件",
+      "target": "六边形背景",
+      "type": "hexagonBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/hole",
+      "kind": "组件",
+      "target": "黑洞背景",
+      "type": "holeBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/stars",
+      "kind": "组件",
+      "target": "星空背景",
+      "type": "starsBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/backgrounds/topography",
+      "kind": "组件",
+      "target": "等高线背景",
+      "type": "topographyBackground"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/auto-height",
+      "kind": "附加动效",
+      "target": "自动高度"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/avatar-group",
+      "kind": "组件",
+      "target": "头像组",
+      "type": "avatarGroup"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/blur",
+      "kind": "附加动效",
+      "target": "模糊渐入"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/button",
+      "kind": "已有组件",
+      "target": "动效按钮"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/click",
+      "kind": "附加动效",
+      "target": "点击反馈"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/code-block",
+      "kind": "组件",
+      "target": "代码展示",
+      "type": "codeBlock"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/copy-button",
+      "kind": "组件",
+      "target": "复制按钮",
+      "type": "copyButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/counting-number",
+      "kind": "组件",
+      "target": "递增数字",
+      "type": "countingNumber"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/cursor",
+      "kind": "附加动效",
+      "target": "光标跟随"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/effect",
+      "kind": "附加动效",
+      "target": "组合入场"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/fade",
+      "kind": "附加动效",
+      "target": "淡入"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/flip-button",
+      "kind": "组件",
+      "target": "翻转按钮",
+      "type": "flipButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/github-stars",
+      "kind": "组件",
+      "target": "GitHub 星标",
+      "type": "githubStars"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/github-stars-button",
+      "kind": "组件",
+      "target": "GitHub 星标按钮",
+      "type": "githubStarsButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/gradient-text",
+      "kind": "组件",
+      "target": "渐变文字",
+      "type": "gradientText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/highlight",
+      "kind": "附加动效",
+      "target": "高亮扫过"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/highlight-text",
+      "kind": "已有组件",
+      "target": "动态标题"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/icon-button",
+      "kind": "组件",
+      "target": "图标按钮",
+      "type": "iconButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/image-zoom",
+      "kind": "组件",
+      "target": "图片放大",
+      "type": "imageZoom"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/input-otp",
+      "kind": "组件",
+      "target": "验证码输入",
+      "type": "inputOtp"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/liquid-button",
+      "kind": "组件",
+      "target": "流体按钮",
+      "type": "liquidButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/magnetic",
+      "kind": "附加动效",
+      "target": "磁吸跟随"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/morphing-text",
+      "kind": "组件",
+      "target": "变形文字",
+      "type": "morphingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/motion-grid",
+      "kind": "组件",
+      "target": "动效网格",
+      "type": "motionGrid"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/page-transition",
+      "kind": "附加动效",
+      "target": "页面切换入场"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/particles",
+      "kind": "附加动效",
+      "target": "点击粒子"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/pinned-list",
+      "kind": "组件",
+      "target": "可置顶列表",
+      "type": "pinnedList"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/ripple-button",
+      "kind": "组件",
+      "target": "涟漪按钮",
+      "type": "rippleButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/rolling-text",
+      "kind": "组件",
+      "target": "滚动文字",
+      "type": "rollingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/rotating-text",
+      "kind": "组件",
+      "target": "旋转文字",
+      "type": "rotatingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/scroll-fade",
+      "kind": "附加动效",
+      "target": "滚动渐显"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/scroll-progress",
+      "kind": "组件",
+      "target": "滚动进度",
+      "type": "scrollProgress"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/scrolling-number",
+      "kind": "组件",
+      "target": "滚动数字",
+      "type": "scrollingNumber"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/shimmering-text",
+      "kind": "组件",
+      "target": "流光文字",
+      "type": "shimmeringText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/shine",
+      "kind": "附加动效",
+      "target": "光泽扫过"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/slide",
+      "kind": "附加动效",
+      "target": "滑入"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/sliding-number",
+      "kind": "组件",
+      "target": "滑动数字",
+      "type": "slidingNumber"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/sliding-text",
+      "kind": "组件",
+      "target": "滑入文字",
+      "type": "slidingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/splitting-text",
+      "kind": "组件",
+      "target": "拆分文字",
+      "type": "splittingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/spring",
+      "kind": "附加动效",
+      "target": "弹簧进入"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/swapping-text",
+      "kind": "组件",
+      "target": "交替文字",
+      "type": "swappingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/theme-toggler",
+      "kind": "附加动效",
+      "target": "点击切换主题"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/theme-toggler-button",
+      "kind": "组件",
+      "target": "主题切换按钮",
+      "type": "themeTogglerButton"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/tilt",
+      "kind": "附加动效",
+      "target": "悬浮倾斜"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/typing-text",
+      "kind": "组件",
+      "target": "打字文字",
+      "type": "typingText"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/animate-ui/zoom",
+      "kind": "附加动效",
+      "target": "缩放进入"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/accordion",
+      "kind": "已有组件",
+      "target": "折叠面板"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/alert-dialog",
+      "kind": "组件",
+      "target": "确认对话框",
+      "type": "alertDialog"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/checkbox",
+      "kind": "已有组件",
+      "target": "复选框"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/collapsible",
+      "kind": "组件",
+      "target": "可折叠内容",
+      "type": "collapsible"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/combobox",
+      "kind": "组件",
+      "target": "可搜索选择",
+      "type": "combobox"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/context-menu",
+      "kind": "组件",
+      "target": "右键菜单",
+      "type": "contextMenu"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/dialog",
+      "kind": "组件",
+      "target": "对话框",
+      "type": "dialog"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/drawer",
+      "kind": "组件",
+      "target": "抽屉",
+      "type": "drawer"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/dropdown-menu",
+      "kind": "组件",
+      "target": "下拉菜单",
+      "type": "dropdownMenu"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/hover-card",
+      "kind": "组件",
+      "target": "悬浮卡片",
+      "type": "hoverCard"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/menubar",
+      "kind": "组件",
+      "target": "菜单栏",
+      "type": "menubar"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/navigation-menu",
+      "kind": "组件",
+      "target": "导航菜单",
+      "type": "navigationMenu"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/pagination",
+      "kind": "已有组件",
+      "target": "分页"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/popover",
+      "kind": "组件",
+      "target": "气泡面板",
+      "type": "popover"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/preview-link-card",
+      "kind": "组件",
+      "target": "链接预览",
+      "type": "previewLinkCard"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/progress",
+      "kind": "已有组件",
+      "target": "进度条"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/questionnaire",
+      "kind": "组件",
+      "target": "分步问卷",
+      "type": "questionnaire"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/radio-group",
+      "kind": "已有组件",
+      "target": "单选组"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/select",
+      "kind": "已有组件",
+      "target": "下拉选择"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/sheet",
+      "kind": "组件",
+      "target": "侧边面板",
+      "type": "sheet"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/sidebar",
+      "kind": "组件",
+      "target": "页面侧栏",
+      "type": "sidebar"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/slider",
+      "kind": "已有组件",
+      "target": "滑块"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/switch",
+      "kind": "已有组件",
+      "target": "开关"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/tabs",
+      "kind": "已有组件",
+      "target": "标签页"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/toast",
+      "kind": "组件",
+      "target": "通知消息",
+      "type": "toast"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/toggle",
+      "kind": "组件",
+      "target": "切换按钮",
+      "type": "toggle"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/toggle-group",
+      "kind": "组件",
+      "target": "切换按钮组",
+      "type": "toggleGroup"
+    },
+    {
+      "url": "https://animate-ui.com/docs/primitives/base-ui/tooltip",
+      "kind": "组件",
+      "target": "文字提示",
+      "type": "tooltip"
+    }
+  ]
+}
