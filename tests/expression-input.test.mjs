@@ -1,3 +1,4 @@
+import { installMatchMedia } from './helpers/media-query.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
@@ -32,6 +33,7 @@ test('expression input completes with the keyboard, preserves invalid drafts and
     bundle: true, write: false, format: 'iife', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' }, logLevel: 'silent',
   });
   const { window } = dom;
+  installMatchMedia(window);
   window.eval(bundle.outputFiles[0].text);
   t.after(() => window.unmount());
   const input = window.document.querySelector('input');

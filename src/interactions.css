@@ -1,4 +1,11 @@
 /* Interaction authoring uses the shared monochrome platform palette. */
+.component-variable-dialog { width: 440px; max-height: calc(100dvh - 32px); }
+.component-variable-dialog form { display: flex; flex-direction: column; min-height: 0; }
+.component-variable-fields { padding: 16px 20px; overflow-y: auto; }
+.component-variable-fields input, .component-variable-fields select, .component-variable-fields textarea { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--studio-200); border-radius: 6px; color: var(--studio-950); background: var(--studio-0); font: inherit; font-size: 12px; }
+.component-variable-fields textarea { resize: vertical; }
+.component-variable-fields :is(input, select, textarea):focus { outline: 2px solid var(--studio-400); outline-offset: 1px; }
+.component-variable-footer { display: flex; justify-content: flex-end; flex-shrink: 0; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--studio-100); }
 .interaction-studio { width: min(1440px, calc(100vw - 48px)); max-width: none; height: min(960px, calc(100dvh - 48px)); max-height: none; overflow: hidden; border: 1px solid var(--studio-200); border-radius: 12px; padding: 0; color: var(--studio-950); background: var(--studio-0); box-shadow: 0 28px 100px rgb(0 0 0 / 22.0%); }
 .interaction-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 12px 18px; border-bottom: 1px solid var(--studio-100); }
 .interaction-header h2 { display: flex; align-items: center; gap: 9px; margin: 0; font-size: 16px; font-weight: 600; }

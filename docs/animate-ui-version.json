@@ -1,0 +1,171 @@
+{
+  "release": "2.1.2",
+  "commit": "e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72",
+  "reactPackage": "2.0.0",
+  "checkedAt": "2026-10-21",
+  "registryFiles": [
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/gradient/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/gradient/index.tsx",
+      "upstreamSha256": "285a43f203ee1d7b8e40782080a7db2af2dd589d1644b77d9a7b890ddc49e3bd",
+      "localSha256": "833e39965c7891bc84c0e675c5743b766853fcbe180431bf1f799fccdcbca9d3",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/fireworks/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/fireworks/index.tsx",
+      "upstreamSha256": "7047d8fc45c5f2781d2d20f0b5a4123306f681b4bd02df505b7eabd5c3e4936e",
+      "localSha256": "f36596931b4c55a675177332437449126abd690e26d234ea31deeffc0329864d",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/stars/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/stars/index.tsx",
+      "upstreamSha256": "c9b1710fb6ab7d8cb8e7cbc5d4cafdbf8d97e02a16ff93d1d95e4a4114acf602",
+      "localSha256": "0d963d9a2e4f0d66bdf9dea82dcd2c9ed081c32d6bb4e285f0a2fc80dd9a535b",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/hexagon/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/hexagon/index.tsx",
+      "upstreamSha256": "6c3a6b0169cf6edd7c6ff194e036e7538e1517de832ef158a7044f72847d7d1b",
+      "localSha256": "480d55d7d028700dcb6a173351b16e0820da35a9d1c2988f7bb6938b64b0125b",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/bubble/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/bubble/index.tsx",
+      "upstreamSha256": "3c9c6d010407ad8d3ec1138d7a7420100a95f465de950b8cca96a3ee4b5bd694",
+      "localSha256": "575229c82f9f4767294b378cd718dae51786a26ad850e23dd407d772cd01a395",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/gravity-stars/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/gravity-stars/index.tsx",
+      "upstreamSha256": "1290f03057c84135387961956c8da9e13796031b4cbc3036835fb1b2ae391d95",
+      "localSha256": "91a4a90ce2287f4baca20ad0f9bd380fe6917da421caa2e4ba4edce895f55060",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/glyph/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/glyph/index.tsx",
+      "upstreamSha256": "6ee6d161dcfcd49569dd5b28a1113bcdf3d0c1e4d01683d3b4c6ccd7b4b76681",
+      "localSha256": "fe2d06f11368df35ed7809676e2b90e5eab683507e347dd0bcfd227ab9ff5f2d",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/topography/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/topography/index.tsx",
+      "upstreamSha256": "ec12c38d535885470f84829a9c21c217cfd7f8caa0ddb7b316cf866da971a471",
+      "localSha256": "5f0d323976bb330b7ab86d12b7b45fa181fab043c37b3e134a25c3fdeb99ee08",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/backgrounds/hole/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/hole/index.tsx",
+      "upstreamSha256": "564b70811435cbf659d02bae8487c82ca760552483ef590d7821c1bf3aeeae37",
+      "localSha256": "9a2e5c0fe64bda755657cc7ebc088f9029b80350d2953011f88e693ae55aae52",
+      "localAdaptations": [
+        "cn import path",
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/buttons/theme-toggler/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/buttons/theme-toggler/index.tsx",
+      "upstreamSha256": "8a1204b9ff827d8cf92d476eb3a397a9956add84d3b8947e53f6086dd5902e12",
+      "localSha256": "02ff4cd4f331f3659a3a4bbc5ea93490e3dd3242a93cc90ebee9fbd70ab8b0bb",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/buttons/liquid/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/buttons/liquid/index.tsx",
+      "upstreamSha256": "27692e8364332244d5695881d0e38150f8382c96c70637c1c73e31c5e35a8cb5",
+      "localSha256": "03b6417114c7a03bec7cb78ffdf59bfd850879ac3de90754cd698d29d27371f6",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/buttons/flip/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/buttons/flip/index.tsx",
+      "upstreamSha256": "03ccd53a87c4abc288ebe997c38ffa7b343cdaf10201acfe4dd612c2945b96b4",
+      "localSha256": "0cf3162f03517fbb219262abb3e9a6cc8dc9718bfa2c1ec9b20b5268b55066cf",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/buttons/github-stars/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/buttons/github-stars/index.tsx",
+      "upstreamSha256": "9c11d82f5ed61a1af8116c6605709da76ef5b3b4bf4cbfe008a18dac243489f5",
+      "localSha256": "e236cc91186858eb0e6f34f450e7346d7754ba91ff9bb1652a7525f54aa150ec",
+      "localAdaptations": [
+        "cn import path"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/code-block/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/components/code-block/index.tsx",
+      "upstreamSha256": "7704b6dbfa58ea004ca656b677b09e6d92be9e01ba2bcd21cd7e10a52ea15da1",
+      "localSha256": "62281290557b167b042ff702c4d51b5f31ae1e1d630e8b1d7cea6c9773f6f6b5",
+      "localAdaptations": [
+        "cn import path",
+        "Lucide copy/check icons"
+      ]
+    },
+    {
+      "file": "src/components/animate-ui/registry/page-transition/index.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/components/page-transition/index.tsx",
+      "upstreamSha256": "af6442fed307e8f38ea2efeff66157e1b893b234ad37e624cf56cad718733197",
+      "localSha256": "f3da25ed6b18d58fe28d6d444fdb0b6c676aeaba26162f888a7b5bfc53d82c0c",
+      "localAdaptations": [
+        "Use explicit pageKey instead of Next.js usePathname; no router dependency"
+      ]
+    }
+  ],
+  "animationControls": {
+    "file": "shared/official-animation-controls.json",
+    "sourceCommit": "e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72",
+    "defaults": "Pinned official demo controls; supplemental documented primitive options",
+    "validation": "shared/animation-settings.mjs",
+    "supplementalSettings": "shared/official-animation-overrides.json",
+    "syncScript": "scripts/sync-official-controls.mjs"
+  },
+  "demoFiles": [
+    {
+      "file": "src/components/OfficialMotionGrid.tsx",
+      "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/demos/animate-ui/motion-grid.tsx",
+      "upstreamSha256": "1fa8e643961218c6d806b6428f34e271c4d59f57070c6d492b2eeb386503bf73",
+      "localSha256": "57b019036ebb27e46bb49d4c9a77c7380b2dbd16ba3c70d3b9473c643ba6ca25",
+      "localAdaptations": [
+        "Read duration/animate from saved block settings",
+        "Pause state loop when animate is false"
+      ]
+    }
+  ]
+}

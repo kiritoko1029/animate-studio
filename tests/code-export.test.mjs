@@ -6,6 +6,10 @@ import { build } from 'esbuild';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { parse, compileScript, compileStyle } from 'vue/compiler-sfc';
 import { createBlock, createDocument, componentTypes } from '../src/model.ts';
+import { canvasPresets } from '../shared/canvas-sizes.mjs';
+import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
+import { alignFrame, clampFrame } from '../src/lib/canvas-bounds.ts';
+import { moveBlockLayer } from '../src/lib/layers.ts';
 import { applyPageTheme, contrastingText, getTheme, saveCustomTheme } from '../src/lib/themes.ts';
 import { generateCode } from '../src/lib/code-export/generate.ts';
 
@@ -31,6 +35,7 @@ test('only embedded previews delegate document scrolling to the editor', t => {
 
 function allComponents() {
   const document = applyPageTheme(createDocument(true), 'tech-blue');
+  document.settings.maxWidth = 1000; // This fixture uses two fixed 500 px columns.
   document.blocks = componentTypes.map((type, i) => ({ ...createBlock(type), frame: { x: i % 2 * 500, y: Math.floor(i / 2) * 380, width: 500, height: 370 } }));
   document.settings.canvasHeight = 5800;
   document.blocks.find(block => block.type === 'pagination').props.max = 10;
@@ -104,6 +109,70 @@ async function mount(format, document, copies = 1) {
 }
 
 for (const format of ['html', 'vue', 'react']) {
+  test(`${format}: overlapping components retain the saved layer order`, async t => {
+    let page = createDocument(true);
+    page.blocks = ['background', 'foreground', 'middle'].map(id => ({ ...createBlock('card'), id, frame: { x: 40, y: 40, width: 400, height: 300 } }));
+    page = moveBlockLayer(page, 'foreground', 'top');
+    const fixture = await mount(format, page);
+    t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
+    const frames = [...fixture.root.querySelectorAll('[data-block-id]')];
+    assert.deepEqual(frames.map(frame => [frame.dataset.blockId, frame.style.zIndex]), [['background','1'],['middle','2'],['foreground','3']]);
+    assert.ok(frames.every(frame => frame.style.left === '40px' && frame.style.top === '40px'));
+  });
+
+  test(`${format}: aligned components retain page margins without a second padding offset`, async t => {
+    const page = createDocument(true);
+    page.settings.padding = 37;
+    const original = { x: 0, y: 100, width: 240, height: 100 };
+    page.blocks = ['left', 'center', 'right'].map(alignment => ({ ...createBlock('button'), frame: alignFrame(original, page.settings, alignment) }));
+    page.blocks.push({ ...createBlock('navbar'), frame: clampFrame({ x: 0, y: 250, width: 1920, height: 85 }, page.settings) });
+    const fixture = await mount(format, page);
+    t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
+    const frames = [...fixture.root.querySelectorAll('[data-block-id]')];
+    assert.deepEqual(frames.map(frame => frame.style.left), ['37px', '840px', '1643px', '37px']);
+    assert.deepEqual(frames.map(frame => frame.style.top), ['100px', '100px', '100px', '250px']);
+    assert.equal(frames[3].style.width, '1846px');
+    assert.equal(fixture.root.querySelector('.free-canvas-margin'), null);
+    assert.deepEqual(fixture.errors, []);
+  });
+
+  test(`${format}: navbar icons, custom logos, hidden marks and legacy defaults render consistently`, async t => {
+    const page = createDocument(true);
+    const choices = [{}, ...Object.keys(navbarIcons).map(brandIcon => ({ brandIcon })), { brandIcon: 'none' },
+      { brandIcon: 'image', imageUrl: '/landscape.svg' }, { brandIcon: 'image', imageUrl: 'javascript:alert(1)' }];
+    page.blocks = choices.map((props, index) => ({
+      ...createBlock('navbar'), id: `navbar-${index}`,
+      props: { title: `品牌 ${index}`, items: '产品|#products', ...props },
+      frame: { x: 0, y: index * 90, width: 1000, height: 85 },
+    }));
+    const fixture = await mount(format, page);
+    t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
+    const brands = fixture.root.querySelectorAll('.as-page-brand');
+    assert.equal(brands.length, choices.length);
+    for (let index = 0; index < brands.length; index++) {
+      const brand = brands[index], choice = choices[index].brandIcon ?? 'leaf';
+      assert.equal(brand.querySelector('.as-page-brand-title').textContent, `品牌 ${index}`);
+      const mark = brand.querySelector('.as-page-brand-mark');
+      if (choice === 'none') { assert.equal(mark, null); continue; }
+      assert.ok(mark);
+      const fallback = mark.querySelector('.as-page-brand-placeholder');
+      assert.equal(fallback.querySelector('path').getAttribute('d'), navbarIcons[choice].path);
+      if (choices[index].imageUrl === '/landscape.svg') {
+        const logo = mark.querySelector('img');
+        assert.equal(logo.getAttribute('src'), resources.assets['/landscape.svg']);
+        assert.equal(logo.hidden, false);
+        assert.equal(fallback.hidden, true);
+        await fixture.act(() => logo.dispatchEvent(new fixture.window.Event('error')));
+        assert.equal(logo.hidden, true);
+        assert.equal(fallback.hidden, false);
+      } else {
+        assert.equal(mark.querySelector('img'), null, 'blank or unsafe image URLs cannot create image requests');
+        assert.equal(fallback.hidden, false);
+      }
+    }
+    assert.deepEqual(fixture.errors, []);
+  });
+
   test(`${format}: Animate page themes carry their canvas and readable control colors into exports`, async t => {
     for (const id of ['animate-light', 'animate-dark']) {
       const page = applyPageTheme(createDocument(), id);
@@ -120,6 +189,23 @@ for (const format of ['html', 'vue', 'react']) {
 }
 
 for (const format of ['html', 'vue', 'react']) {
+  test(`${format}: resolution presets retain design dimensions and scale to the available preview width`, async t => {
+    for (const { width, height } of canvasPresets) {
+      const page = createDocument(true);
+      page.settings = { ...page.settings, maxWidth: width, canvasHeight: height };
+      page.blocks = [{ ...createBlock('button'), frame: { x: width - 240, y: height - 100, width: 240, height: 100 } }];
+      const fixture = await mount(format, page);
+      t.after(() => fixture.window.close());
+      const canvas = fixture.root.querySelector('.as-page-free-canvas');
+      assert.equal(canvas.style.width, `${width}px`);
+      assert.equal(canvas.style.height, `${height}px`);
+      assert.equal(canvas.style.transform, `scale(${500 / width})`);
+      assert.equal(fixture.root.querySelector('[data-block-type="button"]').style.left, `${width - 240}px`);
+      assert.ok(Math.abs(parseFloat(fixture.root.querySelector('.as-page-free-scaled-shell').style.height) - height * 500 / width) < 1e-7);
+      if (format !== 'html') fixture.window.unmountExport();
+    }
+  });
+
   test(`${format}: all ${componentTypes.length} components compile/mount and preserve theme, geometry, assets and initial form state`, async t => {
     const document = allComponents();
     const theme = { ...getTheme('midnight'), id: 'custom-export', name: '导出主题', accent: '#ffaabb' };

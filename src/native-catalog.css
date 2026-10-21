@@ -1,0 +1,79 @@
+/* v2 primitives own their motion. These rules supply the existing page theme. */
+.native-catalog { min-height: 0; }
+.native-catalog .as-page-catalog-button { transition: background-color .15s, box-shadow .15s; }
+.native-catalog .as-page-catalog-button:active { transform: none; }
+.native-catalog :is([data-state=on],[aria-pressed=true]) { box-shadow: 0 0 0 2px var(--page-accent); }
+.native-catalog-background { position: relative; width: 100%; height: 100%; min-height: 220px; overflow: hidden; border-radius: var(--theme-card-radius,12px); }
+.native-catalog:has(.native-catalog-background) { height: 100%; }
+.native-catalog-background-copy { position: absolute; inset: 0; z-index: 1; padding: 28px; pointer-events: none; }
+.native-catalog-background-copy h3 { color: inherit; }
+.native-catalog-background-copy p { color: inherit; opacity: .8; }
+.native-catalog-background[data-slot="gradient-background"],.native-catalog-background[data-slot="stars-background"],.native-catalog-background[data-slot="hole-background"],.native-catalog-background[data-slot="fireworks-background"] { color: white; background-color: #101824; }
+.native-catalog-overlay { position: fixed; inset: 0; background:#0000001a;backdrop-filter:blur(4px); z-index: 100; }
+.native-catalog-dialog { inset: 50% auto auto 50%; translate: -50% -50%; margin: 0; z-index: 101; }
+.native-catalog-dialog--right { inset: 0 0 0 auto; translate: none; height: 100dvh; }
+.native-catalog-dialog--left { inset: 0 auto 0 0; translate: none; height: 100dvh; }
+.native-catalog-dialog--bottom { inset: auto 0 0; translate: none; margin: 0 auto; }
+.native-catalog-popup { z-index: 110; position: relative; }
+.native-catalog-popup [data-highlighted] { background: var(--page-panel,#edf5ef); outline: none; }
+.native-menubar { width: fit-content; max-width: 100%; gap: 3px; padding: 4px; border-radius: 8px; }
+.native-menubar-trigger { position: relative; border: 0; border-radius: 4px; padding: 5px 9px; color: inherit; background: transparent; font: inherit; white-space: nowrap; cursor: pointer; }
+.native-menubar-trigger:hover,.native-menubar-trigger[aria-expanded=true] { background: var(--page-panel,#edf5ef); }
+.native-menubar-positioner { z-index: 110; outline: none; }
+.native-menubar-popup { width: max-content; min-width: 160px; max-width: min(320px,calc(100vw - 24px)); padding: 5px; outline: none; }
+.native-catalog-reveal { padding: 18px; margin-top: 12px; background: var(--page-panel,#f3f7f2); border-radius: 10px; }
+.native-catalog-avatars { display: flex; padding: 8px; }
+.native-catalog-avatars > * { margin-left: -8px; }
+.native-catalog-avatars span[title] { display: grid; place-items: center; width: 42px; height: 42px; border: 2px solid var(--page-surface,#fff); border-radius: 50%; background: var(--page-accent); color: var(--page-on-accent,#fff); font-size: 13px; }
+.native-catalog-otp { display: flex; gap: 6px; margin-top: 8px; }
+.native-catalog-otp > span { display: grid; place-items: center; width: 34px; height: 42px; border: 1px solid var(--page-border); border-radius: 6px; font-size: 22px; }
+.native-catalog-otp > span[data-active=true] { outline: 2px solid var(--page-accent); }
+.native-combobox-option { display:block;width:100%;padding:8px 12px;text-align:left;border-radius:6px; }
+.native-combobox-option:hover,.native-combobox-option:focus-visible { background:var(--page-panel,#edf5ef); }
+.native-catalog-toast { z-index:120; }
+.native-catalog-question { padding:18px;border:1px solid var(--page-border);border-radius:12px; }
+.native-code-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.native-code-block { margin-top:10px;overflow:auto;border-radius:8px;font:13px/1.7 monospace;text-align:left; }
+.native-code-block pre { padding:16px; }
+.native-grid-highlight { background:var(--page-panel);border-radius:8px; }
+
+.native-catalog-background-frame { position:relative;height:100%;min-height:220px;color:#fff; }
+.native-catalog-background-frame--hexagonBackground { color:var(--page-ink,#26382f); }
+
+/* Fixed editor frames provide a real local height to canvas/WebGL and image-zoom renderers. */
+.page-block--bounded:has(.native-catalog-background-frame) > .page-block-content,
+.page-block--bounded:has(.native-image-zoom) > .page-block-content { height:100%;min-height:0; }
+.page-block--bounded .native-catalog:has(.native-image-zoom),
+.page-block--bounded .native-catalog-background-frame,
+.page-block--bounded .native-catalog-background { height:100%;min-height:0; }
+.native-image-zoom img { display:block;width:100%;height:100%;object-fit:cover; }
+.native-scroll-progress { display:flex;align-items:center;gap:10px; }
+.native-scroll-progress .native-page-progress { flex:1;min-width:0;margin:0; }
+.native-scroll-progress output { min-width:3em;text-align:right;font-size:12px;font-variant-numeric:tabular-nums; }
+.native-scrolling-number { margin:auto;font-variant-numeric:tabular-nums; }
+.native-scrolling-item { display:flex;align-items:center;justify-content:center;color:var(--page-muted);flex-shrink:0; }
+.native-scrolling-highlight { background:var(--page-panel,#eef1ef);border-radius:6px; }
+.native-popup-close { position:absolute;right:12px;top:10px;background:none;border:0;font-size:22px;cursor:pointer; }
+.native-catalog-dialog--top { inset:0 0 auto;translate:none;margin:0 auto; }
+.native-drawer-viewport { position:fixed;inset:0;z-index:101;pointer-events:none; }
+.native-drawer-viewport > * { pointer-events:auto; }
+.as-page-catalog-toggle-group[aria-orientation=vertical] { flex-direction:column; }
+.native-toast-viewport { pointer-events:none;position:fixed;inset:auto 16px 16px auto;z-index:200;width:min(384px,calc(100vw - 32px));outline:none; }
+.native-toast { --gap:.75rem;--height:var(--toast-frontmost-height,var(--toast-height));height:var(--height);pointer-events:auto;position:absolute;right:0;bottom:0;z-index:calc(1000 - var(--toast-index));width:100%;transform-origin:bottom;background:var(--page-surface,#fff);color:var(--page-ink,#222);border:1px solid var(--page-border,#ddd);border-radius:16px;box-shadow:0 10px 24px #0002; }
+.native-toast[data-expanded] { height:var(--toast-height); }.native-toast[data-limited] { opacity:0; }
+.native-toast-content { display:flex;align-items:center;gap:12px;padding:16px;overflow:hidden;height:100%; }.native-toast-content > div { flex:1; }.native-toast-content[data-behind] { opacity:0; }.native-toast-content[data-expanded] { opacity:1; }
+.native-sidebar-container { overflow:hidden;margin-top:12px;border:1px solid var(--page-border);border-radius:10px; }.native-sidebar-container h3 { padding:10px;white-space:nowrap; }.native-sidebar-container [data-sidebar=menu-button] { display:flex;align-items:center;gap:10px;padding:10px;white-space:nowrap;min-width:0; }.native-sidebar-container [data-sidebar=menu-button] svg { flex-shrink:0; }.native-sidebar-container[data-state=collapsed] [data-sidebar=menu-button] span { opacity:0; }.native-sidebar-highlight { background:var(--page-panel);border-radius:6px; }
+.native-combobox-option { display:flex;align-items:center;gap:8px; }.native-combobox-option[data-highlighted] { background:var(--page-panel); }
+.native-questionnaire { display:flex;flex-direction:column;gap:16px; }.native-questionnaire fieldset { min-width:0; }.native-question-choice { display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--page-border);border-radius:8px;margin:8px 0;cursor:pointer; }.native-question-choice[data-checked] { background:var(--page-panel);border-color:var(--page-accent); }.native-question-choice input { position:absolute;opacity:0;width:1px;height:1px; }.native-question-choice [data-slot=questionnaire-choice-indicator] { width:16px;height:16px;border:1px solid currentColor;border-radius:50%;display:grid;place-items:center; }.native-question-choice [data-slot=questionnaire-choice-indicator-dot] { width:8px;height:8px;background:currentColor;border-radius:50%; }.native-questionnaire [hidden] { display:none; }
+.native-scroll-example { position:relative;width:100%;height:288px;max-height:100%;overflow:hidden;border:1px solid var(--page-border);border-radius:12px; }.native-scroll-example-container { width:100%;height:100%; }.native-scroll-example-bar { position:absolute;inset:auto 12px 12px;z-index:2; }.native-scroll-example-fill { height:6px;background:currentColor;border-radius:4px; }.native-scroll-example-panel { width:100%;height:288px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:12px; }.native-scroll-example-panel > div { width:100%;height:100%;background:var(--page-panel);border-radius:12px; }
+.official-effect-content { width:100%;height:100%;min-width:0; }.official-highlight { border-radius:8px;background:var(--page-panel); }.official-effect-particle { width:4px;height:4px;border-radius:50%;background:var(--page-accent); }.official-scroll-fade { max-height:100%;overflow:auto; }.official-cursor-label { padding:4px 8px;border-radius:6px;background:var(--page-ink);color:var(--page-surface);font-size:12px; }
+.page-block--bounded:has(.official-effect-content) > div,.page-block--bounded .official-effect-content > .page-block-content { height:100%; }
+
+.page-block--bounded .official-effect-boundary { height:100%;min-height:0; }
+
+.native-drawer-overlay { background:#0000004d;backdrop-filter:blur(8px); }
+.native-catalog .as-page-catalog-pinned-row { animation:none; }
+.native-catalog .as-page-catalog-nav a,.native-catalog .as-page-catalog-nav a:hover { transform:none;transition:background-color .2s; }
+
+.native-navigation-popup { position:relative;width:var(--popup-width);height:var(--popup-height);background:var(--page-surface,#fff);color:var(--page-ink,#222);border:1px solid var(--page-border,#ddd);border-radius:10px;box-shadow:0 8px 30px #0002;transform-origin:var(--transform-origin); }
+.native-navigation-viewport { position:relative;width:100%;height:100%;overflow:hidden; }.native-navigation-content { padding:16px;min-width:200px; }.native-navigation-content a { display:block;padding:8px 12px; }

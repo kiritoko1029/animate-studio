@@ -15,10 +15,10 @@ Build a page by placing components on the canvas, editing their properties, and 
 - **Themes** — a monochrome light/dark workbench, eight page presets, independent component themes, and a custom theme designer.
 - **Component interactions** — shared variables, property bindings, expressions, conditional actions, and click/change events. Expression suggestions use the variables defined in your page.
 - **JavaScript editor** — syntax highlighting, autocomplete, syntax checks, test runs, and runtime logs. Built-in helpers include `ctx.fetchJSON`, `ctx.setState`, `ctx.notify`, and `ctx.sleep`.
-- **Portable exports** — standalone HTML, native Vue/React components, and JSON for continued editing. Exported pages do not require Animate UI, Motion, Radix, or Tailwind.
+- **Portable exports** — standalone HTML, Vue/React wrappers around an embedded page, and JSON for continued editing. Exported pages do not require Animate UI, Motion, Radix, or Tailwind.
 - **Local or Cloudflare hosting** — Express with file storage locally, or a Void-powered Cloudflare Worker with an independent Durable Object for each browser workspace.
 
-Selected workbench controls and animation primitives use official Animate UI v1 registry source. The canvas catalog also includes local adaptations for portable exports; it is not a promise of identical rendering or API coverage. See the [component coverage reference](docs/animate-ui-coverage.md).
+Workbench controls and canvas primitives use `@animate-ui/react` 2.0.0 (the latest npm release), Motion 14.5.0, and registry backgrounds/buttons pinned to Animate UI v2.1.2. Canvas, plain previews, and previews with bindings/scripts use the same official React primitives and default motion. The property panel exposes supported effect settings. HTML downloads embed this runtime; Vue/React downloads wrap the same isolated page in an iframe. See the [version record](docs/animate-ui-version.json) and [component coverage reference](docs/animate-ui-coverage.md).
 
 ## Quick start
 
@@ -32,6 +32,8 @@ npm run dev
 ```
 
 Open **http://127.0.0.1:4173**. The local server binds to the loopback address by default. Edits are saved to `data/page.json`; restarting the server preserves them.
+
+`npm run dev` watches the server and its imported validation/schema files and restarts the backend when they change. Vite handles frontend hot updates. This keeps new editor properties in sync with the save API during development. `npm start` runs without the watcher.
 
 To run the local production build:
 

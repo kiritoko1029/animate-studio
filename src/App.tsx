@@ -1,3 +1,4 @@
+import { AnimationSettings } from './components/AnimationSettings';
 import { Tabs, TabsList, TabsTrigger } from './components/animate-ui/components/radix/tabs';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './components/animate-ui/components/radix/dropdown-menu';
 import { Switch } from './components/animate-ui/components/radix/switch';
@@ -6,22 +7,33 @@ import { StudioButton, StudioDialog, StudioTooltip } from './components/StudioUI
 import { catalogEffects } from './lib/catalog-effects';
 import { CatalogMiniature } from './components/CatalogBlock';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, pointerWithin, closestCenter, type DragEndEvent, type CollisionDetection } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
+import { DndContext, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, pointerWithin, closestCenter, type DragEndEvent, type DragMoveEvent, type DragStartEvent, type CollisionDetection } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Code2, Columns2, Copy, Database, Download, ExternalLink, Eye, FilePlus2, GripVertical, Image, Layers, LayoutDashboard, LayoutTemplate, ListCollapse, LoaderCircle, Menu, Monitor, MousePointer2, PanelBottom, PanelLeft, PanelTop, Play, Plus, Redo2, RotateCcw, Search, Settings2, Smartphone, Sparkles, Square, SquareMousePointer, Tag, TextCursorInput, ToggleLeft, Trash2, Type, Undo2, Upload, X, AlertCircle, AlignLeft, AlignCenter, AlignRight, Minus, type LucideIcon } from 'lucide-react';
 import { CheckSquare, CircleDot, SlidersHorizontal, UserRound, ChartNoAxesCombined, Table2, ListOrdered, Quote, CreditCard, Ellipsis, Star, Text } from 'lucide-react';
 import { applyPageTheme, deleteCustomTheme, getTheme, prepareBlockForPage, saveCustomTheme, type CustomTheme, type ThemeId } from './lib/themes';
 import { ThemePicker } from './components/ThemePicker';
+import navbarIcons from '../shared/navbar-icons.json';
 import { ThemeDesigner } from './components/ThemeDesigner';
 import { LibraryMiniature } from './components/LibraryMiniature';
 import { catalog, extendedCatalog, isExtendedComponent, createBlock, createDocument, blockName, defaultFrame, toFreeDocument, type Block, type BlockFrame, type ComponentType, type PageDocument } from './model';
 import { PageRenderer } from './components/PageRenderer';
 import { FreeCanvas } from './components/FreeCanvas';
+import { CanvasSizeControls, DimensionField } from './components/CanvasSizeControls';
+import { alignFrame, canvasBounds, clampFrame, type HorizontalAlignment } from './lib/canvas-bounds';
+import { ResizableStudioLayout } from './components/ResizableStudioLayout';
+import { PaletteDragPreview } from './components/PaletteDragPreview';
+import { canvasDropPosition, paletteDropPointer, pointInViewport } from './lib/palette-drag';
+import { moveBlockLayer, type LayerAction } from './lib/layers';
+import type { InspectorTab } from './components/CanvasComponentMenu';
+import type { PageSettingsSection } from './components/CanvasPageMenu';
+import { ComponentVariableDialog } from './components/ComponentVariableDialog';
+import { createComponentVariable } from './lib/interactions/component-variable';
 import { createAutosave } from './lib/autosave';
 import { canvasModifierLabel } from './lib/canvas-shortcuts';
 import { fetchPageApi } from './lib/page-api';
-import { placeBlock, insertBlockAfter } from './lib/layout';
+import { placeBlock, insertBlockAfter, fillBlockWidth, type PlacementResult } from './lib/layout';
 import { downloadCode } from './lib/code-export/download';
 import type { Format } from './lib/code-export/generate';
 
@@ -37,15 +49,11 @@ const icons: Record<ComponentType, LucideIcon> = { ...Object.fromEntries(Object.
 const collision: CollisionDetection = args => {
   const viewport = window.document.querySelector('[data-canvas-viewport]')?.getBoundingClientRect();
   const point = args.pointerCoordinates;
-  const hits = pointerWithin(args).filter(hit => hit.id !== 'canvas' || !point || !viewport || (point.x >= viewport.left && point.x <= viewport.right && point.y >= viewport.top && point.y <= viewport.bottom));
-  if (hits.length) return hits.filter(hit=>hit.id!=='canvas').length ? hits.filter(hit=>hit.id!=='canvas') : hits;
+  if (point && viewport && pointInViewport(point, viewport) && args.droppableContainers.some(container => container.id === 'canvas')) return [{ id: 'canvas', data: { pointerCoordinates: point } }];
+  const hits = pointerWithin(args).filter(hit => hit.id !== 'canvas');
+  if (hits.length) return hits;
   return args.pointerCoordinates ? [] : closestCenter(args);
 };
-function clampFrame(frame:BlockFrame,settings:PageDocument['settings']):BlockFrame {
-  const width=Math.min(settings.maxWidth,Math.max(40,frame.width));
-  const height=Math.min(settings.canvasHeight||1400,3000,Math.max(32,frame.height));
-  return {width,height,x:Math.max(0,Math.min(frame.x,settings.maxWidth-width)),y:Math.max(0,Math.min(frame.y,(settings.canvasHeight||1400)-height))};
-}
 
 function IconButton({label,children,onClick,disabled=false,active=false,className=''}:{label:string;children:ReactNode;onClick?:()=>void;disabled?:boolean;active?:boolean;className?:string}) {
   return <StudioTooltip label={label}><StudioButton type="button" className={`icon-button ${active?'active':''} ${className}`} aria-label={label} onClick={onClick} disabled={disabled}>{children}</StudioButton></StudioTooltip>;
@@ -95,31 +103,50 @@ const itemHints: Partial<Record<ComponentType, string>> = {
   breadcrumb:'每行一级，格式：名称 | 链接；最后一级为当前页面。',
 };
 
-function Inspector({document,studioTheme,selected,onUpdate,onFrame,onSettings,onPageTheme,onDesignTheme,onDeleteTheme,onClose,onDelete,onDuplicate,onBlockChange,onOpenStudio}:{document:PageDocument;studioTheme:'light'|'dark';selected:Block|undefined;onUpdate:(props:Partial<Block['props']>)=>void;onFrame:(frame:BlockFrame)=>void;onSettings:(settings:Partial<PageDocument['settings']>)=>void;onPageTheme:(theme:ThemeId)=>void;onDesignTheme:(scope:'component'|'page',theme?:ThemeId)=>void;onDeleteTheme:(theme:ThemeId)=>void;onClose:()=>void;onDelete:()=>void;onDuplicate:()=>void;onBlockChange:(block:Block)=>void;onOpenStudio:(target:InteractionStudioTarget)=>void}) {
+type InspectorRequest = { tab: InspectorTab | 'page'; section?: PageSettingsSection; sequence: number };
+
+function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSettings,onPageTheme,onDesignTheme,onDeleteTheme,onClose,onDelete,onDuplicate,onReset,onBlockChange,onOpenStudio}:{request:InspectorRequest|null;document:PageDocument;studioTheme:'light'|'dark';selected:Block|undefined;onUpdate:(props:Partial<Block['props']>)=>void;onFrame:(frame:BlockFrame)=>void;onSettings:(settings:Partial<PageDocument['settings']>)=>void;onPageTheme:(theme:ThemeId)=>void;onDesignTheme:(scope:'component'|'page',theme?:ThemeId)=>void;onDeleteTheme:(theme:ThemeId)=>void;onClose:()=>void;onDelete:()=>void;onDuplicate:()=>void;onReset:()=>void;onBlockChange:(block:Block)=>void;onOpenStudio:(target:InteractionStudioTarget)=>void}) {
   const [tab,setTab]=useState<'component'|'page'|'logic'>('component');
-  useEffect(()=>{if(selected)setTab(tab=>tab==='page'?'component':tab);},[selected?.id]);
+  useEffect(()=>{if(selected){setTab(tab=>tab==='page'?'component':tab);window.document.getElementById('inspector-panel')?.scrollTo({top:0});}},[selected?.id]);
+  useEffect(()=>{
+    if(!request)return;
+    setTab(request.tab);
+    const frame=requestAnimationFrame(()=>{
+      window.document.getElementById(`inspector-tab-${request.tab}`)?.focus({preventScroll:true});
+      window.document.getElementById('inspector-panel')?.scrollTo({top:0});
+      if(request.tab==='page'&&request.section){
+        const section=window.document.querySelector<HTMLElement>(`[data-page-setting="${request.section}"]`);
+        section?.scrollIntoView({block:'start'});
+        (section?.querySelector<HTMLElement>('input,select')??section?.querySelector<HTMLElement>('button'))?.focus({preventScroll:true});
+      }
+    });
+    return()=>cancelAnimationFrame(frame);
+  },[request]);
   const isComponent=(tab==='component'||tab==='logic') && !!selected;
   const p=selected?.props;
+  const bounds=canvasBounds(document.settings);
   const selectedTheme=getTheme(p?.theme??document.settings.theme,document.settings.customThemes);
   const selectedAccent=p?.accent??(p?.theme?selectedTheme.accent:document.settings.accent);
   const numericMax=selected?.type==='rating'?5:p?.max??(selected?.type==='pagination'?5:100);
   const initialValues: Partial<Record<ComponentType,number>>={slider:60,progress:72,rating:4,pagination:1};
   const numericValue=Math.min(numericMax,p?.value??(selected?initialValues[selected.type]??0:0));
-  return <aside className="inspector">
+  return <aside id="inspector-sidebar-panel" className="inspector">
     <div className="inspector-heading"><span><Settings2 size={15}/> 属性面板</span><IconButton label="收起属性面板" onClick={onClose}><X size={15}/></IconButton></div>
     <Tabs value={tab} onValueChange={value=>setTab(value as typeof tab)} className="studio-tab-root"><TabsList className="studio-tabs inspector-tabs" aria-label="属性面板分类"><TabsTrigger value="component" id="inspector-tab-component" aria-controls="inspector-panel">组件属性</TabsTrigger><TabsTrigger value="logic" id="inspector-tab-logic" aria-controls="inspector-panel" disabled={!selected}>组件联动</TabsTrigger><TabsTrigger value="page" id="inspector-tab-page" aria-controls="inspector-panel">页面设置</TabsTrigger></TabsList></Tabs>
     <div className="inspector-scroll" role="tabpanel" id="inspector-panel" aria-labelledby={`inspector-tab-${tab}`}>
-      {tab==='logic' && selected ? <ComponentInteractions key={selected.id} block={selected} page={document} onChange={onBlockChange} onOpenStudio={onOpenStudio}/> : isComponent && selected && p ? <>
-        <div className="inspected-component"><span className="inspected-icon">{(()=>{const I=icons[selected.type];return <I size={18}/>;})()}</span><span><strong>{blockName(selected.type)}</strong><small>{catalog.find(c=>c.type===selected.type)?.english}</small></span><span className="tiny-badge">已选中</span></div>
-        <ThemePicker customThemes={document.settings.customThemes??[]} onDesign={theme=>onDesignTheme('component',theme)} onDelete={onDeleteTheme} scope="component" value={p.theme} pageTheme={document.settings.theme} onChange={theme=>onUpdate({theme,accent:undefined,background:undefined,color:undefined,radius:undefined})}/>
-        {selected.frame&&<div className="property-section"><h3>位置与尺寸 <span className="precision-label">PX</span></h3><div className="geometry-fields">{(['x','y','width','height'] as const).map((key,i)=><Field key={key} label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]}><input type="number" aria-label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]} min={key==='width'?40:key==='height'?32:0} max={key==='width'?document.settings.maxWidth:key==='height'?3000:key==='x'?document.settings.maxWidth:document.settings.canvasHeight||1400} value={Math.round(selected.frame![key])} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n))onFrame({...selected.frame!,[key]:n});}}/></Field>)}</div><p className="field-hint">拖动组件自由摆放；拖动边框或角点调整大小。按住 Shift 暂停网格吸附。</p></div>}
+      {tab==='logic' && selected ? <ComponentInteractions key={`${selected.id}-${request?.sequence??0}`} block={selected} page={document} onChange={onBlockChange} onOpenStudio={onOpenStudio}/> : isComponent && selected && p ? <>
+        <div className="inspected-component"><span className="inspected-icon">{(()=>{const I=icons[selected.type];return <I size={18}/>;})()}</span><span><strong>{blockName(selected.type)}</strong><small>{catalog.find(c=>c.type===selected.type)?.english}</small></span><StudioTooltip label="恢复内容、样式与动效，保留位置、尺寸、图层和组件联动；支持撤销"><StudioButton className="inspector-reset" aria-label="恢复组件默认属性" onClick={onReset}><RotateCcw size={13}/><span>恢复默认</span></StudioButton></StudioTooltip></div>
         <div className="property-section"><h3>内容</h3>
           {p.title!==undefined&&<Field label="标题"><textarea rows={selected.type==='hero'?2:1} aria-label="标题" value={p.title} onChange={e=>onUpdate({title:e.target.value})} maxLength={300}/></Field>}
+          {selected.type==='navbar'&&<>
+            <Field label="品牌图标"><select aria-label="品牌图标" value={p.brandIcon??'leaf'} onChange={e=>onUpdate({brandIcon:e.target.value as Block['props']['brandIcon']})}>{Object.entries(navbarIcons).map(([value,icon])=><option key={value} value={value}>{icon.label}</option>)}<option value="none">不显示图标</option></select></Field>
+            {p.brandIcon==='image'&&<Field label="Logo 图片地址" hint="支持 https:// 图片链接或站内 / 路径，图片按比例显示。"><input aria-label="Logo 图片地址" type="url" value={p.imageUrl??''} placeholder="https://example.com/logo.svg" onChange={e=>onUpdate({imageUrl:e.target.value})} maxLength={2048}/></Field>}
+          </>}
           {p.label!==undefined&&<Field label={selected.type==='hero'?'顶部标签':'标签文字'}><input aria-label={selected.type==='hero'?'顶部标签':'标签文字'} value={p.label} onChange={e=>onUpdate({label:e.target.value})} maxLength={300}/></Field>}
           {p.text!==undefined&&<Field label={['input','textarea','select'].includes(selected.type)?'占位文字':selected.type==='statistic'?'显示数值':selected.type==='testimonial'?'评价内容':'描述文字'}><textarea rows={3} aria-label={['input','textarea','select'].includes(selected.type)?'占位文字':selected.type==='statistic'?'显示数值':selected.type==='testimonial'?'评价内容':'描述文字'} value={p.text} onChange={e=>onUpdate({text:e.target.value})} maxLength={10000}/></Field>}
           {selected.type==='hero'&&<Field label="按钮文字"><input aria-label="按钮文字" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})} maxLength={100}/></Field>}
           {p.url!==undefined&&<Field label="跳转链接" hint="支持 https://、mailto: 或 #锚点"><input aria-label="跳转链接" value={p.url} onChange={e=>onUpdate({url:e.target.value})} placeholder="https://example.com" maxLength={2000}/></Field>}
-          {p.imageUrl!==undefined&&<Field label="图片地址"><input aria-label="图片地址" value={p.imageUrl} onChange={e=>onUpdate({imageUrl:e.target.value})} maxLength={2000}/></Field>}
+          {selected.type!=='navbar'&&p.imageUrl!==undefined&&<Field label="图片地址"><input aria-label="图片地址" value={p.imageUrl} onChange={e=>onUpdate({imageUrl:e.target.value})} maxLength={2000}/></Field>}
           {p.items!==undefined&&<Field label={selected.type==='navbar'?'导航项目':'内容项目'} hint={itemHints[selected.type] || '每行一项，格式：标题 | 内容'}><textarea rows={7} aria-label="内容项目" value={p.items} onChange={e=>onUpdate({items:e.target.value})} maxLength={10000}/></Field>}
           {selected.type==='pricing'&&<Field label="价格文字"><input aria-label="价格文字" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})} maxLength={100}/></Field>}
           {['slider','progress','rating','pagination'].includes(selected.type)&&<>
@@ -128,9 +155,10 @@ function Inspector({document,studioTheme,selected,onUpdate,onFrame,onSettings,on
           </>}
           {['checkbox','switch','toggle','collapsible','sidebar'].includes(selected.type)&&<Field label="初始状态"><span className="studio-switch-field"><Switch aria-label="初始状态" checked={!!p.checked} onCheckedChange={checked=>onUpdate({checked})}/><span>{p.checked?'已开启':'已关闭'}</span></span></Field>}
           {['checkbox','radio','select','slider','rating','pagination','textarea'].includes(selected.type)&&<p className="field-hint">在预览中体验交互；预览操作不会改变这里保存的初始配置。</p>}
-          {isExtendedComponent(selected.type)&&<><a className="catalog-doc-link" href={extendedCatalog[selected.type].docs} target="_blank" rel="noreferrer">查看官方组件说明 <ExternalLink size={12}/></a>{'variants' in extendedCatalog[selected.type]&&<Field label="展示方式"><select aria-label="展示方式" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})}>{(extendedCatalog[selected.type] as {variants:string[][]}).variants.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>}{p.duration!==undefined&&<Field label="动画 / 展示时长（毫秒）"><input aria-label="动画 / 展示时长" type="number" min={100} max={30000} value={p.duration} onChange={e=>{if(e.target.value)onUpdate({duration:Math.max(100,Math.min(30000,Number(e.target.value)||1800))});}}/></Field>}{['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(selected.type)&&<Field label="显示数值"><input aria-label="显示数值" type="number" min={0} max={1000000000} value={p.value??0} onChange={e=>{if(e.target.value)onUpdate({value:Math.max(0,Math.min(1000000000,Number(e.target.value)||0))});}}/></Field>}{selected.type==='inputOtp'&&<Field label="验证码位数"><input aria-label="验证码位数" type="number" min={1} max={12} value={p.max??6} onChange={e=>onUpdate({max:Math.max(1,Math.min(12,Math.round(Number(e.target.value)||6)))})}/></Field>}</>}
+          {isExtendedComponent(selected.type)&&<><a className="catalog-doc-link" href={extendedCatalog[selected.type].docs} target="_blank" rel="noreferrer">查看官方组件说明 <ExternalLink size={12}/></a>{'variants' in extendedCatalog[selected.type]&&<Field label="展示方式"><select aria-label="展示方式" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})}>{(extendedCatalog[selected.type] as {variants:string[][]}).variants.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>}{['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(selected.type)&&<Field label="显示数值"><input aria-label="显示数值" type="number" min={0} max={1000000000} value={p.value??0} onChange={e=>{if(e.target.value)onUpdate({value:Math.max(0,Math.min(1000000000,Number(e.target.value)||0))});}}/></Field>}{selected.type==='inputOtp'&&<Field label="验证码位数"><input aria-label="验证码位数" type="number" min={1} max={12} value={p.max??6} onChange={e=>onUpdate({max:Math.max(1,Math.min(12,Math.round(Number(e.target.value)||6)))})}/></Field>}</>}
           {selected.type==='separator'&&<p className="muted-note">使用分割线，为内容留出呼吸的空间。</p>}
         </div>
+        <AnimationSettings key={`motion-${selected.id}`} type={selected.type} value={p.motion} onChange={motion=>onUpdate({motion})}/>{selected.frame&&<div className="property-section"><h3>位置与尺寸 <span className="precision-label">PX</span></h3><div className="geometry-fields">{(['x','y','width','height'] as const).map((key,i)=><Field key={key} label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]}><input type="number" aria-label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]} min={key==='width'?40:key==='height'?32:bounds.margin} max={key==='width'?bounds.width:key==='height'?Math.min(3000,bounds.height):key==='x'?bounds.right-selected.frame!.width:bounds.bottom-selected.frame!.height} value={Math.round(selected.frame![key])} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n))onFrame({...selected.frame!,[key]:n});}}/></Field>)}</div><p className="field-hint">拖动组件自由摆放；拖动边框或角点调整大小。按住 Shift 暂停网格吸附。</p></div>}
         <div className="property-section"><h3>外观</h3>
           {['hero','heading','text','button','badge'].includes(selected.type)&&<Field label="对齐方式"><span className="alignment-control">{(['left','center','right'] as const).map((align,i)=>{const I=[AlignLeft,AlignCenter,AlignRight][i];return <StudioButton type="button" key={align} className={(p.align||'left')===align?'active':''} aria-label={['左对齐','居中','右对齐'][i]} onClick={()=>onUpdate({align})}><I size={16}/></StudioButton>;})}</span></Field>}
           {(['heading','text','statistic','pricing'].includes(selected.type)||isExtendedComponent(selected.type)&&p.fontSize!==undefined)&&<RangeField label="文字大小" value={p.fontSize??(selected.type==='statistic'?36:selected.type==='pricing'?30:16)} min={10} max={96} onChange={fontSize=>onUpdate({fontSize})}/>}
@@ -141,12 +169,19 @@ function Inspector({document,studioTheme,selected,onUpdate,onFrame,onSettings,on
           <div className="color-fields"><ColorField label="背景颜色" value={p.background??((p.theme||document.settings.theme)?(['card','statistic','testimonial','pricing'].includes(selected.type)?selectedTheme.panel:selectedTheme.canvas):'#ffffff')} onChange={background=>onUpdate({background})}/><ColorField label="文字颜色" value={p.color??selectedTheme.text} onChange={color=>onUpdate({color})}/></div>
           {(p.background||p.color||p.accent||p.radius!==undefined)&&<StudioButton className="text-button" onClick={()=>onUpdate({background:undefined,color:undefined,accent:undefined,radius:undefined})}><RotateCcw size={12}/>恢复主题样式</StudioButton>}
         </div>
-        <div className="property-section"><h3><Sparkles size={13}/> 入场动效</h3><select aria-label="入场动效" value={p.animation||'none'} onChange={e=>onUpdate({animation:e.target.value as Block['props']['animation']})}><option value="none">无动效</option><option value="fade">轻柔渐入</option><option value="slide">向上浮现</option><option value="scale">弹性缩放</option></select><p className="field-hint">点击预览画布的播放按钮，重播动画。</p><Field label="附加动效"><select aria-label="附加动效" value={p.effect||'none'} onChange={e=>onUpdate({effect:e.target.value as Block['props']['effect']})}>{catalogEffects.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field></div>
+        <div className="property-section"><h3><Sparkles size={13}/> 入场动效</h3><select aria-label="入场动效" value={p.animation||'none'} onChange={e=>onUpdate({animation:e.target.value as Block['props']['animation']})}><option value="none">无动效</option><option value="fade">轻柔渐入</option><option value="slide">向上浮现</option><option value="scale">弹性缩放</option></select><p className="field-hint">点击预览画布的播放按钮，重播动画。</p><Field label="附加动效"><select aria-label="附加动效" value={p.effect||'none'} onChange={e=>onUpdate({effect:e.target.value as Block['props']['effect'],effectOptions:{}})}>{catalogEffects.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field></div>
+        {p.effect&&p.effect!=='none'&&<AnimationSettings extra type={`effect:${p.effect}`} value={p.effectOptions} onChange={effectOptions=>onUpdate({effectOptions})}/>}
+        <details key={selected.id} className="component-theme-disclosure">
+          <summary><ChevronRight size={14}/><strong>组件主题</strong><span>{p.theme?selectedTheme.name:'跟随页面'}</span></summary>
+          <ThemePicker customThemes={document.settings.customThemes??[]} onDesign={theme=>onDesignTheme('component',theme)} onDelete={onDeleteTheme} scope="component" value={p.theme} pageTheme={document.settings.theme} onChange={theme=>onUpdate({theme,accent:undefined,background:undefined,color:undefined,radius:undefined})}/>
+        </details>
       </> : tab==='component'?<div className="inspector-empty"><MousePointer2 size={28}/><h3>选择一个组件</h3><p>点击画布中的组件，<br/>在这里调整它的内容与样式。</p><StudioButton className="secondary-button" onClick={()=>setTab('page')}>调整页面设置</StudioButton></div>:<>
         <div className="page-setting-intro"><span className="inspected-icon"><LayoutTemplate size={20}/></span><h3>让页面拥有自己的风格</h3><p>统一页面风格，也可为组件设置独立主题。</p></div>
+        <CanvasSizeControls width={document.settings.maxWidth} height={document.settings.canvasHeight??1400} onChange={({width,height})=>onSettings({maxWidth:width,canvasHeight:height})}/>
+        <div className="property-section" data-page-setting="margin"><h3>页面边距</h3><DimensionField label="全局页边距（px）" value={document.settings.padding} min={0} max={120} onChange={padding=>onSettings({padding})}/><p className="field-hint">四边统一留白，范围 0–120 px。组件限制在虚线框内；增加边距会移回越界组件，过大的组件会缩小，可撤销。</p></div>
         <ThemePicker customThemes={document.settings.customThemes??[]} onDesign={theme=>onDesignTheme('page',theme)} onDelete={onDeleteTheme} scope="page" studioScheme={studioTheme} value={document.settings.theme} onChange={theme=>{if(theme)onPageTheme(theme);}}/>
-        <div className="property-section"><h3>自定义配色</h3><ColorField label="主题颜色" value={document.settings.accent} onChange={accent=>onSettings({accent})}/><ColorField label="页面背景" value={document.settings.background} onChange={background=>onSettings({background})}/></div>
-        <div className="property-section"><h3>布局</h3><RangeField label="画布宽度" value={document.settings.maxWidth} min={320} max={1600} onChange={maxWidth=>onSettings({maxWidth})}/><Field label="画布高度"><input type="number" aria-label="画布高度" min={320} max={6000} value={document.settings.canvasHeight||1400} onChange={e=>onSettings({canvasHeight:Math.min(6000,Math.max(320,Number(e.target.value)||320))})}/></Field></div>
+        <div className="property-section"><h3>自定义配色</h3><ColorField label="主题颜色" value={document.settings.accent} onChange={accent=>onSettings({accent})}/><div data-page-setting="background"><ColorField label="页面背景" value={document.settings.background} onChange={background=>onSettings({background})}/></div></div>
+
       </>}
     </div>
     {isComponent&&<div className="inspector-footer"><StudioButton className="secondary-button" onClick={onDuplicate}><Copy size={14}/>复制组件</StudioButton><IconButton label="删除选中组件" className="danger" onClick={onDelete}><Trash2 size={15}/></IconButton></div>}
@@ -166,11 +201,15 @@ export default function App() {
   const [insertAfterId,setInsertAfterId]=useState<string|null>(null);
   const [group,setGroup]=useState('全部');
   const [sidebarTab,setSidebarTab]=useState<'components'|'layers'>('components');
-  const [view,setView]=useState<View>('split');
+  const [view,setView]=useState<View>('edit');
   const [canvasReveal,setCanvasReveal]=useState(0);
   const [device,setDevice]=useState<'desktop'|'mobile'>('desktop');
   const [inspector,setInspector]=useState(()=>window.innerWidth>1000);
-  const [dragging,setDragging]=useState<ComponentType|null>(null);
+  const [inspectorRequest,setInspectorRequest]=useState<InspectorRequest|null>(null);
+  const [variableBlockId,setVariableBlockId]=useState<string|null>(null);
+  const [dragging,setDragging]=useState<Block|null>(null);
+  const dragCandidate=useRef<Block|null>(null);
+  const [dragCanvasScale,setDragCanvasScale]=useState<number|null>(null);
   const [toast,setToast]=useState('');
   const [replay,setReplay]=useState(0);
   const [fullPreview,setFullPreview]=useState(false);
@@ -186,7 +225,7 @@ export default function App() {
   const autosave=useRef<ReturnType<typeof createAutosave<PageDocument>>|null>(null);
   const loadVersion=useRef(0);
   const fileRef=useRef<HTMLInputElement>(null);
-  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:6}}),useSensor(KeyboardSensor,{coordinateGetter:sortableKeyboardCoordinates}));
+  const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:6}}),useSensor(KeyboardSensor));
   const notify=useCallback((message:string)=>setToast(message),[]);
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),3200);return()=>clearTimeout(t);},[toast]);
 
@@ -237,49 +276,110 @@ export default function App() {
   const redo=useCallback(()=>{if(!future.length||!current.current)return;const next=future[0];const outgoing=current.current;setPast(items=>[...items,outgoing]);setFuture(items=>items.slice(1));setDocument(next);current.current=next;},[future]);
   const remove=useCallback((id:string)=>{if(!current.current)return;update({...current.current,blocks:current.current.blocks.filter(b=>b.id!==id)});setSelected(null);notify('组件已删除，可通过撤销恢复');},[update,notify]);
   const duplicate=useCallback((id:string)=>{const doc=current.current;if(!doc)return;if(doc.blocks.length>=200){notify('每个页面最多支持 200 个组件');return;}const index=doc.blocks.findIndex(b=>b.id===id);if(index<0)return;const original=doc.blocks[index];const block={...structuredClone(original),id:crypto.randomUUID(),props:{...original.props},...(original.frame?{frame:clampFrame({...original.frame,x:original.frame.x+24,y:original.frame.y+24},doc.settings)}:{})};const blocks=[...doc.blocks];blocks.splice(index+1,0,block);update({...doc,blocks});setSelected(block.id);notify('已复制组件');},[update,notify]);
-  const add=useCallback((type:ComponentType,_index?:number,position?:{x:number;y:number})=>{
+  const finishAdding=useCallback((result:PlacementResult)=>{
+    update(result.page);setSelected(result.block.id);setInspector(true);setView(v=>v==='preview'?'split':v);setShowSidebar(false);setInsertAfterId(null);
+    notify(insertAfterId?'已插入组件，后续内容已整体下移':result.expanded?'已添加组件并扩展画布，已有组件位置保持不变':`已将${blockName(result.block.type)}放入空白区域`);
+    requestAnimationFrame(()=>window.document.querySelector(`[data-block-id="${result.block.id}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'}));
+  },[update,notify,insertAfterId]);
+  const add=useCallback((type:ComponentType)=>{
     const doc=current.current;if(!doc)return;
-    if(doc.blocks.length>=200){notify('每个页面最多支持 200 个组件');return;}
     try {
       const candidate=prepareBlockForPage(createBlock(type),doc.settings);
-      const result=insertAfterId?insertBlockAfter(doc,candidate,insertAfterId):placeBlock(doc,candidate,position);
-      update(result.page);setSelected(result.block.id);setInspector(true);setView(v=>v==='preview'?'split':v);setShowSidebar(false);setInsertAfterId(null);
-      notify(insertAfterId?'已插入组件，后续内容已整体下移':result.expanded?'已添加组件并扩展画布，已有组件位置保持不变':`已将${blockName(type)}放入空白区域`);
-      requestAnimationFrame(()=>window.document.querySelector(`[data-block-id="${result.block.id}"]`)?.scrollIntoView({behavior:'smooth',block:'nearest'}));
+      finishAdding(insertAfterId?insertBlockAfter(doc,candidate,insertAfterId):placeBlock(doc,candidate));
     } catch(error){notify(error instanceof Error?error.message:'暂时无法放置组件');}
-  },[update,notify,insertAfterId]);
+  },[finishAdding,notify,insertAfterId]);
+  function resetComponent(id:string) {
+    const doc=current.current,block=doc?.blocks.find(item=>item.id===id);if(!doc||!block)return;
+    const defaults=prepareBlockForPage(createBlock(block.type),doc.settings).props;
+    update({...doc,blocks:doc.blocks.map(item=>item.id===id?{...item,props:defaults}:item)});
+    notify('组件属性已恢复默认，可撤销');
+  }
   function startInsert(id:string){setInsertAfterId(id);setSidebarTab('components');setShowSidebar(true);setQuery('');setGroup('全部');notify('选择左侧组件，将自动插入选中组件下方');}
-  const move=useCallback((id:string,direction:number)=>{const doc=current.current;if(!doc)return;const from=doc.blocks.findIndex(b=>b.id===id);const to=from+direction;if(from<0||to<0||to>=doc.blocks.length)return;update({...doc,blocks:arrayMove(doc.blocks,from,to)});},[update]);
+  const changeLayer=useCallback((id:string,action:LayerAction)=>{
+    const doc=current.current;if(!doc)return;
+    const next=moveBlockLayer(doc,id,action);if(next===doc)return;
+    update(next);setSelected(id);
+    notify({lower:'已置于下一层',raise:'已置于上一层',top:'已置于顶层',bottom:'已置于底层'}[action]);
+  },[update,notify]);
 
   useEffect(()=>{
     const keydown=(e:KeyboardEvent)=>{
-      if(e.defaultPrevented)return;
+      if(e.defaultPrevented||dragging)return;
       if(window.document.querySelector('dialog[open], [data-slot=dialog-content], [role=menu]'))return;
       if(e.key==='Escape'){setFullPreview(false);setShowHelp(false);setShowExport(false);setShowNew(false);setShowSidebar(false);return;}
       const target=e.target as HTMLElement;const typing=['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable;
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(current.current)void save(current.current);return;}
-      if(typing||fullPreview||showHelp)return;
+      if(typing||target.closest('[role="separator"]')||fullPreview||showHelp)return;
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'&&selected){e.preventDefault();duplicate(selected);}
       if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();remove(selected);}
     };
     window.addEventListener('keydown',keydown);return()=>window.removeEventListener('keydown',keydown);
-  },[undo,redo,selected,remove,duplicate,save,fullPreview,showHelp]);
+  },[undo,redo,selected,remove,duplicate,save,fullPreview,showHelp,dragging]);
+
+  function inspectComponent(id:string,tab:InspectorTab) {
+    setSelected(id);setInspector(true);
+    setInspectorRequest(previous=>({tab,sequence:(previous?.sequence??0)+1}));
+  }
+  function inspectPage(section:PageSettingsSection) {
+    setSelected(null);setInspector(true);
+    setInspectorRequest(previous=>({tab:'page',section,sequence:(previous?.sequence??0)+1}));
+  }
+
+  function updateSettings(settings:Partial<PageDocument['settings']>) {
+    const doc=current.current;if(!doc)return;
+    const next={...doc.settings,...settings};
+    update({...doc,settings:next,blocks:doc.blocks.map(block=>block.frame?{...block,frame:clampFrame(block.frame,next)}:block)});
+  }
 
   function updateFrame(id:string,frame:BlockFrame) {
     const doc=current.current;if(!doc)return;
     update({...doc,blocks:doc.blocks.map(block=>block.id===id?{...block,frame:clampFrame(frame,doc.settings)}:block)});
   }
+  function alignComponent(id:string,alignment:HorizontalAlignment) {
+    const doc=current.current,block=doc?.blocks.find(block=>block.id===id);if(!doc||!block)return;
+    setSelected(id);
+    updateFrame(id,alignFrame(block.frame??defaultFrame(block.type,doc.settings.maxWidth),doc.settings,alignment));
+  }
+  function fillComponentWidth(id:string) {
+    const doc=current.current;if(!doc)return;
+    try {
+      const frame=fillBlockWidth(doc,id);
+      setSelected(id);updateFrame(id,frame);
+      notify('已填满当前区域的可用宽度');
+    } catch(error){notify(error instanceof Error?error.message:'暂时无法填充组件宽度');}
+  }
+  function onDragStart(event:DragStartEvent) {
+    const doc=current.current;if(!doc)return;
+    const type=event.active.data.current?.type as ComponentType|undefined;
+    const candidate=type?prepareBlockForPage(createBlock(type),doc.settings):null;
+    dragCandidate.current=candidate;setDragCanvasScale(null);setDragging(candidate);
+    if(candidate)setView(view=>view==='preview'?'split':view);
+  }
+  function paletteDropTarget(event:DragMoveEvent) {
+    const doc=current.current,candidate=dragCandidate.current;
+    const stage=window.document.querySelector<HTMLElement>('[data-free-stage]');
+    const viewport=window.document.querySelector<HTMLElement>('[data-canvas-viewport]');
+    const point=paletteDropPointer(event.collisions,event.active.rect.current.translated);
+    if(!doc||!candidate||!stage||!viewport||!point||!pointInViewport(point,viewport.getBoundingClientRect()))return null;
+    const scale=Number(stage.dataset.scale)||1;
+    const position=canvasDropPosition(point,stage.getBoundingClientRect(),scale,defaultFrame(candidate.type,canvasBounds(doc.settings).width).width);
+    return {doc,candidate,position,scale};
+  }
+  function onDragMove(event:DragMoveEvent){setDragCanvasScale(paletteDropTarget(event)?.scale??null);}
+  function clearDrag(){setDragging(null);setDragCanvasScale(null);dragCandidate.current=null;}
   function onDragEnd(event:DragEndEvent) {
-    setDragging(null);const doc=current.current;if(!doc||!event.over)return;
+    const target=paletteDropTarget(event);
+    clearDrag();
+    const doc=current.current;if(!doc)return;
     const {active,over}=event;
     if(active.data.current?.from==='palette'){
-      const type=active.data.current.type as ComponentType;
-      const stage=window.document.querySelector<HTMLElement>('[data-free-stage]');
-      const translated=active.rect.current.translated;
-      if(stage&&translated){const rect=stage.getBoundingClientRect();const scale=Number(stage.dataset.scale)||1;const frame=defaultFrame(type,doc.settings.maxWidth);add(type,undefined,{x:(translated.left+translated.width/2-rect.left)/scale-frame.width/2,y:(translated.top+translated.height/2-rect.top)/scale-24});}
-      else add(type);
+      if(!target)return;
+      try {
+        finishAdding(insertAfterId?insertBlockAfter(target.doc,target.candidate,insertAfterId):placeBlock(target.doc,target.candidate,target.position));
+      } catch(error){notify(error instanceof Error?error.message:'暂时无法放置组件');}
     } else {
+      if(!over)return;
       const from=doc.blocks.findIndex(b=>b.id===active.id);const to=over.id==='canvas'?doc.blocks.length-1:doc.blocks.findIndex(b=>b.id===over.id);
       if(from>=0&&to>=0&&from!==to){update({...doc,blocks:arrayMove(doc.blocks,from,to)});notify('组件顺序已更新');}
     }
@@ -288,10 +388,11 @@ export default function App() {
     if(!document)return;const url=URL.createObjectURL(new Blob([JSON.stringify(document,null,2)],{type:'application/json'}));
     const link=window.document.createElement('a');link.href=url;link.download=`${document.name.replace(/[\\/:*?"<>|]/g,'-')||'page'}.json`;link.click();URL.revokeObjectURL(url);setShowExport(false);notify('页面配置已导出');
   }
-  function exportCode(format: Format) {
+  async function exportCode(format: Format) {
     if (!document) return;
     try {
-      downloadCode(document, format);
+      notify('正在准备官方动效运行时…');
+      await downloadCode(document, format);
       setShowExport(false);
       notify(`${{ html: 'HTML 页面', vue: 'Vue 组件', react: 'React 组件' }[format]}已导出`);
     } catch {
@@ -331,6 +432,7 @@ export default function App() {
 
   if(!document)return <div className="loading-screen"><Brand/>{loadError?<><AlertCircle size={28}/><p>{loadError}</p><StudioButton className="primary-button" onClick={()=>void load()}>重新读取</StudioButton></>:<><LoaderCircle className="spin" size={24}/><p>正在打开你的创作空间…</p></>}</div>;
   const selectedBlock=document.blocks.find(b=>b.id===selected);
+  const variableBlock=document.blocks.find(b=>b.id===variableBlockId);
   const filtered=catalog.filter(c=>(group==='全部'||c.group===group)&&`${c.name} ${c.english} ${c.description}`.toLowerCase().includes(query.toLowerCase()));
   const saveText=saveState==='saved'?'已保存':saveState==='saving'?'保存中':saveState==='error'?'保存失败':'待保存';
   return <div className="studio-app">
@@ -338,6 +440,7 @@ export default function App() {
       <div className="header-brand"><IconButton label="打开组件与页面工具" className="mobile-menu" onClick={()=>setShowSidebar(!showSidebar)}><Menu size={18}/></IconButton><Brand/><span className="beta-label">BETA</span></div>
       <div className="document-heading"><span className="header-slash">/</span><input aria-label="页面名称" value={document.name} onChange={e=>update({...document,name:e.target.value})} maxLength={100}/><span className={`save-status ${saveState}`} title={saveState==='error'?saveError:savedAt?`保存于 ${new Date(savedAt).toLocaleTimeString('zh-CN')}`:'自动保存到服务'}>{saveState==='saved'?<CheckCircle2 size={13}/>:saveState==='saving'?<LoaderCircle size={13} className="spin"/>:saveState==='error'?<AlertCircle size={13}/>:<span className="pending-dot"/>}{saveText}</span>{saveState==='error'&&<StudioButton className="retry-save" onClick={()=>void save(document)}>重试</StudioButton>}</div>
       <div className="header-actions"><IconButton label={studioTheme==='light'?'切换工作台深色主题':'切换工作台浅色主题'} onClick={()=>setStudioTheme(value=>value==='light'?'dark':'light')}>{studioTheme==='light'?<Moon size={16}/>:<Sun size={16}/>}</IconButton><div className="history-controls"><IconButton label="撤销 (⌘Z)" onClick={undo} disabled={!past.length}><Undo2 size={16}/></IconButton><IconButton label="重做 (⌘⇧Z)" onClick={redo} disabled={!future.length}><Redo2 size={16}/></IconButton></div><span className="header-divider"/>
+        <DropdownMenu open={showNew} onOpenChange={setShowNew}><DropdownMenuTrigger asChild><StudioButton className="secondary-button create-page-button" aria-label="新建页面" title="新建页面"><Plus size={15}/><span>新建页面</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu new-page-menu" align="end" sideOffset={8}><DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;update(next);setSelected(null);setInsertAfterId(null);setShowNew(false);notify('已新建空白页面，可撤销恢复');}}><FilePlus2 size={15}/>空白页面</DropdownMenuItem><DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;update(next);setSelected(next.blocks[1].id);setInsertAfterId(null);setShowNew(false);notify('已载入灵感模板，可撤销恢复');}}><LayoutTemplate size={15}/>从灵感模板开始</DropdownMenuItem><DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>组件联动示例</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
         <DropdownMenu open={showExport} onOpenChange={setShowExport}><DropdownMenuTrigger asChild><StudioButton className="secondary-button export-button"><Download size={14}/>导出<ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu export-menu" align="end" sideOffset={8}>
           <DropdownMenuItem onSelect={()=>exportCode('html')}><Code2 size={15}/><span>导出 HTML<small>单文件页面 · 浏览器直接打开</small></span></DropdownMenuItem>
           <DropdownMenuItem onSelect={()=>exportCode('vue')}><Code2 size={15}/><span>导出 Vue<small>Vue 3.5+ · 无额外 UI 依赖</small></span></DropdownMenuItem>
@@ -349,10 +452,10 @@ export default function App() {
         <StudioButton className="primary-button preview-button" onClick={()=>setFullPreview(true)}><Play size={13} fill="currentColor"/>预览页面</StudioButton><div className="user-avatar" title="创作空间">C</div>
       </div>
     </header>
-    <DndContext sensors={sensors} collisionDetection={collision} onDragStart={event=>setDragging((event.active.data.current?.type||document.blocks.find(b=>b.id===event.active.id)?.type) as ComponentType)} onDragEnd={onDragEnd} onDragCancel={()=>setDragging(null)}>
-      <div className={`studio-body ${inspector?'with-inspector':''}`}>
+    <DndContext sensors={sensors} collisionDetection={collision} autoScroll={false} onDragStart={onDragStart} onDragMove={onDragMove} onDragOver={onDragMove} onDragEnd={onDragEnd} onDragCancel={clearDrag}>
+      <ResizableStudioLayout inspectorOpen={inspector} disabled={!!dragging}>
         {showSidebar&&<div className="sidebar-backdrop" onClick={()=>setShowSidebar(false)}/>}
-        <aside className={`component-sidebar ${showSidebar?'shown':''}`}>
+        <aside id="component-sidebar-panel" className={`component-sidebar ${showSidebar?'shown':''}`}>
           <nav className="sidebar-page-tools" aria-label="数据与脚本">
             <StudioButton aria-haspopup="dialog" onClick={()=>setLogicTarget({tab:'data'})}><Database size={15}/><span>页面数据</span><small>{document.variables?.length??0}</small></StudioButton>
             <StudioButton aria-haspopup="dialog" onClick={()=>setLogicTarget({tab:'scripts'})}><Code2 size={15}/><span>脚本</span><small>{document.scripts?.length??0}</small></StudioButton>
@@ -360,24 +463,29 @@ export default function App() {
           <Tabs value={sidebarTab} onValueChange={value=>setSidebarTab(value as typeof sidebarTab)} className="studio-tab-root"><TabsList className="studio-tabs sidebar-tabs" aria-label="组件与图层"><TabsTrigger value="components" id="sidebar-tab-components" aria-controls="sidebar-panel"><LayoutDashboard size={15}/>组件</TabsTrigger><TabsTrigger value="layers" id="sidebar-tab-layers" aria-controls="sidebar-panel"><Layers size={15}/>图层<span>{document.blocks.length}</span></TabsTrigger></TabsList></Tabs>
           <div className="sidebar-content" role="tabpanel" id="sidebar-panel" aria-labelledby={`sidebar-tab-${sidebarTab}`}>{sidebarTab==='components'?<>
             <div className="library-intro"><div><h2>组件库</h2><span>{catalog.length}</span></div></div>
-            <div className="search-box"><Search size={14}/><input aria-label="搜索组件" placeholder="搜索组件…" value={query} onChange={e=>setQuery(e.target.value)}/>{query?<StudioButton onClick={()=>setQuery('')} aria-label="清除搜索"><X size={12}/></StudioButton>:<span>⌕</span>}</div>
+            <div className="search-box"><Search size={14}/><input aria-label="搜索组件" placeholder="搜索组件…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<StudioButton onClick={()=>setQuery('')} aria-label="清除搜索"><X size={12}/></StudioButton>}</div>
             <div className="category-filter">{['全部',...new Set(catalog.map(item=>item.group))].map(g=><StudioButton key={g} className={group===g?'active':''} onClick={()=>setGroup(g)}>{g}</StudioButton>)}</div>
             <div className="library-scroll">{insertAfterId&&<div className="insert-notice"><span>选择组件，插入选中项之后</span><StudioButton aria-label="取消插入" onClick={()=>setInsertAfterId(null)}><X size={13}/></StudioButton></div>}<div className="library-section-heading"><span>{group==='全部'?'所有组件':`${group}组件`}</span><span>{filtered.length}</span></div><div className="component-grid">{filtered.map(c=><PaletteItem key={c.type} type={c.type} onAdd={()=>add(c.type)}/>)}</div>{!filtered.length&&<div className="search-empty"><Search size={23}/><p>没有找到相关组件</p><StudioButton className="text-button" onClick={()=>{setQuery('');setGroup('全部');}}>查看所有组件</StudioButton></div>}</div>
-          </>:<div className="layer-list"><div className="layer-heading"><span><LayoutTemplate size={14}/> 首页</span><small>{document.blocks.length} 个组件</small></div>{document.blocks.map((block,index)=>{const I=icons[block.type];return <div key={block.id} className={`layer-item ${selected===block.id?'selected':''}`}><StudioButton onClick={()=>{setSelected(block.id);setCanvasReveal(n=>n+1);setInspector(true);setView(v=>v==='preview'?'split':v);}}><I size={15}/><span>{block.props.title||block.props.label||blockName(block.type)}</span></StudioButton><span className="layer-order">{index+1}</span><div className="layer-actions"><IconButton label={`上移${blockName(block.type)}`} disabled={index===0} onClick={()=>move(block.id,-1)}><ArrowUp size={12}/></IconButton><IconButton label={`下移${blockName(block.type)}`} disabled={index===document.blocks.length-1} onClick={()=>move(block.id,1)}><ArrowDown size={12}/></IconButton></div></div>;})}{!document.blocks.length&&<p className="muted-note">添加组件后，图层会出现在这里。</p>}</div>}
-          </div><div className="sidebar-bottom"><DropdownMenu open={showNew} onOpenChange={setShowNew}><DropdownMenuTrigger asChild><StudioButton className="new-page-button"><Plus size={15}/><span>新建页面</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu new-page-menu" side="top" align="start" sideOffset={8}><DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;update(next);setSelected(null);setInsertAfterId(null);setShowNew(false);notify('已新建空白页面，可撤销恢复');}}><FilePlus2 size={15}/>空白页面</DropdownMenuItem><DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;update(next);setSelected(next.blocks[1].id);setInsertAfterId(null);setShowNew(false);notify('已载入灵感模板，可撤销恢复');}}><LayoutTemplate size={15}/>从灵感模板开始</DropdownMenuItem><DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>组件联动示例</DropdownMenuItem></DropdownMenuContent></DropdownMenu><a className="animate-credit" href="https://animate-ui.com/docs" target="_blank" rel="noreferrer"><span className="animate-mark">a.</span><span>由 Animate UI 驱动</span><ExternalLink size={11}/></a></div>
+          </>:<div className="layer-list"><div className="layer-heading"><span><LayoutTemplate size={14}/> 首页</span><small>顶部 → 底部</small></div>{[...document.blocks].reverse().map((block,index)=>{const I=icons[block.type];return <div key={block.id} className={`layer-item ${selected===block.id?'selected':''}`}><StudioButton onClick={()=>{setSelected(block.id);setCanvasReveal(n=>n+1);setInspector(true);setView(v=>v==='preview'?'split':v);}}><I size={15}/><span>{block.props.title||block.props.label||blockName(block.type)}</span></StudioButton><span className="layer-order">{document.blocks.length-index}</span><div className="layer-actions"><IconButton label={`将${blockName(block.type)}置于上一层`} disabled={index===0} onClick={()=>changeLayer(block.id,'raise')}><ArrowUp size={12}/></IconButton><IconButton label={`将${blockName(block.type)}置于下一层`} disabled={index===document.blocks.length-1} onClick={()=>changeLayer(block.id,'lower')}><ArrowDown size={12}/></IconButton></div></div>;})}{!document.blocks.length&&<p className="muted-note">添加组件后，图层会出现在这里。</p>}</div>}
+          </div><div className="sidebar-bottom"><a className="animate-credit" title="Animate UI v2.1.2 · @animate-ui/react 2.0.0" href="https://animate-ui.com/docs" target="_blank" rel="noreferrer"><span className="animate-mark">a.</span><span>由 Animate UI v2 驱动</span><ExternalLink size={11}/></a></div>
         </aside>
         <main className="workspace">
           <div className="workspace-toolbar"><div className="workspace-breadcrumb"><LayoutTemplate size={14}/><span>首页</span><ChevronRight size={12}/><strong>页面编辑器</strong></div><div className="toolbar-end"><Tabs value={view} onValueChange={value=>setView(value as View)} className="studio-tab-root"><TabsList className="studio-tabs view-switch" aria-label="画布视图">{([{id:'edit',name:'编辑',icon:MousePointer2},{id:'split',name:'并排',icon:Columns2},{id:'preview',name:'预览',icon:Eye}] as const).map(v=><TabsTrigger key={v.id} value={v.id} id={`view-tab-${v.id}`} aria-controls="workspace-canvas-panel" aria-label={`${v.name}模式`}><v.icon size={13}/>{v.name}</TabsTrigger>)}</TabsList></Tabs><span className="toolbar-separator"/><div className="device-toggle"><IconButton label="桌面视图" active={device==='desktop'} onClick={()=>setDevice('desktop')}><Monitor size={16}/></IconButton><IconButton label="手机视图" active={device==='mobile'} onClick={()=>setDevice('mobile')}><Smartphone size={16}/></IconButton></div><span className="toolbar-separator"/><IconButton label="切换属性面板" active={inspector} onClick={()=>setInspector(!inspector)}><Settings2 size={16}/></IconButton></div></div>
           {saveState==='error'&&<div className="save-error-banner" role="alert"><AlertCircle size={14}/><span>{saveError}，修改仍保留在画布中。</span><StudioButton onClick={()=>void save(document)}>重新保存</StudioButton></div>}
           <div className={`canvas-workspace view-${view}`} role="tabpanel" id="workspace-canvas-panel" aria-labelledby={`view-tab-${view}`}>
-            {view!=='preview'&&<section className="canvas-pane edit-pane"><div className="pane-heading"><span><MousePointer2 size={13}/><strong>编辑画布</strong><span className="pane-tag">可编辑</span></span><span className="pane-hint">自由摆放 · 网格吸附</span></div><FreeCanvas revealKey={canvasReveal} document={document} selected={selected} onSelect={setSelected} onFrameChange={updateFrame} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
+            {view!=='preview'&&<section className="canvas-pane edit-pane"><div className="pane-heading"><span><MousePointer2 size={13}/><strong>编辑画布</strong><span className="pane-tag">可编辑</span></span><span className="pane-hint">自由摆放 · 网格吸附</span></div><FreeCanvas revealKey={canvasReveal} document={document} selected={selected} onSelect={setSelected} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
             {view!=='edit'&&<section className="canvas-pane preview-pane"><div className="pane-heading"><span><Eye size={14}/><strong>实时预览</strong><span className="live-indicator"/> </span><IconButton label="重播动画" onClick={()=>setReplay(n=>n+1)}><Play size={12}/></IconButton></div><div className={`preview-scroll ${device==='mobile'?'mobile':''}`}><div className="preview-browser" style={{maxWidth:device==='mobile'?375:document.settings.maxWidth}}><div className="browser-bar"><div className="browser-dots"><i/><i/><i/></div><span><span className="lock-icon">⌑</span> {document.name||'未命名页面'}</span><RotateCcw size={10}/></div><PageRenderer document={document} replayKey={replay}/></div><div className="preview-footnote"><span className="live-indicator"/>与编辑画布实时同步</div></div></section>}
           </div>
           <footer className="workspace-status"><span><span className="connection-dot"/>创作空间<span className="status-separator">/</span>{document.blocks.length} 个组件</span><span><kbd>⌘ Z</kbd> 撤销<StudioButton onClick={()=>setShowHelp(true)}><CircleHelp size={13}/>快捷键与帮助</StudioButton></span></footer>
         </main>
-        {inspector&&<Inspector studioTheme={studioTheme} onOpenStudio={setLogicTarget} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} document={document} selected={selectedBlock} onDesignTheme={openThemeDesigner} onDeleteTheme={theme=>{update(deleteCustomTheme(document,theme));notify('主题已删除，相关组件已恢复继承，可撤销');}} onPageTheme={theme=>{update(applyPageTheme(document,theme));notify(`已应用${getTheme(theme,document.settings.customThemes).name}`);}} onUpdate={props=>{if(!selectedBlock)return;update({...document,blocks:document.blocks.map(b=>b.id===selectedBlock.id?{...b,props:{...b.props,...props}}:b)});}} onFrame={frame=>selected&&updateFrame(selected,frame)} onSettings={settings=>{const next={...document.settings,...settings};update({...document,settings:next,blocks:document.blocks.map(block=>block.frame?{...block,frame:clampFrame(block.frame,next)}:block)});}} onClose={()=>setInspector(false)} onDelete={()=>selected&&remove(selected)} onDuplicate={()=>selected&&duplicate(selected)}/>}
-      </div>
-      <DragOverlay dropAnimation={{duration:180,easing:'ease-out'}}>{dragging&&<div className="drag-overlay"><Miniature type={dragging}/><span>{blockName(dragging)}</span></div>}</DragOverlay>
+        {variableBlock&&<ComponentVariableDialog key={variableBlock.id} page={document} block={variableBlock} onClose={()=>setVariableBlockId(null)} onCreate={(key,variable)=>{
+          const page=current.current;if(!page)return;
+          update(createComponentVariable(page,variableBlock.id,key,variable));
+          setVariableBlockId(null);inspectComponent(variableBlock.id,'logic');notify(`已创建变量 ${variable.name} 并绑定，可撤销`);
+        }}/>}
+        {inspector&&<Inspector request={inspectorRequest} studioTheme={studioTheme} onOpenStudio={setLogicTarget} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} document={document} selected={selectedBlock} onDesignTheme={openThemeDesigner} onDeleteTheme={theme=>{update(deleteCustomTheme(document,theme));notify('主题已删除，相关组件已恢复继承，可撤销');}} onPageTheme={theme=>{update(applyPageTheme(document,theme));notify(`已应用${getTheme(theme,document.settings.customThemes).name}`);}} onUpdate={props=>{if(!selectedBlock)return;update({...document,blocks:document.blocks.map(b=>b.id===selectedBlock.id?{...b,props:{...b.props,...props}}:b)});}} onFrame={frame=>selected&&updateFrame(selected,frame)} onSettings={updateSettings} onClose={()=>setInspector(false)} onDelete={()=>selected&&remove(selected)} onDuplicate={()=>selected&&duplicate(selected)} onReset={()=>selected&&resetComponent(selected)}/>}
+      </ResizableStudioLayout>
+      <PaletteDragPreview block={dragging} settings={document.settings} canvasScale={dragCanvasScale}/>
     </DndContext>
     {logicTarget&&<Suspense fallback={null}><InteractionStudio initialTarget={logicTarget} page={document} onChange={update} onClose={()=>setLogicTarget(null)} onDemo={loadInteractionDemo}/></Suspense>}
     {themeDesign&&<ThemeDesigner initial={themeDesign.initial} editing={themeDesign.editing} scopeName={themeDesign.scopeName} existingNames={(document.settings.customThemes??[]).map(theme=>theme.name)} canCreate={(document.settings.customThemes?.length??0)<30} usageCount={(document.settings.theme===themeDesign.initial.id?1:0)+document.blocks.filter(block=>block.props.theme===themeDesign.initial.id).length} onClose={()=>setThemeDesign(null)} onSave={theme=>{update(saveCustomTheme(document,theme,themeDesign.blockId));setThemeDesign(null);notify(`已应用「${theme.name}」，正在自动保存`);}}/>}

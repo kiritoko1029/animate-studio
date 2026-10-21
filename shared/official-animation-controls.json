@@ -1,0 +1,1727 @@
+{
+  "dialog": {
+    "source": "base-ui/dialog",
+    "groups": {
+      "DialogContent": {
+        "from": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "showCloseButton": {
+          "value": true
+        }
+      }
+    }
+  },
+  "alertDialog": {
+    "source": "base-ui/alert-dialog",
+    "groups": {
+      "AlertDialogContent": {
+        "from": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        }
+      }
+    }
+  },
+  "sheet": {
+    "source": "base-ui/sheet",
+    "groups": {
+      "SheetContent": {
+        "side": {
+          "value": "right",
+          "options": {
+            "top": "top",
+            "right": "right",
+            "bottom": "bottom",
+            "left": "left"
+          }
+        },
+        "showCloseButton": {
+          "value": true
+        }
+      }
+    }
+  },
+  "drawer": {
+    "source": "base-ui/drawer",
+    "groups": {
+      "Drawer": {
+        "direction": {
+          "value": "right",
+          "options": {
+            "bottom": "bottom",
+            "top": "top",
+            "left": "left",
+            "right": "right"
+          }
+        }
+      }
+    }
+  },
+  "popover": {
+    "source": "base-ui/popover",
+    "groups": {
+      "PopoverContent": {
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right",
+            "inline-start": "inline-start",
+            "inline-end": "inline-end"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      }
+    }
+  },
+  "hoverCard": {
+    "source": "base-ui/hover-card",
+    "groups": {
+      "HoverCard": {
+        "followCursor": {
+          "value": false,
+          "options": {
+            "false": false,
+            "true": true,
+            "x": "x",
+            "y": "y"
+          }
+        }
+      },
+      "HoverCardContent": {
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right",
+            "inline-start": "inline-start",
+            "inline-end": "inline-end"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 4
+        }
+      }
+    }
+  },
+  "tooltip": {
+    "source": "base-ui/tooltip",
+    "groups": {
+      "Tooltip": {
+        "followCursor": {
+          "value": false,
+          "options": {
+            "false": false,
+            "true": true,
+            "x": "x",
+            "y": "y"
+          }
+        }
+      },
+      "TooltipContent": {
+        "side": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right",
+            "inline-start": "inline-start",
+            "inline-end": "inline-end"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      }
+    }
+  },
+  "previewLinkCard": {
+    "source": "base-ui/preview-link-card",
+    "groups": {
+      "PreviewLinkCard": {
+        "followCursor": {
+          "value": false,
+          "options": {
+            "false": false,
+            "true": true,
+            "x": "x",
+            "y": "y"
+          }
+        }
+      },
+      "PreviewLinkCardPanel": {
+        "side": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right",
+            "inline-start": "inline-start",
+            "inline-end": "inline-end"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      }
+    }
+  },
+  "collapsible": {
+    "source": "base-ui/collapsible",
+    "groups": {}
+  },
+  "dropdownMenu": {
+    "source": "base-ui/dropdown-menu",
+    "groups": {
+      "DropdownMenuContent": {
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right",
+            "inline-start": "inline-start",
+            "inline-end": "inline-end"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "start",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      }
+    }
+  },
+  "contextMenu": {
+    "source": "base-ui/context-menu",
+    "groups": {}
+  },
+  "menubar": {
+    "source": "base-ui/menubar",
+    "groups": {}
+  },
+  "navigationMenu": {
+    "source": "base-ui/navigation-menu",
+    "groups": {}
+  },
+  "sidebar": {
+    "source": "base-ui/sidebar",
+    "groups": {
+      "SidebarProvider": {
+        "animateOnHover": {
+          "value": true
+        }
+      }
+    }
+  },
+  "combobox": {
+    "source": "base-ui/combobox",
+    "groups": {
+      "ComboboxContent": {
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "sideOffset": {
+          "value": 6
+        },
+        "align": {
+          "value": "start",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      },
+      "AnimateUIProvider": {
+        "checkAnimation": {
+          "value": "draw",
+          "options": {
+            "draw": "draw",
+            "pop": "pop"
+          }
+        }
+      }
+    }
+  },
+  "toggle": {
+    "source": "base-ui/toggle",
+    "groups": {}
+  },
+  "toggleGroup": {
+    "source": "base-ui/toggle-group",
+    "groups": {
+      "ToggleGroup": {
+        "spacing": {
+          "value": 2,
+          "min": 0,
+          "max": 4,
+          "step": 1
+        },
+        "orientation": {
+          "value": "horizontal",
+          "options": {
+            "horizontal": "horizontal",
+            "vertical": "vertical"
+          }
+        }
+      }
+    }
+  },
+  "toast": {
+    "source": "base-ui/toast",
+    "groups": {
+      "Toaster": {
+        "progressBar": {
+          "value": true
+        }
+      }
+    }
+  },
+  "questionnaire": {
+    "source": "base-ui/questionnaire",
+    "groups": {}
+  },
+  "inputOtp": {
+    "source": "animate-ui/input-otp",
+    "groups": {}
+  },
+  "avatarGroup": {
+    "source": "animate-ui/avatar-group",
+    "groups": {}
+  },
+  "codeBlock": {
+    "source": "animate-ui/code-block",
+    "groups": {
+      "CodeBlock": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "duration": {
+          "value": 10000,
+          "min": 0,
+          "max": 30000,
+          "step": 1000
+        },
+        "writing": {
+          "value": true
+        },
+        "cursor": {
+          "value": true
+        }
+      }
+    }
+  },
+  "githubStars": {
+    "source": "animate-ui/github-stars",
+    "groups": {}
+  },
+  "motionGrid": {
+    "source": "animate-ui/motion-grid",
+    "groups": {
+      "MotionGrid": {
+        "duration": {
+          "value": 200,
+          "min": 50,
+          "max": 3000,
+          "step": 50
+        },
+        "animate": {
+          "value": true
+        }
+      }
+    }
+  },
+  "pinnedList": {
+    "source": "animate-ui/pinned-list",
+    "groups": {}
+  },
+  "scrollProgress": {
+    "source": "animate-ui/scroll-progress",
+    "groups": {
+      "ScrollProgressProvider": {
+        "global": {
+          "value": false
+        },
+        "direction": {
+          "value": "vertical",
+          "options": {
+            "horizontal": "horizontal",
+            "vertical": "vertical"
+          }
+        }
+      }
+    }
+  },
+  "copyButton": {
+    "source": "animate-ui/copy-button",
+    "groups": {
+      "CopyButton": {
+        "hoverScale": {
+          "value": 1,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        "delay": {
+          "value": 3000,
+          "min": 0,
+          "max": 10000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "flipButton": {
+    "source": "animate-ui/flip-button",
+    "groups": {
+      "FlipButton": {
+        "from": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "right": "right",
+            "bottom": "bottom",
+            "left": "left"
+          }
+        },
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        }
+      }
+    }
+  },
+  "githubStarsButton": {
+    "source": "animate-ui/github-stars-button",
+    "groups": {}
+  },
+  "iconButton": {
+    "source": "animate-ui/icon-button",
+    "groups": {
+      "IconButton": {
+        "hoverScale": {
+          "value": 1,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        }
+      },
+      "IconButtonParticles": {
+        "side": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "sideOffset": {
+          "value": 0,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0,
+          "min": -50,
+          "max": 50,
+          "step": 1
+        },
+        "count": {
+          "value": 6,
+          "min": 1,
+          "max": 30,
+          "step": 1
+        },
+        "radius": {
+          "value": 30,
+          "min": 10,
+          "max": 100,
+          "step": 1
+        },
+        "spread": {
+          "value": 360,
+          "min": 0,
+          "max": 1000,
+          "step": 1
+        },
+        "duration": {
+          "value": 0.8,
+          "min": 0.1,
+          "max": 2,
+          "step": 0.1
+        },
+        "holdDelay": {
+          "value": 0.05,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01
+        },
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "liquidButton": {
+    "source": "animate-ui/liquid-button",
+    "groups": {
+      "LiquidButton": {
+        "delay": {
+          "value": 0.3,
+          "min": 0.1,
+          "max": 0.5,
+          "step": 0.05
+        },
+        "fillHeight": {
+          "value": 3,
+          "min": 0,
+          "max": 10,
+          "step": 1
+        },
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        }
+      }
+    }
+  },
+  "rippleButton": {
+    "source": "animate-ui/ripple-button",
+    "groups": {
+      "RippleButton": {
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        "hoverScale": {
+          "value": 1,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        }
+      }
+    }
+  },
+  "themeTogglerButton": {
+    "source": "animate-ui/theme-toggler-button",
+    "groups": {}
+  },
+  "gradientText": {
+    "source": "animate-ui/gradient-text",
+    "groups": {
+      "GradientText": {
+        "neon": {
+          "value": false
+        }
+      }
+    }
+  },
+  "morphingText": {
+    "source": "animate-ui/morphing-text",
+    "groups": {
+      "MorphingText": {
+        "loop": {
+          "value": true
+        },
+        "holdDelay": {
+          "value": 2500,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "rollingText": {
+    "source": "animate-ui/rolling-text",
+    "groups": {
+      "RollingText": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "rotatingText": {
+    "source": "animate-ui/rotating-text",
+    "groups": {
+      "RotatingTextContainer": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "y": {
+          "value": -50,
+          "min": -100,
+          "max": 100,
+          "step": 10
+        },
+        "duration": {
+          "value": 2000,
+          "min": 1000,
+          "max": 5000,
+          "step": 100
+        },
+        "align": {
+          "value": "none",
+          "options": {
+            "none": "none",
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        }
+      }
+    }
+  },
+  "shimmeringText": {
+    "source": "animate-ui/shimmering-text",
+    "groups": {
+      "ShimmeringText": {
+        "wave": {
+          "value": false
+        },
+        "duration": {
+          "value": 1,
+          "min": 0.1,
+          "max": 3,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "slidingText": {
+    "source": "animate-ui/sliding-text",
+    "groups": {
+      "SlidingText": {
+        "direction": {
+          "value": "down",
+          "options": {
+            "down": "down",
+            "up": "up"
+          }
+        },
+        "trigger": {
+          "value": "hover",
+          "options": {
+            "hover": "hover",
+            "click": "click"
+          }
+        }
+      }
+    }
+  },
+  "splittingText": {
+    "source": "animate-ui/splitting-text",
+    "groups": {
+      "SplittingText": {
+        "type": {
+          "value": "chars",
+          "options": {
+            "chars": "chars",
+            "words": "words",
+            "lines": "lines"
+          }
+        },
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "animation": {
+          "value": "default",
+          "options": {
+            "default": "default",
+            "vibe": "vibe",
+            "writing": "writing"
+          }
+        }
+      }
+    }
+  },
+  "swappingText": {
+    "source": "animate-ui/swapping-text",
+    "groups": {
+      "SwappingText": {
+        "direction": {
+          "value": "up",
+          "options": {
+            "up": "up",
+            "down": "down"
+          }
+        },
+        "stagger": {
+          "value": 0.07,
+          "min": 0,
+          "max": 0.15,
+          "step": 0.01
+        },
+        "duration": {
+          "value": 2000,
+          "min": 500,
+          "max": 5000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "typingText": {
+    "source": "animate-ui/typing-text",
+    "groups": {
+      "TypingText": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "holdDelay": {
+          "value": 1000,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "loop": {
+          "value": false
+        },
+        "cursor": {
+          "value": true
+        }
+      }
+    }
+  },
+  "countingNumber": {
+    "source": "animate-ui/counting-number",
+    "groups": {
+      "CountingNumber": {
+        "fromNumber": {
+          "value": 0,
+          "min": 0,
+          "max": 1000000000,
+          "step": 1
+        },
+        "padStart": {
+          "value": false
+        },
+        "decimalSeparator": {
+          "value": "."
+        },
+        "decimalPlaces": {
+          "value": 0,
+          "min": 0,
+          "max": 10,
+          "step": 1
+        },
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "scrollingNumber": {
+    "source": "animate-ui/scrolling-number",
+    "groups": {
+      "ScrollingNumberContainer": {
+        "direction": {
+          "value": "btt",
+          "options": {
+            "btt": "btt",
+            "ttb": "ttb",
+            "ltr": "ltr",
+            "rtl": "rtl"
+          }
+        }
+      },
+      "ScrollingNumber": {
+        "delay": {
+          "value": 1000,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "slidingNumber": {
+    "source": "animate-ui/sliding-number",
+    "groups": {
+      "SlidingNumber": {
+        "fromNumber": {
+          "value": true
+        },
+        "padStart": {
+          "value": true
+        },
+        "decimalSeparator": {
+          "value": ","
+        },
+        "decimalPlaces": {
+          "value": 0,
+          "min": 0,
+          "max": 10,
+          "step": 1
+        },
+        "thousandSeparator": {
+          "value": "."
+        },
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "imageZoom": {
+    "source": "animate-ui/image-zoom",
+    "groups": {
+      "ImageZoom": {
+        "zoomScale": {
+          "value": 3,
+          "min": 1,
+          "max": 10,
+          "step": 0.1
+        },
+        "zoomOnHover": {
+          "value": true
+        },
+        "zoomOnClick": {
+          "value": true
+        }
+      }
+    }
+  },
+  "bubbleBackground": {
+    "source": "backgrounds/bubble",
+    "groups": {
+      "BubbleBackground": {
+        "interactive": {
+          "value": true
+        }
+      }
+    }
+  },
+  "fireworksBackground": {
+    "source": "backgrounds/fireworks",
+    "groups": {
+      "FireworksBackground": {
+        "population": {
+          "value": 1,
+          "min": 0.1,
+          "max": 10,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "glyphBackground": {
+    "source": "backgrounds/glyph",
+    "groups": {
+      "GlyphBackground": {
+        "glowColor": {
+          "value": "",
+          "options": {
+            "text": "",
+            "white": "#ffffff",
+            "blue": "#3b9eff",
+            "violet": "#a78bfa",
+            "emerald": "#34d399",
+            "amber": "#fbbf24",
+            "rose": "#fb7185"
+          }
+        },
+        "shapeColor": {
+          "value": "",
+          "options": {
+            "text": "",
+            "white": "#ffffff",
+            "blue": "#3b9eff",
+            "violet": "#a78bfa",
+            "emerald": "#34d399",
+            "amber": "#fbbf24",
+            "rose": "#fb7185"
+          }
+        },
+        "fontSize": {
+          "value": 10,
+          "min": 6,
+          "max": 16,
+          "step": 1
+        },
+        "interactive": {
+          "value": true
+        }
+      }
+    }
+  },
+  "gradientBackground": {
+    "source": "backgrounds/gradient",
+    "groups": {}
+  },
+  "gravityStarsBackground": {
+    "source": "backgrounds/gravity-stars",
+    "groups": {
+      "GravityStarsBackground": {
+        "starsCount": {
+          "value": 75,
+          "min": 1,
+          "max": 500,
+          "step": 1
+        },
+        "starsSize": {
+          "value": 2,
+          "min": 0.5,
+          "max": 10,
+          "step": 0.5
+        },
+        "starsOpacity": {
+          "value": 0.75,
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "glowIntensity": {
+          "value": 15,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        },
+        "glowAnimation": {
+          "value": "ease",
+          "options": {
+            "instant": "instant",
+            "ease": "ease",
+            "spring": "spring"
+          }
+        },
+        "movementSpeed": {
+          "value": 0.3,
+          "min": 0,
+          "max": 5,
+          "step": 0.1
+        },
+        "mouseInfluence": {
+          "value": 100,
+          "min": 0,
+          "max": 500,
+          "step": 1
+        },
+        "mouseGravity": {
+          "value": "attract",
+          "options": {
+            "attract": "attract",
+            "repel": "repel"
+          }
+        },
+        "gravityStrength": {
+          "value": 75,
+          "min": 0,
+          "max": 300,
+          "step": 1
+        },
+        "starsInteraction": {
+          "value": false
+        },
+        "starsInteractionType": {
+          "value": "bounce",
+          "options": {
+            "bounce": "bounce",
+            "merge": "merge"
+          }
+        }
+      }
+    }
+  },
+  "hexagonBackground": {
+    "source": "backgrounds/hexagon",
+    "groups": {
+      "HexagonBackground": {
+        "hexagonSize": {
+          "value": 75,
+          "min": 20,
+          "max": 200,
+          "step": 1
+        },
+        "hexagonMargin": {
+          "value": 3,
+          "min": 0,
+          "max": 20,
+          "step": 1
+        }
+      }
+    }
+  },
+  "holeBackground": {
+    "source": "backgrounds/hole",
+    "groups": {
+      "HoleBackground": {
+        "strokeColor": {
+          "value": "#737373"
+        },
+        "numberOfLines": {
+          "value": 50,
+          "min": 1,
+          "max": 200,
+          "step": 1
+        },
+        "numberOfDiscs": {
+          "value": 50,
+          "min": 1,
+          "max": 200,
+          "step": 1
+        }
+      }
+    }
+  },
+  "starsBackground": {
+    "source": "backgrounds/stars",
+    "groups": {
+      "StarsBackground": {
+        "factor": {
+          "value": 0.05,
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        "speed": {
+          "value": 50,
+          "min": 1,
+          "max": 200,
+          "step": 1
+        },
+        "starColor": {
+          "value": "#fff"
+        },
+        "pointerEvents": {
+          "value": true
+        }
+      }
+    }
+  },
+  "topographyBackground": {
+    "source": "backgrounds/topography",
+    "groups": {
+      "TopographyBackground": {
+        "lineColor": {
+          "value": "",
+          "options": {
+            "text": "",
+            "blue": "#3b9eff",
+            "violet": "#a78bfa",
+            "emerald": "#34d399",
+            "amber": "#fbbf24",
+            "rose": "#fb7185"
+          }
+        },
+        "levels": {
+          "value": 16,
+          "min": 4,
+          "max": 40,
+          "step": 1
+        },
+        "speed": {
+          "value": 1,
+          "min": 0,
+          "max": 5,
+          "step": 0.1
+        },
+        "scale": {
+          "value": 1,
+          "min": 0.3,
+          "max": 3,
+          "step": 0.1
+        },
+        "peak": {
+          "value": 1,
+          "min": 0,
+          "max": 3,
+          "step": 0.1
+        },
+        "interactive": {
+          "value": true
+        }
+      }
+    }
+  },
+  "button": {
+    "source": "animate-ui/button",
+    "groups": {
+      "Button": {
+        "tapScale": {
+          "value": 0.97,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        "hoverScale": {
+          "value": 1,
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        }
+      }
+    }
+  },
+  "heading": {
+    "source": "animate-ui/highlight-text",
+    "groups": {
+      "HighlightText": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        }
+      }
+    }
+  },
+  "accordion": {
+    "source": "base-ui/accordion",
+    "groups": {}
+  },
+  "tabs": {
+    "source": "base-ui/tabs",
+    "groups": {}
+  },
+  "switch": {
+    "source": "base-ui/switch",
+    "groups": {}
+  },
+  "checkbox": {
+    "source": "base-ui/checkbox",
+    "groups": {
+      "AnimateUIProvider": {
+        "checkAnimation": {
+          "value": "draw",
+          "options": {
+            "draw": "draw",
+            "pop": "pop"
+          }
+        }
+      }
+    }
+  },
+  "radio": {
+    "source": "base-ui/radio-group",
+    "groups": {}
+  },
+  "select": {
+    "source": "base-ui/select",
+    "groups": {
+      "SelectContent": {
+        "position": {
+          "value": "item-aligned",
+          "options": {
+            "popper": "popper",
+            "item-aligned": "item-aligned"
+          }
+        },
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "sideOffset": {
+          "value": 4
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0
+        }
+      },
+      "AnimateUIProvider": {
+        "checkAnimation": {
+          "value": "draw",
+          "options": {
+            "draw": "draw",
+            "pop": "pop"
+          }
+        }
+      }
+    }
+  },
+  "slider": {
+    "source": "base-ui/slider",
+    "groups": {}
+  },
+  "progress": {
+    "source": "base-ui/progress",
+    "groups": {}
+  },
+  "pagination": {
+    "source": "base-ui/pagination",
+    "groups": {}
+  },
+  "effect:auto-height": {
+    "source": "animate-ui/auto-height",
+    "groups": {}
+  },
+  "effect:blur": {
+    "source": "animate-ui/blur",
+    "groups": {
+      "Blur": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "initialBlur": {
+          "value": 10,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        },
+        "blur": {
+          "value": 0,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        }
+      }
+    }
+  },
+  "effect:click": {
+    "source": "animate-ui/click",
+    "groups": {
+      "Click": {
+        "global": {
+          "value": false
+        },
+        "duration": {
+          "value": 400,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "size": {
+          "value": 100,
+          "min": 0,
+          "max": 300,
+          "step": 10
+        }
+      }
+    }
+  },
+  "effect:effect": {
+    "source": "animate-ui/effect",
+    "groups": {
+      "Effect": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "blur": {
+          "value": true
+        },
+        "slide": {
+          "value": true
+        },
+        "fade": {
+          "value": true
+        },
+        "zoom": {
+          "value": true
+        }
+      }
+    }
+  },
+  "effect:fade": {
+    "source": "animate-ui/fade",
+    "groups": {
+      "Fade": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "initialOpacity": {
+          "value": 0,
+          "min": 0,
+          "max": 1,
+          "step": 0.1
+        },
+        "opacity": {
+          "value": 1,
+          "min": 0,
+          "max": 1,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "effect:highlight": {
+    "source": "animate-ui/highlight",
+    "groups": {
+      "Highlight": {
+        "mode": {
+          "value": "children",
+          "options": {
+            "children": "children",
+            "parent": "parent"
+          }
+        },
+        "exitDelay": {
+          "value": 200,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "hover": {
+          "value": false
+        }
+      }
+    }
+  },
+  "effect:magnetic": {
+    "source": "animate-ui/magnetic",
+    "groups": {
+      "Magnetic": {
+        "onlyOnHover": {
+          "value": false
+        },
+        "strength": {
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.05
+        },
+        "range": {
+          "value": 120
+        }
+      }
+    }
+  },
+  "effect:particles": {
+    "source": "animate-ui/particles",
+    "groups": {
+      "ParticlesEffect": {
+        "side": {
+          "value": "top",
+          "options": {
+            "top": "top",
+            "bottom": "bottom",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "sideOffset": {
+          "value": 0,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        },
+        "align": {
+          "value": "center",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 0,
+          "min": -50,
+          "max": 50,
+          "step": 1
+        },
+        "count": {
+          "value": 6,
+          "min": 1,
+          "max": 30,
+          "step": 1
+        },
+        "radius": {
+          "value": 30,
+          "min": 10,
+          "max": 100,
+          "step": 1
+        },
+        "spread": {
+          "value": 360,
+          "min": 0,
+          "max": 1000,
+          "step": 1
+        },
+        "duration": {
+          "value": 0.8,
+          "min": 0.1,
+          "max": 2,
+          "step": 0.1
+        },
+        "holdDelay": {
+          "value": 0.05,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01
+        },
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "effect:scroll-fade": {
+    "source": "animate-ui/scroll-fade",
+    "groups": {
+      "ScrollFade": {
+        "shrink": {
+          "value": 0.03,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.005
+        },
+        "blur": {
+          "value": 4,
+          "min": 0,
+          "max": 8,
+          "step": 0.5
+        }
+      }
+    }
+  },
+  "effect:shine": {
+    "source": "animate-ui/shine",
+    "groups": {
+      "Shine": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "duration": {
+          "value": 1200,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "loop": {
+          "value": true
+        },
+        "loopDelay": {
+          "value": 500,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "deg": {
+          "value": -15,
+          "min": -50,
+          "max": 50,
+          "step": 5
+        },
+        "enable": {
+          "value": true
+        },
+        "enableOnHover": {
+          "value": false
+        },
+        "enableOnTap": {
+          "value": false
+        }
+      }
+    }
+  },
+  "effect:slide": {
+    "source": "animate-ui/slide",
+    "groups": {
+      "Slide": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "direction": {
+          "value": "up",
+          "options": {
+            "up": "up",
+            "down": "down",
+            "left": "left",
+            "right": "right"
+          }
+        },
+        "offset": {
+          "value": 100,
+          "min": 0,
+          "max": 1000,
+          "step": 10
+        }
+      }
+    }
+  },
+  "effect:theme-toggler": {
+    "source": "animate-ui/theme-toggler",
+    "groups": {
+      "ThemeToggler": {
+        "direction": {
+          "value": "ltr",
+          "options": {
+            "btt": "btt",
+            "ttb": "ttb",
+            "ltr": "ltr",
+            "rtl": "rtl"
+          }
+        }
+      }
+    }
+  },
+  "effect:tilt": {
+    "source": "animate-ui/tilt",
+    "groups": {
+      "Tilt": {
+        "maxTilt": {
+          "value": 10,
+          "min": 0,
+          "max": 50,
+          "step": 1
+        },
+        "perspective": {
+          "value": 800,
+          "min": 200,
+          "max": 5000,
+          "step": 10
+        }
+      }
+    }
+  },
+  "effect:zoom": {
+    "source": "animate-ui/zoom",
+    "groups": {
+      "Zoom": {
+        "delay": {
+          "value": 0,
+          "min": 0,
+          "max": 3000,
+          "step": 100
+        },
+        "initialScale": {
+          "value": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.1
+        },
+        "scale": {
+          "value": 1,
+          "min": 0,
+          "max": 1,
+          "step": 0.1
+        }
+      }
+    }
+  },
+  "effect:spring": {
+    "source": "animate-ui/spring",
+    "groups": {}
+  },
+  "effect:page-transition": {
+    "source": "animate-ui/page-transition",
+    "groups": {
+      "PageTransition": {
+        "effect": {
+          "value": "slide",
+          "options": {
+            "fade": "fade",
+            "slide": "slide",
+            "push": "push",
+            "zoom": "zoom",
+            "iris": "iris",
+            "wipe": "wipe",
+            "bands": "bands",
+            "stack": "stack",
+            "flow": "flow",
+            "chop": "chop",
+            "random": "random"
+          }
+        }
+      }
+    }
+  },
+  "effect:cursor": {
+    "source": "animate-ui/cursor",
+    "groups": {
+      "CursorProvider": {
+        "global": {
+          "value": false
+        },
+        "enableCursor": {
+          "value": true
+        },
+        "enableCursorFollow": {
+          "value": true
+        }
+      },
+      "CursorFollow": {
+        "side": {
+          "value": "bottom",
+          "options": {
+            "top": "top",
+            "right": "right",
+            "bottom": "bottom",
+            "left": "left"
+          }
+        },
+        "sideOffset": {
+          "value": 15
+        },
+        "align": {
+          "value": "end",
+          "options": {
+            "start": "start",
+            "center": "center",
+            "end": "end"
+          }
+        },
+        "alignOffset": {
+          "value": 5
+        }
+      }
+    }
+  }
+}

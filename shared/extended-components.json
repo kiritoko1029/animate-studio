@@ -9,31 +9,12 @@
       "padding": 20,
       "label": "打开对话框",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。",
-      "variant": "center"
+      "text": "在这里展示详细说明，或确认接下来的操作。"
     },
     "frame": {
       "width": 360,
       "height": 110
-    },
-    "variants": [
-      [
-        "center",
-        "居中"
-      ],
-      [
-        "right",
-        "右侧"
-      ],
-      [
-        "left",
-        "左侧"
-      ],
-      [
-        "bottom",
-        "底部"
-      ]
-    ]
+    }
   },
   "alertDialog": {
     "name": "确认对话框",
@@ -45,31 +26,12 @@
       "padding": 20,
       "label": "打开确认对话框",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。",
-      "variant": "center"
+      "text": "在这里展示详细说明，或确认接下来的操作。"
     },
     "frame": {
       "width": 360,
       "height": 110
-    },
-    "variants": [
-      [
-        "center",
-        "居中"
-      ],
-      [
-        "right",
-        "右侧"
-      ],
-      [
-        "left",
-        "左侧"
-      ],
-      [
-        "bottom",
-        "底部"
-      ]
-    ]
+    }
   },
   "sheet": {
     "name": "侧边面板",
@@ -81,31 +43,12 @@
       "padding": 20,
       "label": "打开侧边面板",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。",
-      "variant": "right"
+      "text": "在这里展示详细说明，或确认接下来的操作。"
     },
     "frame": {
       "width": 360,
       "height": 110
-    },
-    "variants": [
-      [
-        "center",
-        "居中"
-      ],
-      [
-        "right",
-        "右侧"
-      ],
-      [
-        "left",
-        "左侧"
-      ],
-      [
-        "bottom",
-        "底部"
-      ]
-    ]
+    }
   },
   "drawer": {
     "name": "抽屉",
@@ -117,31 +60,12 @@
       "padding": 20,
       "label": "打开抽屉",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。",
-      "variant": "bottom"
+      "text": "在这里展示详细说明，或确认接下来的操作。"
     },
     "frame": {
       "width": 360,
       "height": 110
-    },
-    "variants": [
-      [
-        "center",
-        "居中"
-      ],
-      [
-        "right",
-        "右侧"
-      ],
-      [
-        "left",
-        "左侧"
-      ],
-      [
-        "bottom",
-        "底部"
-      ]
-    ]
+    }
   },
   "popover": {
     "name": "气泡面板",
@@ -268,7 +192,7 @@
     "name": "菜单栏",
     "english": "Menubar",
     "group": "导航",
-    "description": "菜单栏 · Menubar",
+    "description": "应用菜单栏 · Menubar · Base UI，分组下拉菜单与平滑切换动效",
     "docs": "https://animate-ui.com/docs/primitives/base-ui/menubar",
     "props": {
       "padding": 20,
@@ -379,8 +303,7 @@
       "padding": 20,
       "label": "显示通知",
       "title": "保存成功",
-      "text": "你的修改已经保存。",
-      "duration": 3000
+      "text": "你的修改已经保存。"
     },
     "frame": {
       "width": 320,
@@ -478,18 +401,16 @@
     "name": "动效网格",
     "english": "Motion Grid",
     "group": "展示",
-    "description": "动效网格 · Motion Grid",
+    "description": "官方点阵动画，在多组状态图案之间连续切换",
     "docs": "https://animate-ui.com/docs/primitives/animate-ui/motion-grid",
     "props": {
       "padding": 20,
-      "title": "探索创作方向",
-      "items": "设计\n开发\n动效\n品牌\n产品\n灵感"
+      "title": "探索创作方向"
     },
     "frame": {
       "width": 480,
       "height": 300
-    },
-    "itemsHint": "每行一张卡片；点击卡片切换强调状态。"
+    }
   },
   "pinnedList": {
     "name": "可置顶列表",
@@ -517,11 +438,11 @@
     "props": {
       "padding": 20,
       "title": "阅读进度",
-      "text": "向下滚动页面，查看阅读进度。"
+      "text": "滚动此区域，查看阅读进度。"
     },
     "frame": {
       "width": 420,
-      "height": 120
+      "height": 328
     }
   },
   "copyButton": {
@@ -665,8 +586,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -683,7 +603,6 @@
       "padding": 20,
       "title": "让灵感自由生长",
       "fontSize": 32,
-      "duration": 1800,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -701,8 +620,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -719,7 +637,6 @@
       "padding": 20,
       "title": "让灵感自由生长",
       "fontSize": 32,
-      "duration": 1800,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -737,8 +654,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -754,8 +670,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -771,8 +686,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -789,7 +703,6 @@
       "padding": 20,
       "title": "让灵感自由生长",
       "fontSize": 32,
-      "duration": 1800,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -807,8 +720,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
-      "duration": 1800
+      "fontSize": 32
     },
     "frame": {
       "width": 460,
@@ -824,10 +736,9 @@
     "props": {
       "padding": 20,
       "label": "累计创作",
-      "value": 86,
+      "value": 2025,
       "max": 100,
-      "fontSize": 44,
-      "duration": 1600
+      "fontSize": 36
     },
     "frame": {
       "width": 320,
@@ -843,14 +754,13 @@
     "props": {
       "padding": 20,
       "label": "累计创作",
-      "value": 86,
+      "value": 1000,
       "max": 100,
-      "fontSize": 44,
-      "duration": 1600
+      "fontSize": 18
     },
     "frame": {
       "width": 320,
-      "height": 180
+      "height": 280
     }
   },
   "slidingNumber": {
@@ -862,10 +772,9 @@
     "props": {
       "padding": 20,
       "label": "累计创作",
-      "value": 86,
+      "value": 2025,
       "max": 100,
-      "fontSize": 44,
-      "duration": 1600
+      "fontSize": 36
     },
     "frame": {
       "width": 320,
@@ -898,8 +807,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -915,8 +823,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -932,8 +839,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -949,8 +855,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -966,8 +871,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -983,8 +887,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -1000,8 +903,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -1017,8 +919,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,
@@ -1034,8 +935,7 @@
     "props": {
       "padding": 0,
       "title": "让创意流动",
-      "text": "用动态背景，创造新的视觉体验。",
-      "duration": 6000
+      "text": "用动态背景，创造新的视觉体验。"
     },
     "frame": {
       "width": 600,

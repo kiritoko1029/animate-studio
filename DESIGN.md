@@ -19,12 +19,13 @@
 - `src/studio-ui.css` 负责官方控件在工作台中的密度与浮层布局；组件所属 CSS 负责各自布局。
 - 主按钮为黑白反相；选中标签以滑动底板和字色区分。错误和禁用状态保留文本/图标，不能只靠颜色。
 - 弹窗居中且受视口约束，只有内容区滚动；脚本编辑器保持可用的编辑高度。
-- 按钮轻微缩放、标签高亮滑动、弹窗淡入；沿用 `MotionConfig reducedMotion="user"`。
+- 按钮轻微缩放、标签高亮滑动、弹窗淡入；使用 `MotionConfig` 与 `AnimateUIProvider` 的 `reducedMotion="user"`。
 - 上述细化规则为本次实现选择。（Agent 推断）
 
 ## 可用组件
 
-- `components/animate-ui/components/`：官方 v1 registry 的 Button、Tabs、Dialog、DropdownMenu、Switch、Tooltip。
+- `components/animate-ui/components/`：基于官方 v2 npm 原语的 Button、Tabs、Dialog、DropdownMenu、Switch、Tooltip 样式封装。
+- `components/animate-ui/registry/`：固定到官方 v2.1.2 的 9 种背景与 4 种样式按钮，来源见 `docs/animate-ui-version.json`。
 - `components/StudioUI.tsx`：统一平台按钮、工具提示和弹窗适配。平台新增控件先复用这些组件。
 - 文本输入、选择框、颜色与数值字段使用原生控件及共享平台配色；CodeMirror 负责脚本编辑。（Agent 推断）
 

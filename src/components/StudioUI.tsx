@@ -18,7 +18,7 @@ export function StudioDialog({ title, className = '', children, onClose, dismiss
   const opener = useRef(document.activeElement);
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
     <DialogContent className={`studio-dialog ${className}`} showCloseButton={false} role={role} aria-describedby={undefined}
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 32 }}
       onEscapeKeyDown={event => {
         const target = event.target;
         // Radix listens in capture phase; let editors consume Escape before closing a workbench.

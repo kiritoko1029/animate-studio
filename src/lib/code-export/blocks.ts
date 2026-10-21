@@ -1,4 +1,5 @@
 import { catalogContent } from './catalog-blocks.ts';
+import navbarIcons from '../../../shared/navbar-icons.json' with { type: 'json' };
 import { createInteractionRuntime } from '../../../shared/interactions.mjs';
 import { defaultFrame, safeUrl, isExtendedComponent, type BlockProps, type PageDocument } from '../../model.ts';
 import { blockThemeStyle, pageThemeStyle } from '../themes.ts';
@@ -15,7 +16,6 @@ function icon(name: string, size = 16) {
   const paths: Record<string, string> = {
     arrow: 'M4 12h15m-6-6 6 6-6 6', check: 'm5 12 4 4L19 6', down: 'm6 9 6 6 6-6', right: 'm9 6 6 6-6 6', left: 'm15 6-6 6 6 6',
     star: 'm12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9Z',
-    leaf: 'M5 19C1 6 13 3 21 3c0 10-4 18-16 16Zm0 0L16 8',
     spark: 'm12 2 2.7 7.3L22 12l-7.3 2.7L12 22l-2.7-7.3L2 12l7.3-2.7Z',
     layers: 'm2 8 10-5 10 5-10 5Zm0 5 10 5 10-5M2 18l10 5 10-5',
     image: 'M3 3h18v18H3Zm0 14 6-6 5 5 3-3 4 4M7 7h.01',
@@ -74,13 +74,22 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
     function content(): Element {
       if (isExtendedComponent(block.type)) return catalogContent({ type: block.type, p, field, id, imageUrl });
       switch (block.type) {
-        case 'navbar': return h('nav', { class: 'page-navbar', 'aria-label': '页面导航' }, [
-          h('a', { ...linkAttrs('#'), class: 'page-brand' }, [h('span', { class: 'page-brand-mark' }, [icon('leaf', 17)]), h('span', {}, [p.title]), h('span', { class: 'page-brand-dot' }, ['.'])]),
-          h('div', { class: 'page-nav-links' }, (p.items || '').split(/[,，\n]/).map(item => item.trim()).filter(item => item.split('|')[0].trim()).map((item, i) => {
-            const [label, url] = item.split('|');
-            return h('a', linkAttrs(url || ['#features', '#about', '#contact'][i % 3]), [label]);
-          })),
-        ]);
+        case 'navbar': {
+          const name = p.brandIcon ?? 'leaf';
+          const image = name === 'image' ? imageUrl(p.imageUrl) : '';
+          const failed = field(!image, 'BrandImage');
+          const mark = name === 'none' ? undefined : h('span', { class: `page-brand-mark${name === 'image' ? ' page-brand-mark--image' : ''}`, 'aria-hidden': 'true' }, [
+            image ? h('img', { src: image, alt: '', hidden: bind(failed.expression, failed.initial) }, [], { error: failed.set('true') }) : undefined,
+            h('span', { class: 'page-brand-placeholder', hidden: bind(`!${failed.expression}`, !failed.initial) }, [h('svg', { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2.3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [h('path', { d: (navbarIcons[name] ?? navbarIcons.leaf).path })])]),
+          ]);
+          return h('nav', { class: 'page-navbar', 'aria-label': '页面导航' }, [
+            h('a', { ...linkAttrs('#'), class: 'page-brand' }, [mark, h('span', { class: 'page-brand-title' }, [p.title]), h('span', { class: 'page-brand-dot' }, ['.'])]),
+            h('div', { class: 'page-nav-links' }, (p.items || '').split(/[,，\n]/).map(item => item.trim()).filter(item => item.split('|')[0].trim()).map((item, i) => {
+              const [label, url] = item.split('|');
+              return h('a', linkAttrs(url || ['#features', '#about', '#contact'][i % 3]), [label]);
+            })),
+          ]);
+        }
         case 'hero': {
           const lines = (p.title || '').split('\n');
           return h('section', { class: 'page-hero' }, [
@@ -238,7 +247,7 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
     }
     const body = connect(content());
     const frameEvents: Record<string, string> = block.events?.click?.length ? { click: `event.preventDefault(); void logic.dispatch(${js(block.id)}, 'click');` } : {};
-    return h('div', { class: 'page-free-frame', style: { left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height) }, 'data-block-type': block.type, 'data-block-id': block.id, ...(block.bindings?.visible ? { hidden: bind(`!${dynamic('visible', true).expression}`, !logic.read(block.bindings.visible, true)) } : {}), ...(block.bindings?.disabled ? { 'aria-disabled': dynamic('disabled', false) } : {}) }, [
+    return h('div', { class: 'page-free-frame', style: { left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height), zIndex: index + 1 }, 'data-block-type': block.type, 'data-block-id': block.id, ...(block.bindings?.visible ? { hidden: bind(`!${dynamic('visible', true).expression}`, !logic.read(block.bindings.visible, true)) } : {}), ...(block.bindings?.disabled ? { 'aria-disabled': dynamic('disabled', false) } : {}) }, [
       h('div', { class: `page-block page-block--${block.type} page-block--bounded`, style, 'data-theme': p.theme ?? document.settings.theme, 'data-animation': p.animation || 'none', 'data-catalog-effect': p.effect || 'none' }, [h('div', { class: 'page-block-content' }, [body])]),
     ], frameEvents);
   });

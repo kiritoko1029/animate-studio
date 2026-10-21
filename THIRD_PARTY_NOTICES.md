@@ -4,34 +4,19 @@ Animate Studio's project license is in [LICENSE.md](LICENSE.md). The notice belo
 
 ## Animate UI
 
-Animate Studio embeds the following official Animate UI v1 registry primitives and their helper modules as part of this application. These files are original upstream source with local import paths adapted. The accordion import uses the equivalent individual `@radix-ui/react-accordion` package. Styling and the simplified public API in `src/components/animate-ui/index.tsx` are application-specific wrappers.
+Animate Studio uses the official `@animate-ui/react` npm package **2.0.0**, the latest package release checked on 2026-10-21, with Motion **14.5.0**. The upstream repository/site release is **v2.1.2**: v2.1.1 and v2.1.2 update the upstream AI skill, while the React package retains its 2.0.0 version.
 
 Source project: https://github.com/imskyleen/animate-ui
 
-Documentation: https://animate-ui.com/docs
+Release: https://github.com/imskyleen/animate-ui/tree/v2.1.2
 
-Retrieved: 2026-10-19; platform controls added 2026-10-20
+Pinned source commit: `e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72`
 
-- `primitives/buttons/button.tsx`: https://animate-ui.com/r/primitives-buttons-button.json
-- `primitives/animate/slot.tsx`: https://animate-ui.com/r/primitives-animate-slot.json
-- `primitives/effects/fade.tsx`: https://animate-ui.com/r/primitives-effects-fade.json
-- `primitives/texts/highlight.tsx`: https://animate-ui.com/r/primitives-texts-highlight.json
-- `primitives/radix/accordion.tsx`: https://animate-ui.com/r/primitives-radix-accordion.json
-- `hooks/use-is-in-view.ts`: https://animate-ui.com/r/hooks-use-is-in-view.json
-- `hooks/use-controlled-state.ts`: https://animate-ui.com/r/hooks-use-controlled-state.json
-- `lib/get-strict-context.tsx`: https://animate-ui.com/r/lib-get-strict-context.json
+The 9 background, 4 styled-button, Code Block, and Page Transition registry sources in `src/components/animate-ui/registry/` were retrieved from that commit on 2026-10-21. Local adaptations include the `cn` import and, for canvas backgrounds, component-local sizing/pointer coordinates so editor zoom does not scale the drawing twice. Exact source URLs, upstream/local SHA-256 hashes, and adaptation notes are in [the version manifest](docs/animate-ui-version.json), and every registry file retains an attribution header. The Motion Grid demo frames and animation controls also derive from this pinned source.
 
-Additional official v1 registry components used by the workbench (2026-10-20):
+The styled wrappers in `src/components/animate-ui/components/` derive from the previously embedded v1 Button, Tabs, Dialog, DropdownMenu, Switch and Tooltip sources (retrieved 2026-10-19/20). Their animation primitives now come from the v2 npm package. The embedded v1 primitive and helper files have been removed. Original wrapper copyrights and license terms remain applicable.
 
-- `components/buttons/button.tsx`: https://animate-ui.com/r/components-buttons-button.json
-- `components/radix/tabs.tsx`: https://animate-ui.com/r/components-radix-tabs.json
-- `components/radix/dialog.tsx`: https://animate-ui.com/r/components-radix-dialog.json
-- `components/radix/dropdown-menu.tsx`: https://animate-ui.com/r/components-radix-dropdown-menu.json
-- `components/radix/switch.tsx`: https://animate-ui.com/r/components-radix-switch.json
-- `components/radix/tooltip.tsx`: https://animate-ui.com/r/components-radix-tooltip.json
-- Corresponding `primitives/radix/` modules, `primitives/effects/highlight.tsx`, `primitives/effects/auto-height.tsx`, and hooks `use-auto-height.tsx` / `use-data-state.tsx` come from the registry dependencies. Full source URLs are retained in their file headers.
-
-New registry sources preserve their upstream interaction model. Switch state props are kept on Radix Root rather than forwarded to the DOM button (avoids a React unknown-handler warning). Local utility/helper imports are adapted; `WithAsChild` uses a type-only import for this project's strict TypeScript configuration. The application wrapper supplies its own monochrome tokens, editor spacing, restrained animation, and Escape handling for code/expression editors. These are source-distributed v1 components, not the v2 npm package. Existing portable HTML/Vue/React exports do not include these platform controls.
+Application compositions, low-code property mapping, theme tokens, fixed-canvas placement, and the standalone HTML/Vue/React export runtime are maintained by Animate Studio. The current download path bundles the same official rendering runtime used by the canvas. Low-code controls expose supported serializable settings, rather than the full React API. See [component coverage](docs/animate-ui-coverage.md).
 
 License source: https://github.com/imskyleen/animate-ui/blob/main/LICENSE.md
 

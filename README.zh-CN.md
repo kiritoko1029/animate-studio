@@ -15,10 +15,10 @@
 - **主题设计**：黑白工作台浅色/深色切换、8 套页面预设、组件独立主题，以及自定义主题设计器。
 - **组件联动**：共享变量、属性绑定、表达式、条件动作、点击与值变化事件。表达式提示会使用当前页面已有变量。
 - **JavaScript 编辑器**：代码高亮、自动补全、语法检查、测试运行和调试日志；内置 `ctx.fetchJSON`、`ctx.setState`、`ctx.notify`、`ctx.sleep` 等函数。
-- **可移植代码导出**：导出独立 HTML 或原生 Vue/React 组件，无需额外安装 Animate UI、Motion、Radix 或 Tailwind；页面 JSON 可用于继续编辑。
+- **可移植代码导出**：导出独立 HTML 或内嵌页面的 Vue/React 包装组件，无需额外安装 Animate UI、Motion、Radix 或 Tailwind；页面 JSON 可用于继续编辑。
 - **本地与云端部署**：本地使用 Express 和文件存储，云端通过 Void 发布到 Cloudflare Workers，每个浏览器拥有独立的持久化工作区。
 
-工作台的部分控件与动效基础组件使用 Animate UI 官方 v1 registry 源码。画布组件库也包含为跨框架导出实现的本地适配，不承诺与官网逐帧视觉或全部 API 一致。详见 [组件覆盖说明](docs/animate-ui-coverage.md)。
+工作台控件与画布原语已使用 `@animate-ui/react` 2.0.0（npm 最新版）和 Motion 14.5.0；背景与样式按钮固定使用 Animate UI v2.1.2 的 Registry 源码。画布、普通预览和带联动的预览共用官方 React 原语与默认动效；属性面板可调整官方支持的效果参数。下载的 HTML 内嵌同一运行时，Vue/React 组件通过 iframe 承载该独立页面。详见 [版本记录](docs/animate-ui-version.json) 和 [组件覆盖说明](docs/animate-ui-coverage.md)。
 
 ## 快速开始
 

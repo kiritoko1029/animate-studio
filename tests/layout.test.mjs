@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { placeBlock, insertBlockAfter } from '../src/lib/layout.ts';
+import { placeBlock, insertBlockAfter, fillBlockWidth } from '../src/lib/layout.ts';
 import { defaultFrame } from '../src/model.ts';
 
 function block(id, frame, type = 'button') { return { id, type, props: { label: id }, ...(frame ? { frame } : {}) }; }
@@ -15,6 +15,70 @@ function freeze(value) {
   for (const item of Object.values(value)) if (item && typeof item === 'object') freeze(item);
   return value;
 }
+
+test('width fill uses the full inner canvas without changing vertical geometry or the original document', () => {
+  for (const [width, padding] of [[1000, 0], [1000, 37], [3840, 80]]) {
+    const source = page([block('target', { x: 200, y: 150, width: 240, height: 100 })], width);
+    source.settings.padding = padding;
+    freeze(source);
+    assert.deepEqual(fillBlockWidth(source, 'target'), { x: padding, y: 150, width: width - padding * 2, height: 100 });
+    assert.equal(source.blocks[0].frame.width, 240);
+  }
+});
+
+test('width fill stops at the nearest neighbors across the entire vertical span and leaves them fixed', () => {
+  const source = freeze(page([
+    block('target', { x: 300, y: 200, width: 100, height: 100 }),
+    block('left-far', { x: 0, y: 150, width: 100, height: 100 }),
+    block('left-near', { x: 100, y: 299, width: 120, height: 100 }),
+    block('right-near', { x: 800, y: 150, width: 100, height: 51 }),
+    block('right-far', { x: 900, y: 200, width: 100, height: 100 }),
+  ]));
+  const before = JSON.stringify(source);
+  const frame = fillBlockWidth(source, 'target');
+  assert.deepEqual(frame, { x: 236, y: 200, width: 548, height: 100 });
+  assert.equal(JSON.stringify(source), before);
+  const filled = { ...source, blocks: source.blocks.map(item => item.id === 'target' ? { ...item, frame } : item) };
+  assert.deepEqual(fillBlockWidth(filled, 'target'), frame, 'filling twice must not change the result');
+});
+
+test('components entirely above or below the target do not consume its available width', () => {
+  const source = page([
+    block('above', { x: 0, y: 0, width: 1000, height: 200 }),
+    block('target', { x: 300, y: 200, width: 100, height: 100 }),
+    block('below', { x: 0, y: 300, width: 1000, height: 200 }),
+  ]);
+  assert.deepEqual(fillBlockWidth(source, 'target'), { x: 0, y: 200, width: 1000, height: 100 });
+});
+
+test('width fill preserves tight and touching gaps instead of shrinking the selected component', () => {
+  for (const gap of [0, 5, 10]) {
+    const target = block('target', { x: 200, y: 100, width: 100, height: 100 });
+    const source = page([
+      block('left', { x: 0, y: 100, width: 200 - gap, height: 100 }), target,
+      block('right', { x: 300 + gap, y: 100, width: 100, height: 100 }),
+    ]);
+    assert.deepEqual(fillBlockWidth(source, 'target'), target.frame);
+  }
+});
+
+test('width fill rejects existing overlaps and missing components without mutating the page', () => {
+  const source = freeze(page([
+    block('target', { x: 200, y: 100, width: 200, height: 100 }),
+    block('overlapping', { x: 300, y: 150, width: 200, height: 200 }),
+  ]));
+  const before = JSON.stringify(source);
+  assert.throws(() => fillBlockWidth(source, 'target'), /重叠/);
+  assert.throws(() => fillBlockWidth(source, 'missing'), /找不到/);
+  assert.equal(JSON.stringify(source), before);
+});
+
+test('width fill remains available at the component count limit', () => {
+  const source = page([block('target', { x: 200, y: 0, width: 100, height: 100 }),
+    ...Array.from({ length: 199 }, (_, index) => block(`other-${index}`, { x: 0, y: 200, width: 40, height: 32 })),
+  ]);
+  assert.equal(fillBlockWidth(source, 'target').width, 1000);
+});
 
 test('adding uses component default dimensions and preserves the input document', () => {
   const source = freeze(page());

@@ -40,7 +40,8 @@ export async function createApp({
       app.get('/{*path}', (_req, res) => res.sendFile(resolve(projectRoot, 'dist/index.html')));
     } else {
       const { createServer } = await import('vite');
-      vite = await createServer({ root: projectRoot, server: { middlewareMode: true }, appType: 'spa' });
+      // The runner avoids generated config modules that would retrigger Node's watcher.
+      vite = await createServer({ root: projectRoot, configLoader: 'runner', server: { middlewareMode: true }, appType: 'spa' });
       app.use(vite.middlewares);
     }
   }

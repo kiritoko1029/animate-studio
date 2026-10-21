@@ -81,3 +81,21 @@
 @media (prefers-reduced-motion: reduce) {
   .page-progress-field > progress::-webkit-progress-value { transition: none; }
 }
+
+/* Animate UI v2 controls use the page's existing colors and dimensions. */
+.native-page-checkbox,.native-page-radio { display:grid;place-items:center;flex-shrink:0;width:17px;height:17px;margin-top:3px;padding:0;border:1px solid var(--page-border);border-radius:4px;background:var(--page-surface);color:var(--page-on-accent); }
+.native-page-checkbox[data-state=checked] { background:var(--page-accent);border-color:var(--page-accent); }
+.native-page-checkbox span { display:flex; }
+.native-page-radio { border-radius:50%;color:var(--page-accent); }
+.native-page-radio-indicator { width:9px;height:9px;border-radius:50%;background:currentColor; }
+.native-page-slider { position:relative;display:flex;align-items:center;width:100%;height:20px;margin-bottom:12px;touch-action:none;user-select:none; }
+.native-page-slider-track { position:relative;flex:1;height:5px;border-radius:99px;background:var(--page-panel);overflow:hidden; }
+.native-page-slider-range { position:absolute;height:100%;background:var(--page-accent); }
+.native-page-slider-thumb { display:block;width:16px;height:16px;border:2px solid var(--page-surface);border-radius:50%;background:var(--page-accent);box-shadow:0 0 0 1px var(--page-border); }
+.native-page-progress { height:9px;margin-bottom:13px;border-radius:99px;background:var(--page-panel);overflow:hidden; }
+.native-page-progress-indicator { width:100%;height:100%;background:var(--page-accent); }
+.native-page-select { display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left; }
+.native-page-select-content { z-index:110;min-width:var(--radix-select-trigger-width);max-height:var(--radix-select-content-available-height);padding:5px;border:1px solid var(--page-border,#dce4de);border-radius:8px;background:var(--page-surface,#fff);color:var(--page-ink,#26382f);box-shadow:0 8px 28px #0002; }
+.native-page-select-item { display:flex;justify-content:space-between;gap:16px;padding:8px 12px;border-radius:4px;font-size:14px;outline:none; }
+.native-page-select-item[data-highlighted] { background:var(--page-panel,#edf5ef); }
+:is(.native-page-checkbox,.native-page-radio,.native-page-slider-thumb,.native-page-select):focus-visible { outline:2px solid var(--page-accent);outline-offset:3px; }

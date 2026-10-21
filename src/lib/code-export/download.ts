@@ -4,12 +4,14 @@ import libraryCss from '../../library-blocks.css?raw';
 import portableCss from './portable.css?raw';
 import landscape from '../../../public/landscape.svg?raw';
 import type { PageDocument } from '../../model';
-import { generateCode, type Format } from './generate';
+import type { Format } from './generate';
+import { generateNativeCode } from './native';
 
 export const exportResources = { pageCss, libraryCss, portableCss, catalogCss, assets: { '/landscape.svg': `data:image/svg+xml;charset=utf-8,${encodeURIComponent(landscape)}` } };
 
-export function downloadCode(document: PageDocument, format: Format) {
-  const output = generateCode(document, format, exportResources);
+export async function downloadCode(document: PageDocument, format: Format) {
+  const { default: bundle } = await import('virtual:animate-studio-native-export');
+  const output = generateNativeCode(document, format, bundle, exportResources.assets);
   const url = URL.createObjectURL(new Blob([output.content], { type: output.mime }));
   const anchor = window.document.createElement('a');
   anchor.href = url;

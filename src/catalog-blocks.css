@@ -55,3 +55,9 @@
 .as-page-catalog[hidden],.as-page-catalog [hidden],.as-page-catalog-pinned-row[hidden],.as-page-number-overlay[hidden]{display:none!important}
 .page-block-content:has(>.as-page-catalog[class*="Background"]),.as-page-block-content:has(>.as-page-catalog[class*="Background"]){height:100%;min-height:0!important}.as-page-catalog[class*="Background"]{min-height:0}.as-page-catalog-backdrop-copy{min-height:0}
 .as-page-text-overlay{position:absolute;inset:0;pointer-events:none}.as-page-text-overlay[hidden]{display:none!important}
+.catalog-mini-menubar{position:relative;width:78px;height:45px;color:var(--studio-600);font-size:7px}
+.catalog-mini-menubar>span{display:flex;gap:3px;padding:3px;border:1px solid var(--studio-200);border-radius:4px;background:var(--studio-0)}
+.catalog-mini-menubar>span>*{padding:1px 3px;font-style:normal;font-weight:500}
+.catalog-mini-menubar b{background:var(--studio-200);border-radius:2px}
+.catalog-mini-menubar small{display:grid;gap:4px;width:36px;padding:5px;margin:2px 0 0 2px;border:1px solid var(--studio-200);border-radius:3px;background:var(--studio-0);box-shadow:0 2px 4px #0001}
+.catalog-mini-menubar small i{height:2px;background:var(--studio-300)}

@@ -8,6 +8,8 @@ import { createApp, closeServer } from '../server/index.mjs';
 import { createPageStore } from '../server/store.mjs';
 import { componentTypes, createBlock, defaultFrame } from '../src/model.ts';
 import { applyPageTheme, getTheme, saveCustomTheme, themePresets } from '../src/lib/themes.ts';
+import { canvasPresets } from '../shared/canvas-sizes.mjs';
+import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
 
 function page(name = '测试页面') {
   return { version: 1, name, settings: { background: '#ffffff', accent: '#408668', maxWidth: 1000, padding: 0 }, blocks: [
@@ -66,10 +68,34 @@ test('every library component survives import, save and restart with its initial
   assert.deepEqual((await restarted.request('/api/page')).body.page, document);
 });
 
+test('global page margins and aligned frames survive save and restart', async t => {
+  const first = await fixture(t);
+  const document = page();
+  document.settings = { ...document.settings, padding: 37, layout: 'free', canvasHeight: 800 };
+  document.blocks = [37, 380, 723].map((x, index) => ({ ...createBlock('button'), frame: { x, y: 37 + index * 116, width: 240, height: 100 } }));
+  assert.equal((await first.request('/api/page', 'PUT', { page: document })).status, 200);
+  const restarted = await fixture(t, { dataDir: first.dataDir });
+  assert.deepEqual((await restarted.request('/api/page')).body.page, document);
+});
+
+test('navbar icon choices and custom logo URLs survive import, save and restart', async t => {
+  const first = await fixture(t);
+  const document = page();
+  document.blocks = [undefined, ...Object.keys(navbarIcons), 'none'].map((brandIcon, index) => ({
+    id: `nav-${index}`, type: 'navbar', props: { title: '品牌', ...(brandIcon ? { brandIcon } : {}),
+      ...(brandIcon === 'image' ? { imageUrl: 'https://example.com/logo.svg' } : {}) },
+  }));
+  assert.equal((await first.request('/api/validate', 'POST', { page: document })).status, 200);
+  assert.equal((await first.request('/api/page', 'PUT', { page: document })).status, 200);
+  const restarted = await fixture(t, { dataDir: first.dataDir });
+  assert.deepEqual((await restarted.request('/api/page')).body.page, document);
+});
+
 test('invalid component values are rejected without replacing the saved page', async t => {
   const { request } = await fixture(t);
   const original = await request('/api/page', 'PUT', { page: page() });
   const invalid = [
+    ['navbar', { brandIcon: 'unknown' }], ['navbar', { brandIcon: 42 }], ['navbar', { brandIcon: 'image', imageUrl: 'javascript:alert(1)' }],
     ['inputOtp', { max: 13 }], ['inputOtp', { max: 2.5 }], ['toast', { duration: 0 }], ['typingText', { duration: 30001 }], ['button', { effect: 'invalid' }],
     ['checkbox', { checked: 'true' }], ['rating', { value: 6 }], ['rating', { value: 2.5 }],
     ['slider', { value: -1 }], ['slider', { max: 0 }], ['progress', { value: 51, max: 50 }],
@@ -131,6 +157,19 @@ test('free canvas settings and block frames persist and remain optional for lega
   assert.equal((await request('/api/validate', 'POST', { page: page() })).status, 200);
 });
 
+test('1080p, 2K and 4K canvas dimensions and wide components survive save and restart', async t => {
+  const first = await fixture(t);
+  const restarted = await fixture(t, { dataDir: first.dataDir });
+  for (const { width, height } of canvasPresets) {
+    const document = page();
+    document.settings = { ...document.settings, maxWidth: width, canvasHeight: height, layout: 'free' };
+    document.blocks[0].frame = { x: 0, y: 0, width, height: 390 };
+    document.blocks.push({ ...createBlock('button'), frame: { x: width - 240, y: height - 100, width: 240, height: 100 } });
+    assert.equal((await first.request('/api/page', 'PUT', { page: document })).status, 200);
+    assert.deepEqual((await restarted.request('/api/page')).body.page, document);
+  }
+});
+
 test('rejects invalid layouts, canvas heights and unsafe or incomplete block frames', async t => {
   const { request } = await fixture(t);
   for (const layout of ['absolute', '', 1, null]) {
@@ -145,8 +184,8 @@ test('rejects invalid layouts, canvas heights and unsafe or incomplete block fra
   }
   const frame = { x: 0, y: 0, width: 100, height: 100 };
   const invalidFrames = [
-    null, [], {}, { x: 0, y: 0, width: 100 }, { ...frame, x: -1 }, { ...frame, x: 1601 },
-    { ...frame, y: -1 }, { ...frame, y: 6001 }, { ...frame, width: 39 }, { ...frame, width: 1601 },
+    null, [], {}, { x: 0, y: 0, width: 100 }, { ...frame, x: -1 }, { ...frame, x: 3841 },
+    { ...frame, y: -1 }, { ...frame, y: 6001 }, { ...frame, width: 39 }, { ...frame, width: 3841 },
     { ...frame, height: 31 }, { ...frame, height: 3001 }, { ...frame, width: '100' },
     { ...frame, height: null }, { ...frame, rotate: 20 }, { ...frame, constructor: 'unsafe' },
     JSON.parse('{"x":0,"y":0,"width":100,"height":100,"__proto__":{}}'),

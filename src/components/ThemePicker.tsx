@@ -19,7 +19,7 @@ export function ThemePicker({ scope, value, pageTheme, customThemes, onChange, o
   const label = scope === 'component' ? '组件主题' : '页面主题';
   const active = value ? getTheme(value, customThemes) : undefined;
   const isCustom = customThemes.some(theme => theme.id === value);
-  return <section className="property-section theme-section" aria-label={label}>
+  return <section className="property-section theme-section" aria-label={label} data-page-setting={scope === 'page' ? 'theme' : undefined}>
     <h3><Palette size={13} />{label}<span className="theme-count">{themePresets.length} 套风格</span></h3>
     {scope === 'component' && <StudioButton type="button" className={`theme-inherit ${!value ? 'selected' : ''}`} aria-pressed={!value} onClick={() => onChange(undefined)}>
       <Link2 size={14} /><span><strong>跟随页面</strong><small>{pageTheme ? getTheme(pageTheme, customThemes).name : '当前页面配色'}</small></span>{!value && <Check size={14} />}

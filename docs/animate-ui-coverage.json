@@ -1,5 +1,5 @@
 {
-  "checkedOn": "2026-10-20",
+  "checkedOn": "2026-10-21",
   "source": "https://animate-ui.com/docs",
   "entries": [
     {
@@ -472,5 +472,7 @@
       "target": "文字提示",
       "type": "tooltip"
     }
-  ]
+  ],
+  "release": "2.1.2",
+  "reactPackage": "2.0.0"
 }

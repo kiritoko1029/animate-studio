@@ -61,6 +61,7 @@ export function useCanvasViewport(design: ViewportSize, mobile: boolean, busy: b
     if (!element) return;
     const wheel = (event: WheelEvent) => {
       const zoom = hasCanvasModifier(event);
+      if (!zoom && event.target instanceof Element && event.target.closest('[data-canvas-interactive]')) return;
       if (!zoom && (event.ctrlKey || event.metaKey)) return;
       event.preventDefault();
       if (settings.current.busy || pan.current) return;
@@ -77,7 +78,7 @@ export function useCanvasViewport(design: ViewportSize, mobile: boolean, busy: b
     const release = () => { space.current = false; setSpaceHeld(false); cancelPan(); };
     const keydown = (event: KeyboardEvent) => {
       const inCanvas = hover.current || element.closest('.free-canvas')?.contains(document.activeElement);
-      if (!inCanvas || editable(event.target) || document.querySelector('dialog[open], [data-slot="dialog-content"], [role="menu"]')) return;
+      if (!inCanvas || editable(event.target) || event.target instanceof Element && event.target.closest('[data-canvas-interactive]') || document.querySelector('dialog[open], [data-slot="dialog-content"], [role="menu"]')) return;
       if (event.code === 'Space' && event.target instanceof HTMLElement && event.target.closest('button, a[href], [role=button]')) return;
       if (event.code === 'Space' && !event.altKey && !event.ctrlKey && !event.metaKey && !settings.current.busy) {
         event.preventDefault(); space.current = true; setSpaceHeld(true); return;
@@ -108,6 +109,7 @@ export function useCanvasViewport(design: ViewportSize, mobile: boolean, busy: b
   }, []);
 
   const pointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.target instanceof Element && event.target.closest('[data-canvas-interactive]')) return;
     if (settings.current.busy || pan.current || !(event.button === 1 || (event.button === 0 && (space.current || handTool)))) return;
     event.preventDefault(); event.stopPropagation();
     event.currentTarget.focus({ preventScroll: true });

@@ -1,4 +1,8 @@
 import extendedComponents from '../shared/extended-components.json' with { type: 'json' };
+import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
+import type { AnimationSettings } from '../shared/animation-settings.mjs';
+import { canvasLimits, defaultCanvasSize } from '../shared/canvas-sizes.mjs';
+import { canvasBounds, clampFrame } from './lib/canvas-bounds.ts';
 import type { CatalogEffect } from './lib/catalog-effects';
 export type ExtendedComponentType = keyof typeof extendedComponents;
 export const extendedCatalog = extendedComponents;
@@ -10,7 +14,9 @@ export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'c
 export type ComponentType = typeof componentTypes[number];
 export type BlockProps = {
   duration?: number; effect?: CatalogEffect;
+  motion?: AnimationSettings; effectOptions?: AnimationSettings;
   title?: string; text?: string; label?: string; url?: string; imageUrl?: string;
+  brandIcon?: keyof typeof navbarIcons | 'none';
   items?: string; variant?: string; align?: 'left' | 'center' | 'right';
   fontSize?: number; padding?: number; radius?: number; background?: string; color?: string;
   value?: number; max?: number; checked?: boolean;
@@ -59,9 +65,9 @@ export const catalog: {type: ComponentType; name: string; english: string; group
 ];
 const defaults: Record<ComponentType, BlockProps> = {
   ...Object.fromEntries(Object.entries(extendedComponents).map(([type, entry]) => [type, entry.props])) as Record<ExtendedComponentType, BlockProps>,
-  navbar: {title:'Forma', items:'产品,关于我们,联系我们', padding:20},
+  navbar: {title:'Forma', brandIcon:'leaf', items:'产品,关于我们,联系我们', padding:20},
   hero: {label:'让每一个想法，都能被看见',title:'好想法，\n值得一个好页面。',text:'从一个灵感开始，把想象变成触手可及的体验。\n自由搭建，让创作自然发生。',variant:'开始探索',url:'#features',align:'center',padding:46,animation:'fade'},
-  heading: {title:'为灵感，留一点空间。',fontSize:28,align:'left',padding:20,animation:'fade'},
+  heading: {title:'为灵感，留一点空间。',fontSize:28,align:'left',padding:20},
   text: {text:'把复杂留给工具，把专注留给创作。用简单、自然的方式，讲好你的故事。',fontSize:15,align:'left',padding:20},
   button: {label:'开始探索',url:'#features',variant:'primary',align:'left',padding:20,radius:10,animation:'none'},
   badge: {label:'为创作者而生',padding:16,align:'left'},
@@ -108,21 +114,23 @@ export function defaultFrame(type: ComponentType, canvasWidth: number, x = 32, y
   const size=frameSizes[type];const width=Math.min(canvasWidth,size.width);
   return {x:Math.max(0,Math.min(x,canvasWidth-width)),y:Math.max(0,y),width,height:size.height};
 }
-/** Upgrade older vertical documents while keeping every existing free frame. */
+/** Upgrade older vertical documents and keep frames within the page margins. */
 export function toFreeDocument(document: PageDocument): PageDocument {
-  let cursor=0;
+  const { margin, width }=canvasBounds(document.settings);
+  let cursor=margin,contentBottom=0;
   const blocks=document.blocks.map(block=>{
-    if(block.frame){cursor=Math.max(cursor,block.frame.y+block.frame.height+16);return block;}
-    const frame={...defaultFrame(block.type,document.settings.maxWidth,0,cursor),width:document.settings.maxWidth};
+    if(block.frame){const frame=clampFrame(block.frame,{...document.settings,canvasHeight:canvasLimits.maxHeight});contentBottom=Math.max(contentBottom,frame.y+frame.height);cursor=Math.max(cursor,frame.y+frame.height+16);return {...block,frame};}
+    const frame=clampFrame({...defaultFrame(block.type,width,margin,cursor),x:margin,width},{...document.settings,canvasHeight:canvasLimits.maxHeight});
+    contentBottom=Math.max(contentBottom,frame.y+frame.height);
     cursor+=frame.height+16;
     return {...block,frame};
   });
-  return {...document,settings:{...document.settings,layout:'free',canvasHeight:Math.min(6000,Math.max(document.settings.canvasHeight||1400,cursor))},blocks};
+  return {...document,settings:{...document.settings,layout:'free',canvasHeight:Math.min(canvasLimits.maxHeight,Math.max(document.settings.canvasHeight||1400,contentBottom+margin))},blocks};
 }
 export function createDocument(blank = false): PageDocument {
   const types:ComponentType[]=['navbar','hero','card','card','accordion','footer'];
-  const frames:BlockFrame[]=[{x:0,y:0,width:1000,height:85},{x:100,y:100,width:800,height:390},{x:40,y:520,width:440,height:260},{x:520,y:520,width:440,height:260},{x:100,y:820,width:800,height:370},{x:0,y:1240,width:1000,height:110}];
-  return {version:1,name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:1000,padding:0,layout:'free',canvasHeight:1400},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
+  const frames:BlockFrame[]=[{x:0,y:0,width:1920,height:85},{x:480,y:100,width:960,height:390},{x:40,y:520,width:440,height:260},{x:520,y:520,width:440,height:260},{x:1040,y:520,width:800,height:370},{x:0,y:950,width:1920,height:110}];
+  return {version:1,name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:defaultCanvasSize.width,padding:0,layout:'free',canvasHeight:defaultCanvasSize.height},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
 }
 export const blockName = (type: ComponentType) => catalog.find(c=>c.type===type)?.name ?? type;
 export function safeUrl(value?: string) {

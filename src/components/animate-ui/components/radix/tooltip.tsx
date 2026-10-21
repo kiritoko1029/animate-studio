@@ -1,11 +1,11 @@
 /** Official Animate UI registry source: https://animate-ui.com/r/components-radix-tooltip.json
  * Copyright (c) 2025 Elliot Sutton. MIT + Commons Clause.
- * See THIRD_PARTY_NOTICES.md. Local utility import adapted. */
+ * See THIRD_PARTY_NOTICES.md. Styled wrapper migrated to the v2 npm primitive. */
 import * as React from 'react';
 
 import {
   TooltipProvider as TooltipProviderPrimitive,
-  Tooltip as TooltipPrimitive,
+  Root as TooltipPrimitive,
   TooltipTrigger as TooltipTriggerPrimitive,
   TooltipContent as TooltipContentPrimitive,
   TooltipArrow as TooltipArrowPrimitive,
@@ -14,7 +14,7 @@ import {
   type TooltipProps as TooltipPrimitiveProps,
   type TooltipTriggerProps as TooltipTriggerPrimitiveProps,
   type TooltipContentProps as TooltipContentPrimitiveProps,
-} from '@/components/animate-ui/primitives/radix/tooltip';
+} from '@animate-ui/react/primitives/radix-ui/tooltip';
 import { cn } from '@/lib/cn';
 
 type TooltipProviderProps = TooltipProviderPrimitiveProps;

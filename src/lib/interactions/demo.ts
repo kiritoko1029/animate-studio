@@ -4,6 +4,7 @@ import type { Block, ComponentType } from '../../model.ts';
 export function createInteractionDemo() {
   const page = createDocument(true);
   page.name = '组件联动 · 体验四个场景';
+  page.settings.maxWidth = 1000;
   page.settings.canvasHeight = 1280;
   page.variables = [
     { name: 'name', type: 'string', initial: '' }, { name: 'progress', type: 'number', initial: 30 },

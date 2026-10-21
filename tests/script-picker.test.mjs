@@ -1,3 +1,4 @@
+import { installMatchMedia } from './helpers/media-query.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,7 @@ test('script picker commits valid names, cancels invalid edits and selects dupli
   virtualConsole.on('error', (...args) => errors.push(args.join(' ')));
   const dom = new JSDOM('<div id="root"></div><button id="outside">Outside</button>', { url: 'https://studio.test', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole });
   const { window } = dom;
+  installMatchMedia(window);
   t.after(() => { window.unmount?.(); window.close(); });
   const bundle = await build({
     stdin: { contents: `

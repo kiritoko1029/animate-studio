@@ -1,11 +1,14 @@
 import extendedComponents from '../shared/extended-components.json' with { type: 'json' };
+import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
 import { validateInteractions } from '../shared/interaction-schema.mjs';
+import { canvasLimits } from '../shared/canvas-sizes.mjs';
 import themes from '../shared/themes.json' with { type: 'json' };
+import { validateAnimationSettings } from '../shared/animation-settings.mjs';
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300 };
 const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100] };
-const enumValues = { effect: ['none','auto-height','blur','click','effect','fade','highlight','magnetic','particles','scroll-fade','shine','slide','theme-toggler','tilt','zoom','spring','page-transition','cursor'], align: ['left', 'center', 'right'], animation: ['none', 'fade', 'slide', 'scale'] };
+const enumValues = { brandIcon: [...Object.keys(navbarIcons), 'none'], effect: ['none','auto-height','blur','click','effect','fade','highlight','magnetic','particles','scroll-fade','shine','slide','theme-toggler','tilt','zoom','spring','page-transition','cursor'], align: ['left', 'center', 'right'], animation: ['none', 'fade', 'slide', 'scale'] };
 const colorPattern = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
@@ -87,10 +90,10 @@ export function validatePage(page) {
   if (Object.hasOwn(page.settings, 'theme') && !validThemes.has(page.settings.theme)) fail('page.settings.theme 的主题无效');
   color(page.settings.background, 'page.settings.background');
   color(page.settings.accent, 'page.settings.accent');
-  number(page.settings.maxWidth, 320, 1600, 'page.settings.maxWidth');
+  number(page.settings.maxWidth, canvasLimits.minWidth, canvasLimits.maxWidth, 'page.settings.maxWidth');
   number(page.settings.padding, 0, 120, 'page.settings.padding');
   if (Object.hasOwn(page.settings, 'layout') && !['flow', 'free'].includes(page.settings.layout)) fail('page.settings.layout 的选项无效');
-  if (Object.hasOwn(page.settings, 'canvasHeight')) number(page.settings.canvasHeight, 320, 6000, 'page.settings.canvasHeight');
+  if (Object.hasOwn(page.settings, 'canvasHeight')) number(page.settings.canvasHeight, canvasLimits.minHeight, canvasLimits.maxHeight, 'page.settings.canvasHeight');
   if (!Array.isArray(page.blocks) || page.blocks.length > 200) fail('页面最多包含 200 个组件');
   const ids = new Set();
   for (const block of page.blocks) {
@@ -102,16 +105,18 @@ export function validatePage(page) {
     if (Object.hasOwn(block, 'frame')) {
       record(block.frame, ['x', 'y', 'width', 'height'], 'block.frame');
       required(block.frame, ['x', 'y', 'width', 'height'], 'block.frame');
-      number(block.frame.x, 0, 1600, 'block.frame.x');
-      number(block.frame.y, 0, 6000, 'block.frame.y');
-      number(block.frame.width, 40, 1600, 'block.frame.width');
+      number(block.frame.x, 0, canvasLimits.maxWidth, 'block.frame.x');
+      number(block.frame.y, 0, canvasLimits.maxHeight, 'block.frame.y');
+      number(block.frame.width, 40, canvasLimits.maxWidth, 'block.frame.width');
       number(block.frame.height, 32, 3000, 'block.frame.height');
     }
-    record(block.props, [...Object.keys(stringLimits), ...Object.keys(numberLimits), ...Object.keys(enumValues), 'background', 'color', 'accent', 'checked', 'theme'], 'block.props');
+    record(block.props, [...Object.keys(stringLimits), ...Object.keys(numberLimits), ...Object.keys(enumValues), 'background', 'color', 'accent', 'checked', 'theme', 'motion', 'effectOptions'], 'block.props');
     for (const [key, value] of Object.entries(block.props)) {
       if (Object.hasOwn(stringLimits, key)) string(value, stringLimits[key], `block.props.${key}`);
       else if (Object.hasOwn(numberLimits, key)) number(value, ...((key === 'value' && ['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(block.type)) ? [0, 1000000000] : numberLimits[key]), `block.props.${key}`);
-      else if (key === 'theme') {
+      else if (key === 'motion' || key === 'effectOptions') {
+        try { validateAnimationSettings(key === 'motion' ? block.type : `effect:${block.props.effect}`, value); } catch (error) { fail(error.message); }
+      } else if (key === 'theme') {
         if (!validThemes.has(value)) fail('block.props.theme 的主题无效');
       } else if (Object.hasOwn(enumValues, key)) {
         if (!enumValues[key].includes(value)) fail(`block.props.${key} 的选项无效`);

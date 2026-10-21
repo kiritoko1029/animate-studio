@@ -27,9 +27,13 @@
 .page-surface h1, .page-surface h2, .page-surface h3, .page-surface p, .page-surface figure { margin: 0; }
 .page-navbar { display: flex; align-items: flex-start; gap: 24px; min-width: 0; padding: 0 13px; }
 .page-brand { min-width: 0; flex: 0 0 auto; display: flex; align-items: center; gap: 7px; font-size: var(--block-font-size, 19px); font-weight: 720; line-height: 1; letter-spacing: -.7px; white-space: nowrap; color: var(--block-color, var(--page-ink)); }
-.page-brand > span:nth-child(2) { max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
-.page-brand-mark { display: grid; place-items: center; width: 27px; height: 27px; color: var(--page-on-accent, white); background: var(--page-accent); border-radius: 50% 50% 50% 8px; transform: rotate(-10deg); }
+.page-brand-title { min-width: 0; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+.page-brand-mark { display: grid; flex-shrink: 0; place-items: center; width: 27px; height: 27px; color: var(--page-on-accent, white); background: var(--page-accent); border-radius: 50% 50% 50% 8px; transform: rotate(-10deg); }
 .page-brand-mark svg { transform: rotate(10deg); }
+.page-brand-placeholder { display: grid; place-items: center; }
+.page-brand-mark--image { color: var(--block-color, var(--page-ink)); background: transparent; border-radius: 0; transform: none; }
+.page-brand-mark--image svg { transform: none; }
+.page-brand-mark--image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .page-brand-dot { color: var(--page-accent); margin-left: -5px; }
 .page-nav-links { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px clamp(12px, 3cqw, 29px); margin-left: auto; padding-top: 3px; color: var(--block-color, var(--page-muted, #617166)); font-size: 12px; line-height: 1.65; }
 .page-nav-links a { max-width: 100%; overflow-wrap: anywhere; transition: color .18s; }
@@ -147,9 +151,9 @@
 .page-surface--free { min-height: 0; padding: 0; overflow: hidden; }
 .page-free-viewport { width: 100%; min-width: 0; }
 .page-free-scaled-shell { position: relative; margin-inline: auto; }
-.page-free-canvas { position: absolute; inset: 0 auto auto 0; transform-origin: top left; background: var(--page-bg); overflow: hidden; }
+.page-free-canvas { position: absolute; inset: 0 auto auto 0; transform-origin: top left; background: var(--page-bg); overflow: hidden; isolation: isolate; }
 .page-free-frame { position: absolute; container-type: inline-size; min-width: 0; min-height: 0; }
-.page-block--bounded, .page-free-frame > .page-block { width: 100%; height: 100%; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--page-border, #cbd7cf) transparent; }
+.page-block--bounded, .page-free-frame > .page-block { width: 100%; height: 100%; min-height: 0; overflow: auto; overscroll-behavior: auto; scrollbar-width: thin; scrollbar-color: var(--page-border, #cbd7cf) transparent; }
 .page-block--bounded > .page-block-content, .page-free-frame > .page-block > .page-block-content { min-height: 100%; }
 .page-block--bounded.page-block--card > .page-block-content,
 .page-block--bounded.page-block--hero > .page-block-content { display: flex; flex-direction: column; }
@@ -168,3 +172,8 @@
 .page-block[data-theme] .page-tab-content, .page-block[data-theme] .page-input { color: var(--block-color, var(--page-ink)); }
 .page-block[data-theme] :is(.page-input, .page-radio-option, .page-data-table) { border-color: var(--page-border); }
 .page-block[data-theme] .page-feature-card { border-color: var(--page-border); }
+
+/* The switch primitive animates its thumb against the CSS resting position. */
+.page-switch { display: flex; align-items: center; justify-content: flex-start; }
+.page-switch[data-state=checked] { justify-content: flex-end; }
+.page-switch-thumb,.page-switch-thumb[data-state=checked] { transform: none; transition: none; }

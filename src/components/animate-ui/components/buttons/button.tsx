@@ -1,6 +1,6 @@
 /** Official Animate UI registry source: https://animate-ui.com/r/components-buttons-button.json
  * Copyright (c) 2025 Elliot Sutton. MIT + Commons Clause.
- * See THIRD_PARTY_NOTICES.md. Local utility import adapted. */
+ * See THIRD_PARTY_NOTICES.md. Styled wrapper migrated to the v2 npm primitive. */
 'use client';
 
 import * as React from 'react';
@@ -9,7 +9,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import {
   Button as ButtonPrimitive,
   type ButtonProps as ButtonPrimitiveProps,
-} from '@/components/animate-ui/primitives/buttons/button';
+} from '@animate-ui/react/primitives/buttons/button';
 import { cn } from '@/lib/cn';
 
 const buttonVariants = cva(

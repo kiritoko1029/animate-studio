@@ -1,15 +1,13 @@
 /** Official Animate UI registry source: https://animate-ui.com/r/components-radix-dialog.json
  * Copyright (c) 2025 Elliot Sutton. MIT + Commons Clause.
- * See THIRD_PARTY_NOTICES.md. Local utility import adapted. */
+ * See THIRD_PARTY_NOTICES.md. Styled wrapper migrated to the v2 npm primitive. */
 import * as React from 'react';
 import { XIcon } from 'lucide-react';
 
 import {
-  Dialog as DialogPrimitive,
+  Root as DialogPrimitive,
   DialogContent as DialogContentPrimitive,
   DialogDescription as DialogDescriptionPrimitive,
-  DialogFooter as DialogFooterPrimitive,
-  DialogHeader as DialogHeaderPrimitive,
   DialogTitle as DialogTitlePrimitive,
   DialogTrigger as DialogTriggerPrimitive,
   DialogPortal as DialogPortalPrimitive,
@@ -18,13 +16,11 @@ import {
   type DialogProps as DialogPrimitiveProps,
   type DialogContentProps as DialogContentPrimitiveProps,
   type DialogDescriptionProps as DialogDescriptionPrimitiveProps,
-  type DialogFooterProps as DialogFooterPrimitiveProps,
-  type DialogHeaderProps as DialogHeaderPrimitiveProps,
   type DialogTitleProps as DialogTitlePrimitiveProps,
   type DialogTriggerProps as DialogTriggerPrimitiveProps,
   type DialogOverlayProps as DialogOverlayPrimitiveProps,
   type DialogCloseProps as DialogClosePrimitiveProps,
-} from '@/components/animate-ui/primitives/radix/dialog';
+} from '@animate-ui/react/primitives/radix-ui/dialog';
 import { cn } from '@/lib/cn';
 
 type DialogProps = DialogPrimitiveProps;
@@ -68,7 +64,7 @@ function DialogContent({
 }: DialogContentProps) {
   return (
     <DialogPortalPrimitive>
-      <DialogOverlay />
+      <DialogOverlay data-slot="dialog-overlay" />
       <DialogContentPrimitive
         className={cn(
           'bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg sm:max-w-lg',
@@ -88,22 +84,22 @@ function DialogContent({
   );
 }
 
-type DialogHeaderProps = DialogHeaderPrimitiveProps;
+type DialogHeaderProps = React.ComponentProps<'div'>;
 
 function DialogHeader({ className, ...props }: DialogHeaderProps) {
   return (
-    <DialogHeaderPrimitive
+    <div
       className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
       {...props}
     />
   );
 }
 
-type DialogFooterProps = DialogFooterPrimitiveProps;
+type DialogFooterProps = React.ComponentProps<'div'>;
 
 function DialogFooter({ className, ...props }: DialogFooterProps) {
   return (
-    <DialogFooterPrimitive
+    <div
       className={cn(
         'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
         className,

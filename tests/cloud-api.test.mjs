@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { handleCloudApi } from '../server/cloud-api.mjs';
 import { createDocument } from '../src/model.ts';
+import { canvasPresets } from '../shared/canvas-sizes.mjs';
 
 function fixture() {
   const records = new Map();
@@ -21,6 +22,16 @@ function fixture() {
   }), getStore);
   return { request, records };
 }
+
+test('cloud API accepts and restores every canvas size preset', async () => {
+  const { request } = fixture(), workspace = randomUUID();
+  for (const { width, height } of canvasPresets) {
+    const page = createDocument(true);
+    page.settings = { ...page.settings, maxWidth: width, canvasHeight: height };
+    assert.equal((await request('/api/page', { method: 'PUT', workspace, body: { page } })).status, 200);
+    assert.deepEqual((await (await request('/api/page', { workspace })).json()).page, page);
+  }
+});
 
 test('cloud API isolates browser workspaces and returns saved data without caching', async () => {
   const { request } = fixture();

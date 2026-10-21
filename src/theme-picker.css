@@ -1,4 +1,14 @@
 .theme-section h3 { display: flex; gap: 6px; align-items: center; }
+.component-theme-disclosure { border-bottom: 1px solid var(--studio-100); margin-bottom: 16px; }
+.component-theme-disclosure > summary { display: flex; align-items: center; gap: 7px; padding: 16px 0; color: var(--studio-600); font-size: 11px; cursor: pointer; list-style: none; }
+.component-theme-disclosure > summary::-webkit-details-marker { display: none; }
+.component-theme-disclosure > summary:focus-visible { outline: 2px solid var(--studio-600); outline-offset: 2px; border-radius: 4px; }
+.component-theme-disclosure > summary > svg { flex-shrink: 0; }
+.component-theme-disclosure[open] > summary > svg { transform: rotate(90deg); }
+.component-theme-disclosure > summary strong { font-weight: 600; }
+.component-theme-disclosure > summary span { margin-left: auto; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--studio-500); font-size: 10px; }
+.component-theme-disclosure > .theme-section { padding-top: 0; border-bottom: 0; }
+.component-theme-disclosure > .theme-section > h3 { display: none; }
 .theme-count { margin-left: auto; font-size: 10px; font-weight: 400; color: var(--studio-500); }
 .theme-preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 8px; }
 .theme-preset { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 4px; border: 1px solid var(--studio-200); border-radius: 8px; background: var(--studio-0); cursor: pointer; transition: border-color .18s, box-shadow .18s, transform .18s; }

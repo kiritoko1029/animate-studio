@@ -1,21 +1,21 @@
 import type { ReactNode } from 'react';
 import type { HTMLMotionProps } from 'motion/react';
 import { cn } from '@/lib/cn';
-import { Button } from './primitives/buttons/button';
-import { Fade, type FadeProps } from './primitives/effects/fade';
+import { Button } from '@animate-ui/react/primitives/buttons/button';
+import { Fade, type FadeProps } from '@animate-ui/react/primitives/effects/fade';
 import {
   HighlightText as AnimateHighlightText,
   type HighlightTextProps as PrimitiveHighlightTextProps,
-} from './primitives/texts/highlight';
+} from '@animate-ui/react/primitives/texts/highlight';
 import {
-  Accordion,
+  Root as Accordion,
   AccordionItem,
   AccordionHeader,
   AccordionTrigger,
   AccordionContent,
-} from './primitives/radix/accordion';
+} from '@animate-ui/react/primitives/radix-ui/accordion';
 
-/** Application wrappers around the official Animate UI registry primitives. */
+/** Application wrappers around the official Animate UI v2 npm primitives. */
 export type AnimatedButtonProps = HTMLMotionProps<'button'> & {
   variant?: 'primary' | 'secondary' | 'ghost';
   hoverScale?: number;
@@ -25,7 +25,7 @@ export type AnimatedButtonProps = HTMLMotionProps<'button'> & {
 export function AnimatedButton({
   variant = 'primary',
   className,
-  hoverScale = 1.025,
+  hoverScale = 1,
   tapScale = 0.97,
   type = 'button',
   ...props
@@ -63,7 +63,6 @@ export function HighlightText({
   return (
     <AnimateHighlightText
       text={text ?? children ?? ''}
-      transition={{ duration: 1.1, ease: 'easeInOut' }}
       style={{
         backgroundImage: `linear-gradient(transparent 54%, ${color} 54%, ${color} 94%, transparent 94%)`,
         ...style,
@@ -87,16 +86,18 @@ export type AnimatedAccordionItem = {
 export type AnimatedAccordionProps = {
   items: AnimatedAccordionItem[];
   defaultOpen?: boolean | string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   className?: string;
 };
 
-export function AnimatedAccordion({ items, defaultOpen = true, className }: AnimatedAccordionProps) {
+export function AnimatedAccordion({ items, defaultOpen = true, className, value, onValueChange }: AnimatedAccordionProps) {
   const initialValue = typeof defaultOpen === 'string'
     ? defaultOpen
     : defaultOpen && items.length ? items[0].id ?? 'item-0' : undefined;
 
   return (
-    <Accordion type="single" collapsible defaultValue={initialValue} className={cn('w-full', className)}>
+    <Accordion type="single" collapsible defaultValue={initialValue} value={value} onValueChange={onValueChange} className={cn('w-full', className)}>
       {items.map((item, index) => (
         <AccordionItem
           key={item.id ?? index}
@@ -120,5 +121,5 @@ export function AnimatedAccordion({ items, defaultOpen = true, className }: Anim
   );
 }
 
-export { Fade, Fades } from './primitives/effects/fade';
-export { Button } from './primitives/buttons/button';
+export { Fade, Fades } from '@animate-ui/react/primitives/effects/fade';
+export { Button } from '@animate-ui/react/primitives/buttons/button';

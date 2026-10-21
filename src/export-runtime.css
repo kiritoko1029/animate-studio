@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@import "./studio-tokens.css";
+@import "./studio-ui.css";
+* { box-sizing:border-box; }
+body { margin:0; }
+button,input,textarea,select { font:inherit; }
+button,a { touch-action:manipulation; }
+button { cursor:pointer; }
+button:disabled { cursor:default;opacity:.34; }
+a { color:inherit;text-decoration:none; }
+.runtime-debug { display:none; }
