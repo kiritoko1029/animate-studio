@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useLayoutEffect, useState } from 'react';
 import { useMotionValueEvent } from 'motion/react';
 import { ScrollProgress, ScrollProgressProvider, useScrollProgress } from '@animate-ui/react/primitives/scroll-progress';
+import type { Block } from '../model';
+import { motionProps, officialClass, officialStyle } from '../lib/official-motion';
 import { pageScrollContainer } from '../lib/scroll-progress';
 
 export const CanvasScrollProgress = createContext<number | null>(null);
 
-function PageProgressValue({ label, direction }: { label:string;direction:'vertical'|'horizontal' }) {
+function PageProgressValue({ label, direction, block }: { label:string;direction:'vertical'|'horizontal';block?:Block }) {
   const canvasProgress = useContext(CanvasScrollProgress);
   const { containerRef, progress } = useScrollProgress();
   const [value,setValue] = useState(0);
@@ -13,10 +15,10 @@ function PageProgressValue({ label, direction }: { label:string;direction:'verti
   const attach = useCallback((node:HTMLDivElement|null)=>{ containerRef.current=node ? pageScrollContainer(node) as HTMLDivElement : null; },[containerRef]);
   useMotionValueEvent(progress,'change',next=>setValue(Math.max(0,Math.min(100,next*100))));
   useLayoutEffect(()=>{ if(canvasProgress!==null && direction==='vertical')progress.set(canvasProgress/100); },[canvasProgress,direction,progress]);
-  return <div ref={attach} className="native-scroll-progress"><div className="native-page-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><ScrollProgress className="native-scroll-example-fill"/></div><output aria-label={`${label}百分比`}>{Math.round(value)}%</output></div>;
+  return <div ref={attach} className="native-scroll-progress"><div className="native-page-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><ScrollProgress {...(block?motionProps<typeof ScrollProgress>(block,'ScrollProgress'):{})} className={officialClass('native-scroll-example-fill',block?motionProps<typeof ScrollProgress>(block,'ScrollProgress').className:undefined)}/></div><output aria-label={`${label}百分比`}>{Math.round(value)}%</output></div>;
 }
 
 /** Keep the official spring, and adapt its scroll source to the editor's panned/scaled page. */
-export function PageScrollProgress({label,direction='vertical'}:{label:string;direction?:'vertical'|'horizontal'}) {
-  return <ScrollProgressProvider direction={direction}><PageProgressValue label={label} direction={direction}/></ScrollProgressProvider>;
+export function PageScrollProgress({label,direction='vertical',block}:{label:string;direction?:'vertical'|'horizontal';block?:Block}) {
+  return <ScrollProgressProvider {...(block?motionProps<typeof ScrollProgressProvider>(block,'ScrollProgressProvider'):{})} global={false} direction={direction}><PageProgressValue block={block} label={label} direction={direction}/></ScrollProgressProvider>;
 }

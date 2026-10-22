@@ -6,18 +6,18 @@ import { join } from 'node:path';
 import { createPageStore } from '../server/store.mjs';
 import { validatePage } from '../server/validation.mjs';
 import { createBlock, createDocument } from '../src/model.ts';
-import { officialAnimationControls, officialAnimationProps, validateAnimationSettings } from '../shared/animation-settings.mjs';
+import { officialAnimationControls, officialAnimationProps, validateAnimationSettings, animationValuesEqual } from '../shared/animation-settings.mjs';
 import { generateNativeCode } from '../src/lib/code-export/native.ts';
 import { transform } from 'esbuild';
 import { parse, compileScript } from '@vue/compiler-sfc';
 import { JSDOM } from 'jsdom';
 
-test('official settings retain pinned defaults, reject invalid values, and survive persistence and reset', async t => {
-  assert.deepEqual(officialAnimationProps('dialog','DialogContent'),{from:'top',showCloseButton:true});
+test('official settings retain reviewed defaults, reject invalid values, and survive persistence and reset', async t => {
+  assert.deepEqual(officialAnimationProps('dialog','DialogContent'),{from:'top',showCloseButton:false});
   assert.equal(officialAnimationProps('morphingText','MorphingText').holdDelay,2500);
   assert.deepEqual(officialAnimationProps('imageZoom','ImageZoom'),{zoomScale:3,zoomOnHover:true,zoomOnClick:true});
   for (const [type,{groups}] of Object.entries(officialAnimationControls)) {
-    const settings=Object.fromEntries(Object.entries(groups).flatMap(([group,fields])=>Object.entries(fields).map(([key,field])=>[`${group}.${key}`,field.value])));
+    const settings=Object.fromEntries(Object.entries(groups).flatMap(([group,fields])=>Object.entries(fields).filter(([,field])=>Object.hasOwn(field,'value')).map(([key,field])=>[`${group}.${key}`,field.value])));
     assert.doesNotThrow(()=>validateAnimationSettings(type,settings),type);
   }
   const bad = [null,[],{'DialogContent.from':'diagonal'},{'DialogContent.from':true},{'DialogContent.unknown':1},JSON.parse('{"__proto__":1}')];

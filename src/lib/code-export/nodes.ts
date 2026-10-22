@@ -22,7 +22,7 @@ const reactNames: Record<string, string> = { inputmode: 'inputMode', autocomplet
 
 function styleObject(style: Style) {
   return Object.fromEntries(Object.entries(style).filter(([, value]) => value !== undefined).map(([key, value]) => [key,
-    typeof value === 'number' && !key.startsWith('--') && !['opacity', 'fontWeight', 'zIndex', 'flexGrow', 'flexShrink'].includes(key) ? `${value}px` : value,
+    typeof value === 'number' && !key.startsWith('--') && !['opacity', 'fontWeight', 'zIndex', 'flexGrow', 'flexShrink', 'zoom'].includes(key) ? `${value}px` : value,
   ]));
 }
 const styleText = (style: Style) => Object.entries(styleObject(style)).map(([key, value]) => `${key.replace(/[A-Z]/g, char => `-${char.toLowerCase()}`)}:${value}`).join(';');

@@ -1,4 +1,8 @@
+import { version as appVersion } from '../package.json';
 import { AnimationSettings } from './components/AnimationSettings';
+import { ComponentScaleControls } from './components/ComponentScaleControls';
+import { BatchInspector } from './components/BatchInspector';
+import { duplicateSelection, patchSelection, replaceSelectedBlocks, selectComponentIds, themeSelection } from './lib/component-selection';
 import { Tabs, TabsList, TabsTrigger } from './components/animate-ui/components/radix/tabs';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './components/animate-ui/components/radix/dropdown-menu';
 import { Switch } from './components/animate-ui/components/radix/switch';
@@ -6,7 +10,7 @@ import { Moon, Sun } from 'lucide-react';
 import { StudioButton, StudioDialog, StudioTooltip } from './components/StudioUI';
 import { catalogEffects } from './lib/catalog-effects';
 import { CatalogMiniature } from './components/CatalogBlock';
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { DndContext, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, pointerWithin, closestCenter, type DragEndEvent, type DragMoveEvent, type DragStartEvent, type CollisionDetection } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { AnimatePresence, motion } from 'motion/react';
@@ -21,7 +25,7 @@ import { catalog, extendedCatalog, isExtendedComponent, createBlock, createDocum
 import { PageRenderer } from './components/PageRenderer';
 import { FreeCanvas } from './components/FreeCanvas';
 import { CanvasSizeControls, DimensionField } from './components/CanvasSizeControls';
-import { alignFrame, canvasBounds, clampFrame, type HorizontalAlignment } from './lib/canvas-bounds';
+import { alignFrame, canvasBounds, clampFrame, frameSizeLimits, type HorizontalAlignment } from './lib/canvas-bounds';
 import { ResizableStudioLayout } from './components/ResizableStudioLayout';
 import { PaletteDragPreview } from './components/PaletteDragPreview';
 import { canvasDropPosition, paletteDropPointer, pointInViewport } from './lib/palette-drag';
@@ -124,6 +128,7 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
   },[request]);
   const isComponent=(tab==='component'||tab==='logic') && !!selected;
   const p=selected?.props;
+  const editableItems=p?.items ?? (selected ? (extendedCatalog as Partial<Record<ComponentType,{props:Block['props']}>>)[selected.type]?.props.items : undefined);
   const bounds=canvasBounds(document.settings);
   const selectedTheme=getTheme(p?.theme??document.settings.theme,document.settings.customThemes);
   const selectedAccent=p?.accent??(p?.theme?selectedTheme.accent:document.settings.accent);
@@ -136,6 +141,7 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
     <div className="inspector-scroll" role="tabpanel" id="inspector-panel" aria-labelledby={`inspector-tab-${tab}`}>
       {tab==='logic' && selected ? <ComponentInteractions key={`${selected.id}-${request?.sequence??0}`} block={selected} page={document} onChange={onBlockChange} onOpenStudio={onOpenStudio}/> : isComponent && selected && p ? <>
         <div className="inspected-component"><span className="inspected-icon">{(()=>{const I=icons[selected.type];return <I size={18}/>;})()}</span><span><strong>{blockName(selected.type)}</strong><small>{catalog.find(c=>c.type===selected.type)?.english}</small></span><StudioTooltip label="恢复内容、样式与动效，保留位置、尺寸、图层和组件联动；支持撤销"><StudioButton className="inspector-reset" aria-label="恢复组件默认属性" onClick={onReset}><RotateCcw size={13}/><span>恢复默认</span></StudioButton></StudioTooltip></div>
+        <ComponentScaleControls key={`scale-${selected.id}`} block={selected} settings={document.settings} onChange={onBlockChange}/>
         <div className="property-section"><h3>内容</h3>
           {p.title!==undefined&&<Field label="标题"><textarea rows={selected.type==='hero'?2:1} aria-label="标题" value={p.title} onChange={e=>onUpdate({title:e.target.value})} maxLength={300}/></Field>}
           {selected.type==='navbar'&&<>
@@ -147,7 +153,7 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
           {selected.type==='hero'&&<Field label="按钮文字"><input aria-label="按钮文字" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})} maxLength={100}/></Field>}
           {p.url!==undefined&&<Field label="跳转链接" hint="支持 https://、mailto: 或 #锚点"><input aria-label="跳转链接" value={p.url} onChange={e=>onUpdate({url:e.target.value})} placeholder="https://example.com" maxLength={2000}/></Field>}
           {selected.type!=='navbar'&&p.imageUrl!==undefined&&<Field label="图片地址"><input aria-label="图片地址" value={p.imageUrl} onChange={e=>onUpdate({imageUrl:e.target.value})} maxLength={2000}/></Field>}
-          {p.items!==undefined&&<Field label={selected.type==='navbar'?'导航项目':'内容项目'} hint={itemHints[selected.type] || '每行一项，格式：标题 | 内容'}><textarea rows={7} aria-label="内容项目" value={p.items} onChange={e=>onUpdate({items:e.target.value})} maxLength={10000}/></Field>}
+          {editableItems!==undefined&&<Field label={selected.type==='navbar'?'导航项目':'内容项目'} hint={itemHints[selected.type] || '每行一项，格式：标题 | 内容'}><textarea rows={7} aria-label="内容项目" value={editableItems} onChange={e=>onUpdate({items:e.target.value})} maxLength={10000}/></Field>}
           {selected.type==='pricing'&&<Field label="价格文字"><input aria-label="价格文字" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})} maxLength={100}/></Field>}
           {['slider','progress','rating','pagination'].includes(selected.type)&&<>
             <Field label={selected.type==='progress'?'当前进度':selected.type==='pagination'?'初始页码':selected.type==='rating'?'初始评分':'初始数值'} hint={selected.type==='rating'?'0–5 星；预览中可点击或用方向键评分。':undefined}><input type="number" min={selected.type==='pagination'?1:0} max={numericMax} step={1} value={numericValue} onChange={e=>{if(e.target.value==='')return;const value=Math.round(Number(e.target.value));if(Number.isFinite(value))onUpdate({value:Math.min(numericMax,Math.max(selected.type==='pagination'?1:0,value))});}}/></Field>
@@ -158,7 +164,7 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
           {isExtendedComponent(selected.type)&&<><a className="catalog-doc-link" href={extendedCatalog[selected.type].docs} target="_blank" rel="noreferrer">查看官方组件说明 <ExternalLink size={12}/></a>{'variants' in extendedCatalog[selected.type]&&<Field label="展示方式"><select aria-label="展示方式" value={p.variant||''} onChange={e=>onUpdate({variant:e.target.value})}>{(extendedCatalog[selected.type] as {variants:string[][]}).variants.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>}{['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(selected.type)&&<Field label="显示数值"><input aria-label="显示数值" type="number" min={0} max={1000000000} value={p.value??0} onChange={e=>{if(e.target.value)onUpdate({value:Math.max(0,Math.min(1000000000,Number(e.target.value)||0))});}}/></Field>}{selected.type==='inputOtp'&&<Field label="验证码位数"><input aria-label="验证码位数" type="number" min={1} max={12} value={p.max??6} onChange={e=>onUpdate({max:Math.max(1,Math.min(12,Math.round(Number(e.target.value)||6)))})}/></Field>}</>}
           {selected.type==='separator'&&<p className="muted-note">使用分割线，为内容留出呼吸的空间。</p>}
         </div>
-        <AnimationSettings key={`motion-${selected.id}`} type={selected.type} value={p.motion} onChange={motion=>onUpdate({motion})}/>{selected.frame&&<div className="property-section"><h3>位置与尺寸 <span className="precision-label">PX</span></h3><div className="geometry-fields">{(['x','y','width','height'] as const).map((key,i)=><Field key={key} label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]}><input type="number" aria-label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]} min={key==='width'?40:key==='height'?32:bounds.margin} max={key==='width'?bounds.width:key==='height'?Math.min(3000,bounds.height):key==='x'?bounds.right-selected.frame!.width:bounds.bottom-selected.frame!.height} value={Math.round(selected.frame![key])} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n))onFrame({...selected.frame!,[key]:n});}}/></Field>)}</div><p className="field-hint">拖动组件自由摆放；拖动边框或角点调整大小。按住 Shift 暂停网格吸附。</p></div>}
+        <AnimationSettings key={`motion-${selected.id}`} type={selected.type} value={p.motion} onChange={motion=>onUpdate({motion})}/>{selected.frame&&<div className="property-section"><h3>位置与尺寸 <span className="precision-label">PX</span></h3><div className="geometry-fields">{(['x','y','width','height'] as const).map((key,i)=><Field key={key} label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]}><input type="number" aria-label={['横坐标 X','纵坐标 Y','宽度 W','高度 H'][i]} min={key==='width'?40:key==='height'?32:bounds.margin} max={key==='width'?frameSizeLimits(document.settings,p.contentScale).width:key==='height'?frameSizeLimits(document.settings,p.contentScale).height:key==='x'?Math.max(bounds.left,bounds.right-selected.frame!.width):Math.max(bounds.top,bounds.bottom-selected.frame!.height)} value={Math.round(selected.frame![key])} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n))onFrame({...selected.frame!,[key]:n});}}/></Field>)}</div><p className="field-hint">拖动组件自由摆放；拖动边框或角点调整大小。按住 Shift 暂停网格吸附。</p></div>}
         <div className="property-section"><h3>外观</h3>
           {['hero','heading','text','button','badge'].includes(selected.type)&&<Field label="对齐方式"><span className="alignment-control">{(['left','center','right'] as const).map((align,i)=>{const I=[AlignLeft,AlignCenter,AlignRight][i];return <StudioButton type="button" key={align} className={(p.align||'left')===align?'active':''} aria-label={['左对齐','居中','右对齐'][i]} onClick={()=>onUpdate({align})}><I size={16}/></StudioButton>;})}</span></Field>}
           {(['heading','text','statistic','pricing'].includes(selected.type)||isExtendedComponent(selected.type)&&p.fontSize!==undefined)&&<RangeField label="文字大小" value={p.fontSize??(selected.type==='statistic'?36:selected.type==='pricing'?30:16)} min={10} max={96} onChange={fontSize=>onUpdate({fontSize})}/>}
@@ -190,7 +196,12 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
 
 export default function App() {
   const [document,setDocument]=useState<PageDocument|null>(null);
-  const [selected,setSelected]=useState<string|null>(null);
+  const [selection,setSelection]=useState<string[]>([]);
+  const selectedIds=useMemo(()=>selection.filter(id=>document?.blocks.some(block=>block.id===id)),[selection,document?.blocks]);
+  const selected=selectedIds.at(-1)??null;
+  const setSelected=useCallback((id:string|null)=>setSelection(id?[id]:[]),[]);
+  const selectComponent=useCallback((id:string|null,additive=false)=>setSelection(ids=>selectComponentIds(ids,id,additive)),[]);
+  useEffect(()=>{setSelection(ids=>{const next=ids.filter(id=>document?.blocks.some(block=>block.id===id));return next.length===ids.length?ids:next;});},[document?.blocks]);
   const [past,setPast]=useState<PageDocument[]>([]);
   const [future,setFuture]=useState<PageDocument[]>([]);
   const [loadError,setLoadError]=useState('');
@@ -220,7 +231,7 @@ export default function App() {
   const [logicTarget,setLogicTarget]=useState<InteractionStudioTarget|null>(null);
   const [showHelp,setShowHelp]=useState(false);
   const [showSidebar,setShowSidebar]=useState(false);
-  const [themeDesign,setThemeDesign]=useState<{initial:CustomTheme;editing:boolean;blockId?:string;scopeName:string}|null>(null);
+  const [themeDesign,setThemeDesign]=useState<{initial:CustomTheme;editing:boolean;blockId?:string;blockIds?:string[];scopeName:string}|null>(null);
   const current=useRef(document); current.current=document;
   const autosave=useRef<ReturnType<typeof createAutosave<PageDocument>>|null>(null);
   const loadVersion=useRef(0);
@@ -274,8 +285,8 @@ export default function App() {
   },[]);
   const undo=useCallback(()=>{if(!past.length||!current.current)return;const previous=past[past.length-1];const outgoing=current.current;setFuture(items=>[outgoing,...items]);setPast(items=>items.slice(0,-1));setDocument(previous);current.current=previous;},[past]);
   const redo=useCallback(()=>{if(!future.length||!current.current)return;const next=future[0];const outgoing=current.current;setPast(items=>[...items,outgoing]);setFuture(items=>items.slice(1));setDocument(next);current.current=next;},[future]);
-  const remove=useCallback((id:string)=>{if(!current.current)return;update({...current.current,blocks:current.current.blocks.filter(b=>b.id!==id)});setSelected(null);notify('组件已删除，可通过撤销恢复');},[update,notify]);
-  const duplicate=useCallback((id:string)=>{const doc=current.current;if(!doc)return;if(doc.blocks.length>=200){notify('每个页面最多支持 200 个组件');return;}const index=doc.blocks.findIndex(b=>b.id===id);if(index<0)return;const original=doc.blocks[index];const block={...structuredClone(original),id:crypto.randomUUID(),props:{...original.props},...(original.frame?{frame:clampFrame({...original.frame,x:original.frame.x+24,y:original.frame.y+24},doc.settings)}:{})};const blocks=[...doc.blocks];blocks.splice(index+1,0,block);update({...doc,blocks});setSelected(block.id);notify('已复制组件');},[update,notify]);
+  const remove=useCallback((id:string)=>{const doc=current.current;if(!doc)return;const ids=selectedIds.includes(id)?selectedIds:[id];update({...doc,blocks:doc.blocks.filter(block=>!ids.includes(block.id))});setSelected(null);notify(`已删除 ${ids.length} 个组件，可通过撤销恢复`);},[update,notify,selectedIds,setSelected]);
+  const duplicate=useCallback((id:string)=>{const doc=current.current;if(!doc)return;try{const result=duplicateSelection(doc,selectedIds.includes(id)?selectedIds:[id]);update(result.page);setSelection(result.ids);notify(`已复制 ${result.ids.length} 个组件`);}catch(error){notify(error instanceof Error?error.message:'暂时无法复制组件');}},[update,notify,selectedIds]);
   const finishAdding=useCallback((result:PlacementResult)=>{
     update(result.page);setSelected(result.block.id);setInspector(true);setView(v=>v==='preview'?'split':v);setShowSidebar(false);setInsertAfterId(null);
     notify(insertAfterId?'已插入组件，后续内容已整体下移':result.expanded?'已添加组件并扩展画布，已有组件位置保持不变':`已将${blockName(result.block.type)}放入空白区域`);
@@ -291,7 +302,7 @@ export default function App() {
   function resetComponent(id:string) {
     const doc=current.current,block=doc?.blocks.find(item=>item.id===id);if(!doc||!block)return;
     const defaults=prepareBlockForPage(createBlock(block.type),doc.settings).props;
-    update({...doc,blocks:doc.blocks.map(item=>item.id===id?{...item,props:defaults}:item)});
+    update({...doc,blocks:doc.blocks.map(item=>item.id===id?{...item,props:{...defaults,...(item.props.contentScale === undefined ? {} : {contentScale:item.props.contentScale})}}:item)});
     notify('组件属性已恢复默认，可撤销');
   }
   function startInsert(id:string){setInsertAfterId(id);setSidebarTab('components');setShowSidebar(true);setQuery('');setGroup('全部');notify('选择左侧组件，将自动插入选中组件下方');}
@@ -310,6 +321,7 @@ export default function App() {
       const target=e.target as HTMLElement;const typing=['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable;
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if(current.current)void save(current.current);return;}
       if(typing||target.closest('[role="separator"]')||fullPreview||showHelp)return;
+      if((e.metaKey||e.ctrlKey)&&!e.altKey&&e.key.toLowerCase()==='a'&&target.closest('.layer-list')){e.preventDefault();setSelection(current.current?.blocks.map(block=>block.id)??[]);setInspector(true);return;}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'&&selected){e.preventDefault();duplicate(selected);}
       if((e.key==='Delete'||e.key==='Backspace')&&selected){e.preventDefault();remove(selected);}
@@ -318,7 +330,7 @@ export default function App() {
   },[undo,redo,selected,remove,duplicate,save,fullPreview,showHelp,dragging]);
 
   function inspectComponent(id:string,tab:InspectorTab) {
-    setSelected(id);setInspector(true);
+    if(!selectedIds.includes(id)||tab==='logic')setSelected(id);setInspector(true);
     setInspectorRequest(previous=>({tab,sequence:(previous?.sequence??0)+1}));
   }
   function inspectPage(section:PageSettingsSection) {
@@ -329,17 +341,17 @@ export default function App() {
   function updateSettings(settings:Partial<PageDocument['settings']>) {
     const doc=current.current;if(!doc)return;
     const next={...doc.settings,...settings};
-    update({...doc,settings:next,blocks:doc.blocks.map(block=>block.frame?{...block,frame:clampFrame(block.frame,next)}:block)});
+    update({...doc,settings:next,blocks:doc.blocks.map(block=>block.frame?{...block,frame:clampFrame(block.frame,next,block.props.contentScale)}:block)});
   }
 
   function updateFrame(id:string,frame:BlockFrame) {
     const doc=current.current;if(!doc)return;
-    update({...doc,blocks:doc.blocks.map(block=>block.id===id?{...block,frame:clampFrame(frame,doc.settings)}:block)});
+    update({...doc,blocks:doc.blocks.map(block=>block.id===id?{...block,frame:clampFrame(frame,doc.settings,block.props.contentScale)}:block)});
   }
   function alignComponent(id:string,alignment:HorizontalAlignment) {
     const doc=current.current,block=doc?.blocks.find(block=>block.id===id);if(!doc||!block)return;
     setSelected(id);
-    updateFrame(id,alignFrame(block.frame??defaultFrame(block.type,doc.settings.maxWidth),doc.settings,alignment));
+    updateFrame(id,alignFrame(block.frame??defaultFrame(block.type,doc.settings.maxWidth),doc.settings,alignment,block.props.contentScale));
   }
   function fillComponentWidth(id:string) {
     const doc=current.current;if(!doc)return;
@@ -427,17 +439,18 @@ export default function App() {
       if(block?.props.color)initial.text=block.props.color;
       if(block?.props.radius!==undefined)initial.radius=block.props.radius;
     }
-    setThemeDesign({initial,editing:!!id,blockId:block?.id,scopeName:block?`「${blockName(block.type)}」组件`:'页面'});
+    setThemeDesign({initial,editing:!!id,blockId:block?.id,blockIds:block&&selectedIds.length>1?[...selectedIds]:undefined,scopeName:block?selectedIds.length>1?`${selectedIds.length} 个组件`:`「${blockName(block.type)}」组件`:'页面'});
   }
 
   if(!document)return <div className="loading-screen"><Brand/>{loadError?<><AlertCircle size={28}/><p>{loadError}</p><StudioButton className="primary-button" onClick={()=>void load()}>重新读取</StudioButton></>:<><LoaderCircle className="spin" size={24}/><p>正在打开你的创作空间…</p></>}</div>;
   const selectedBlock=document.blocks.find(b=>b.id===selected);
+  const selectedBlocks=document.blocks.filter(block=>selectedIds.includes(block.id));
   const variableBlock=document.blocks.find(b=>b.id===variableBlockId);
   const filtered=catalog.filter(c=>(group==='全部'||c.group===group)&&`${c.name} ${c.english} ${c.description}`.toLowerCase().includes(query.toLowerCase()));
   const saveText=saveState==='saved'?'已保存':saveState==='saving'?'保存中':saveState==='error'?'保存失败':'待保存';
   return <div className="studio-app">
     <header className="app-header">
-      <div className="header-brand"><IconButton label="打开组件与页面工具" className="mobile-menu" onClick={()=>setShowSidebar(!showSidebar)}><Menu size={18}/></IconButton><Brand/><span className="beta-label">BETA</span></div>
+      <div className="header-brand"><IconButton label="打开组件与页面工具" className="mobile-menu" onClick={()=>setShowSidebar(!showSidebar)}><Menu size={18}/></IconButton><Brand/><a className="version-label" href={`https://github.com/kiritoko1029/animate-studio/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" aria-label={`当前版本 v${appVersion}，查看更新日志`} title={`v${appVersion} · 查看更新日志`}>v{appVersion}</a></div>
       <div className="document-heading"><span className="header-slash">/</span><input aria-label="页面名称" value={document.name} onChange={e=>update({...document,name:e.target.value})} maxLength={100}/><span className={`save-status ${saveState}`} title={saveState==='error'?saveError:savedAt?`保存于 ${new Date(savedAt).toLocaleTimeString('zh-CN')}`:'自动保存到服务'}>{saveState==='saved'?<CheckCircle2 size={13}/>:saveState==='saving'?<LoaderCircle size={13} className="spin"/>:saveState==='error'?<AlertCircle size={13}/>:<span className="pending-dot"/>}{saveText}</span>{saveState==='error'&&<StudioButton className="retry-save" onClick={()=>void save(document)}>重试</StudioButton>}</div>
       <div className="header-actions"><IconButton label={studioTheme==='light'?'切换工作台深色主题':'切换工作台浅色主题'} onClick={()=>setStudioTheme(value=>value==='light'?'dark':'light')}>{studioTheme==='light'?<Moon size={16}/>:<Sun size={16}/>}</IconButton><div className="history-controls"><IconButton label="撤销 (⌘Z)" onClick={undo} disabled={!past.length}><Undo2 size={16}/></IconButton><IconButton label="重做 (⌘⇧Z)" onClick={redo} disabled={!future.length}><Redo2 size={16}/></IconButton></div><span className="header-divider"/>
         <DropdownMenu open={showNew} onOpenChange={setShowNew}><DropdownMenuTrigger asChild><StudioButton className="secondary-button create-page-button" aria-label="新建页面" title="新建页面"><Plus size={15}/><span>新建页面</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu new-page-menu" align="end" sideOffset={8}><DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;update(next);setSelected(null);setInsertAfterId(null);setShowNew(false);notify('已新建空白页面，可撤销恢复');}}><FilePlus2 size={15}/>空白页面</DropdownMenuItem><DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;update(next);setSelected(next.blocks[1].id);setInsertAfterId(null);setShowNew(false);notify('已载入灵感模板，可撤销恢复');}}><LayoutTemplate size={15}/>从灵感模板开始</DropdownMenuItem><DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>组件联动示例</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
@@ -466,14 +479,14 @@ export default function App() {
             <div className="search-box"><Search size={14}/><input aria-label="搜索组件" placeholder="搜索组件…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<StudioButton onClick={()=>setQuery('')} aria-label="清除搜索"><X size={12}/></StudioButton>}</div>
             <div className="category-filter">{['全部',...new Set(catalog.map(item=>item.group))].map(g=><StudioButton key={g} className={group===g?'active':''} onClick={()=>setGroup(g)}>{g}</StudioButton>)}</div>
             <div className="library-scroll">{insertAfterId&&<div className="insert-notice"><span>选择组件，插入选中项之后</span><StudioButton aria-label="取消插入" onClick={()=>setInsertAfterId(null)}><X size={13}/></StudioButton></div>}<div className="library-section-heading"><span>{group==='全部'?'所有组件':`${group}组件`}</span><span>{filtered.length}</span></div><div className="component-grid">{filtered.map(c=><PaletteItem key={c.type} type={c.type} onAdd={()=>add(c.type)}/>)}</div>{!filtered.length&&<div className="search-empty"><Search size={23}/><p>没有找到相关组件</p><StudioButton className="text-button" onClick={()=>{setQuery('');setGroup('全部');}}>查看所有组件</StudioButton></div>}</div>
-          </>:<div className="layer-list"><div className="layer-heading"><span><LayoutTemplate size={14}/> 首页</span><small>顶部 → 底部</small></div>{[...document.blocks].reverse().map((block,index)=>{const I=icons[block.type];return <div key={block.id} className={`layer-item ${selected===block.id?'selected':''}`}><StudioButton onClick={()=>{setSelected(block.id);setCanvasReveal(n=>n+1);setInspector(true);setView(v=>v==='preview'?'split':v);}}><I size={15}/><span>{block.props.title||block.props.label||blockName(block.type)}</span></StudioButton><span className="layer-order">{document.blocks.length-index}</span><div className="layer-actions"><IconButton label={`将${blockName(block.type)}置于上一层`} disabled={index===0} onClick={()=>changeLayer(block.id,'raise')}><ArrowUp size={12}/></IconButton><IconButton label={`将${blockName(block.type)}置于下一层`} disabled={index===document.blocks.length-1} onClick={()=>changeLayer(block.id,'lower')}><ArrowDown size={12}/></IconButton></div></div>;})}{!document.blocks.length&&<p className="muted-note">添加组件后，图层会出现在这里。</p>}</div>}
+          </>:<div className="layer-list"><div className="layer-heading"><span><LayoutTemplate size={14}/> 首页</span><small>顶部 → 底部</small></div>{[...document.blocks].reverse().map((block,index)=>{const I=icons[block.type];return <div key={block.id} className={`layer-item ${selectedIds.includes(block.id)?'selected':''}`}><StudioButton aria-pressed={selectedIds.includes(block.id)} onClick={event=>{selectComponent(block.id,event.shiftKey||event.metaKey||event.ctrlKey);setCanvasReveal(n=>n+1);setInspector(true);setView(v=>v==='preview'?'split':v);}}><I size={15}/><span>{block.props.title||block.props.label||blockName(block.type)}</span></StudioButton><span className="layer-order">{document.blocks.length-index}</span><div className="layer-actions"><IconButton label={`将${blockName(block.type)}置于上一层`} disabled={index===0} onClick={()=>changeLayer(block.id,'raise')}><ArrowUp size={12}/></IconButton><IconButton label={`将${blockName(block.type)}置于下一层`} disabled={index===document.blocks.length-1} onClick={()=>changeLayer(block.id,'lower')}><ArrowDown size={12}/></IconButton></div></div>;})}{!document.blocks.length&&<p className="muted-note">添加组件后，图层会出现在这里。</p>}</div>}
           </div><div className="sidebar-bottom"><a className="animate-credit" title="Animate UI v2.1.2 · @animate-ui/react 2.0.0" href="https://animate-ui.com/docs" target="_blank" rel="noreferrer"><span className="animate-mark">a.</span><span>由 Animate UI v2 驱动</span><ExternalLink size={11}/></a></div>
         </aside>
         <main className="workspace">
           <div className="workspace-toolbar"><div className="workspace-breadcrumb"><LayoutTemplate size={14}/><span>首页</span><ChevronRight size={12}/><strong>页面编辑器</strong></div><div className="toolbar-end"><Tabs value={view} onValueChange={value=>setView(value as View)} className="studio-tab-root"><TabsList className="studio-tabs view-switch" aria-label="画布视图">{([{id:'edit',name:'编辑',icon:MousePointer2},{id:'split',name:'并排',icon:Columns2},{id:'preview',name:'预览',icon:Eye}] as const).map(v=><TabsTrigger key={v.id} value={v.id} id={`view-tab-${v.id}`} aria-controls="workspace-canvas-panel" aria-label={`${v.name}模式`}><v.icon size={13}/>{v.name}</TabsTrigger>)}</TabsList></Tabs><span className="toolbar-separator"/><div className="device-toggle"><IconButton label="桌面视图" active={device==='desktop'} onClick={()=>setDevice('desktop')}><Monitor size={16}/></IconButton><IconButton label="手机视图" active={device==='mobile'} onClick={()=>setDevice('mobile')}><Smartphone size={16}/></IconButton></div><span className="toolbar-separator"/><IconButton label="切换属性面板" active={inspector} onClick={()=>setInspector(!inspector)}><Settings2 size={16}/></IconButton></div></div>
           {saveState==='error'&&<div className="save-error-banner" role="alert"><AlertCircle size={14}/><span>{saveError}，修改仍保留在画布中。</span><StudioButton onClick={()=>void save(document)}>重新保存</StudioButton></div>}
           <div className={`canvas-workspace view-${view}`} role="tabpanel" id="workspace-canvas-panel" aria-labelledby={`view-tab-${view}`}>
-            {view!=='preview'&&<section className="canvas-pane edit-pane"><div className="pane-heading"><span><MousePointer2 size={13}/><strong>编辑画布</strong><span className="pane-tag">可编辑</span></span><span className="pane-hint">自由摆放 · 网格吸附</span></div><FreeCanvas revealKey={canvasReveal} document={document} selected={selected} onSelect={setSelected} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
+            {view!=='preview'&&<section className="canvas-pane edit-pane"><div className="pane-heading"><span><MousePointer2 size={13}/><strong>编辑画布</strong><span className="pane-tag">可编辑</span></span><span className="pane-hint">自由摆放 · 网格吸附</span></div><FreeCanvas revealKey={canvasReveal} document={document} selected={selected} selectedIds={selectedIds} onSelect={selectComponent} onSelectAll={()=>{setSelection(document.blocks.map(block=>block.id));setInspector(true);}} onFramesChange={frames=>update({...document,blocks:document.blocks.map(block=>frames[block.id]?{...block,frame:frames[block.id]}:block)})} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
             {view!=='edit'&&<section className="canvas-pane preview-pane"><div className="pane-heading"><span><Eye size={14}/><strong>实时预览</strong><span className="live-indicator"/> </span><IconButton label="重播动画" onClick={()=>setReplay(n=>n+1)}><Play size={12}/></IconButton></div><div className={`preview-scroll ${device==='mobile'?'mobile':''}`}><div className="preview-browser" style={{maxWidth:device==='mobile'?375:document.settings.maxWidth}}><div className="browser-bar"><div className="browser-dots"><i/><i/><i/></div><span><span className="lock-icon">⌑</span> {document.name||'未命名页面'}</span><RotateCcw size={10}/></div><PageRenderer document={document} replayKey={replay}/></div><div className="preview-footnote"><span className="live-indicator"/>与编辑画布实时同步</div></div></section>}
           </div>
           <footer className="workspace-status"><span><span className="connection-dot"/>创作空间<span className="status-separator">/</span>{document.blocks.length} 个组件</span><span><kbd>⌘ Z</kbd> 撤销<StudioButton onClick={()=>setShowHelp(true)}><CircleHelp size={13}/>快捷键与帮助</StudioButton></span></footer>
@@ -483,15 +496,15 @@ export default function App() {
           update(createComponentVariable(page,variableBlock.id,key,variable));
           setVariableBlockId(null);inspectComponent(variableBlock.id,'logic');notify(`已创建变量 ${variable.name} 并绑定，可撤销`);
         }}/>}
-        {inspector&&<Inspector request={inspectorRequest} studioTheme={studioTheme} onOpenStudio={setLogicTarget} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} document={document} selected={selectedBlock} onDesignTheme={openThemeDesigner} onDeleteTheme={theme=>{update(deleteCustomTheme(document,theme));notify('主题已删除，相关组件已恢复继承，可撤销');}} onPageTheme={theme=>{update(applyPageTheme(document,theme));notify(`已应用${getTheme(theme,document.settings.customThemes).name}`);}} onUpdate={props=>{if(!selectedBlock)return;update({...document,blocks:document.blocks.map(b=>b.id===selectedBlock.id?{...b,props:{...b.props,...props}}:b)});}} onFrame={frame=>selected&&updateFrame(selected,frame)} onSettings={updateSettings} onClose={()=>setInspector(false)} onDelete={()=>selected&&remove(selected)} onDuplicate={()=>selected&&duplicate(selected)} onReset={()=>selected&&resetComponent(selected)}/>}
+        {inspector&&(selectedBlocks.length>1?<BatchInspector key={selectedIds.join(',')} document={document} blocks={selectedBlocks} onPatch={patch=>update(patchSelection(document,selectedIds,patch))} onBlocksChange={blocks=>update(replaceSelectedBlocks(document,blocks))} onTheme={theme=>update(themeSelection(document,selectedIds,theme))} onDesignTheme={()=>openThemeDesigner('component')} onClose={()=>setInspector(false)} onDelete={()=>selected&&remove(selected)} onDuplicate={()=>selected&&duplicate(selected)}/>:<Inspector request={inspectorRequest} studioTheme={studioTheme} onOpenStudio={setLogicTarget} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} document={document} selected={selectedBlock} onDesignTheme={openThemeDesigner} onDeleteTheme={theme=>{update(deleteCustomTheme(document,theme));notify('主题已删除，相关组件已恢复继承，可撤销');}} onPageTheme={theme=>{update(applyPageTheme(document,theme));notify(`已应用${getTheme(theme,document.settings.customThemes).name}`);}} onUpdate={props=>{if(!selectedBlock)return;update({...document,blocks:document.blocks.map(b=>b.id===selectedBlock.id?{...b,props:{...b.props,...props}}:b)});}} onFrame={frame=>selected&&updateFrame(selected,frame)} onSettings={updateSettings} onClose={()=>setInspector(false)} onDelete={()=>selected&&remove(selected)} onDuplicate={()=>selected&&duplicate(selected)} onReset={()=>selected&&resetComponent(selected)}/>)}
       </ResizableStudioLayout>
       <PaletteDragPreview block={dragging} settings={document.settings} canvasScale={dragCanvasScale}/>
     </DndContext>
     {logicTarget&&<Suspense fallback={null}><InteractionStudio initialTarget={logicTarget} page={document} onChange={update} onClose={()=>setLogicTarget(null)} onDemo={loadInteractionDemo}/></Suspense>}
-    {themeDesign&&<ThemeDesigner initial={themeDesign.initial} editing={themeDesign.editing} scopeName={themeDesign.scopeName} existingNames={(document.settings.customThemes??[]).map(theme=>theme.name)} canCreate={(document.settings.customThemes?.length??0)<30} usageCount={(document.settings.theme===themeDesign.initial.id?1:0)+document.blocks.filter(block=>block.props.theme===themeDesign.initial.id).length} onClose={()=>setThemeDesign(null)} onSave={theme=>{update(saveCustomTheme(document,theme,themeDesign.blockId));setThemeDesign(null);notify(`已应用「${theme.name}」，正在自动保存`);}}/>}
+    {themeDesign&&<ThemeDesigner initial={themeDesign.initial} editing={themeDesign.editing} scopeName={themeDesign.scopeName} existingNames={(document.settings.customThemes??[]).map(theme=>theme.name)} canCreate={(document.settings.customThemes?.length??0)<30} usageCount={(document.settings.theme===themeDesign.initial.id?1:0)+document.blocks.filter(block=>block.props.theme===themeDesign.initial.id).length} onClose={()=>setThemeDesign(null)} onSave={theme=>{const next=saveCustomTheme(document,theme,themeDesign.blockId);update(themeDesign.blockIds?themeSelection(next,themeDesign.blockIds,theme.id):next);setThemeDesign(null);notify(`已应用「${theme.name}」，正在自动保存`);}}/>}
     <input type="file" accept=".json,application/json" ref={fileRef} hidden onChange={e=>void importFile(e.target.files?.[0])}/>
     <AnimatePresence>{toast&&<motion.div className="toast" role="status" initial={{opacity:0,y:12,scale:.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:8}}><CheckCircle2 size={16}/>{toast}<StudioButton aria-label="关闭提示" onClick={()=>setToast('')}><X size={13}/></StudioButton></motion.div>}</AnimatePresence>
     {fullPreview&&<StudioDialog title="页面预览" className="full-preview" onClose={()=>setFullPreview(false)}><header><StudioButton className="secondary-button" autoFocus onClick={()=>setFullPreview(false)}><ArrowLeft size={14}/>返回编辑</StudioButton><span>{document.name}</span><div><IconButton label="桌面预览" active={device==='desktop'} onClick={()=>setDevice('desktop')}><Monitor size={17}/></IconButton><IconButton label="手机预览" active={device==='mobile'} onClick={()=>setDevice('mobile')}><Smartphone size={17}/></IconButton><IconButton label="重播页面动画" onClick={()=>setReplay(n=>n+1)}><RotateCcw size={16}/></IconButton></div></header><div className={`full-preview-scroll ${device}`}><div className="full-preview-page" style={{maxWidth:device==='mobile'?375:document.settings.maxWidth}}><PageRenderer document={document} replayKey={replay}/></div></div></StudioDialog>}
-    {showHelp&&<StudioDialog title="快捷键与帮助" className="help-dialog" onClose={()=>setShowHelp(false)}><div className="modal-heading"><h2>让创作更顺手</h2><IconButton label="关闭帮助" onClick={()=>setShowHelp(false)}><X size={18}/></IconButton></div><p>拖入组件 → 拖动位置与大小 → 查看预览。修改会自动保存。</p><div className="shortcut-list">{[['撤销','⌘ / Ctrl + Z'],['重做','⌘ / Ctrl + Shift + Z'],['复制选中组件','⌘ / Ctrl + D'],['删除选中组件','Delete / Backspace'],['立即保存','⌘ / Ctrl + S'],['缩放画布',`${canvasModifierLabel} + 滚轮 / + / −`],['平移画布','空格 + 拖动 / 中键'],['适应画布',`${canvasModifierLabel} + 0`],['恢复 100%',`${canvasModifierLabel} + 1`],['关闭预览与弹窗','Esc']].map(([name,key])=><div key={name}><span>{name}</span><kbd>{key}</kbd></div>)}</div><p className="help-note">拖动八个控制点调整大小，按住 Shift 暂停网格吸附。点击添加会自动寻找空白区域；选中组件工具栏的加号可在其后插入，并整体下移后续内容。方向键微调位置，Shift + 方向键移动 8px。</p><a href="https://animate-ui.com/docs" target="_blank" rel="noreferrer">查看 Animate UI 文档 <ExternalLink size={13}/></a></StudioDialog>}
+    {showHelp&&<StudioDialog title="快捷键与帮助" className="help-dialog" onClose={()=>setShowHelp(false)}><div className="modal-heading"><h2>让创作更顺手</h2><IconButton label="关闭帮助" onClick={()=>setShowHelp(false)}><X size={18}/></IconButton></div><p>拖入组件 → 拖动位置与大小 → 查看预览。修改会自动保存。</p><div className="shortcut-list">{[['全选画布组件','⌘ / Ctrl + A'],['增减选择','Shift / ⌘ / Ctrl + 点击'],['撤销','⌘ / Ctrl + Z'],['重做','⌘ / Ctrl + Shift + Z'],['复制选中组件','⌘ / Ctrl + D'],['删除选中组件','Delete / Backspace'],['立即保存','⌘ / Ctrl + S'],['缩放画布',`${canvasModifierLabel} + 滚轮 / + / −`],['平移画布','空格 + 拖动 / 中键'],['适应画布',`${canvasModifierLabel} + 0`],['恢复 100%',`${canvasModifierLabel} + 1`],['关闭预览与弹窗','Esc']].map(([name,key])=><div key={name}><span>{name}</span><kbd>{key}</kbd></div>)}</div><p className="help-note">拖动八个控制点调整大小，按住 Shift 暂停网格吸附。点击添加会自动寻找空白区域；选中组件工具栏的加号可在其后插入，并整体下移后续内容。方向键微调位置，Shift + 方向键移动 8px。</p><a href="https://animate-ui.com/docs" target="_blank" rel="noreferrer">查看 Animate UI 文档 <ExternalLink size={13}/></a></StudioDialog>}
   </div>;
 }

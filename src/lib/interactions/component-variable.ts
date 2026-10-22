@@ -16,6 +16,7 @@ function fixedValue(block: Block, key: BindingKey): JsonValue {
   if (key === 'disabled') return false;
   if (key === 'checked') return block.props.checked ?? block.type === 'sidebar';
   if (key !== 'value') return block.props[key] ?? '';
+  if (bindingVariableTypes(block,key)[0] === 'array') return block.type === 'slider' ? (block.props.motion?.['Slider.value'] ?? block.props.motion?.['Slider.defaultValue'] ?? []) as JsonValue : [];
   if (bindingVariableTypes(block, key).includes('string')) return '';
   if (block.type === 'motionGrid') return -1;
   if (block.type === 'accordion') return block.props.items?.trim() ? 0 : -1;
@@ -39,7 +40,7 @@ export function suggestComponentVariable(page: PageDocument, block: Block, key: 
   if (Object.hasOwn(variableDefaults, type) && bindingVariableTypes(block, key).includes(type) && (typeof value !== 'number' || Number.isFinite(value)) && value !== null) {
     return { name, type, initial: value };
   }
-  return { name, type: typeof fallback as Variable['type'], initial: fallback };
+  return { name, type: (Array.isArray(fallback) ? 'array' : typeof fallback) as Variable['type'], initial: fallback };
 }
 
 /** Create and bind in one document update so undo never leaves a dangling reference. */

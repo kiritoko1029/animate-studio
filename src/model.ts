@@ -19,6 +19,7 @@ export type BlockProps = {
   brandIcon?: keyof typeof navbarIcons | 'none';
   items?: string; variant?: string; align?: 'left' | 'center' | 'right';
   fontSize?: number; padding?: number; radius?: number; background?: string; color?: string;
+  contentScale?: number;
   value?: number; max?: number; checked?: boolean;
   theme?: ThemeId; accent?: string;
   animation?: 'none' | 'fade' | 'slide' | 'scale';
@@ -119,7 +120,14 @@ export function toFreeDocument(document: PageDocument): PageDocument {
   const { margin, width }=canvasBounds(document.settings);
   let cursor=margin,contentBottom=0;
   const blocks=document.blocks.map(block=>{
-    if(block.frame){const frame=clampFrame(block.frame,{...document.settings,canvasHeight:canvasLimits.maxHeight});contentBottom=Math.max(contentBottom,frame.y+frame.height);cursor=Math.max(cursor,frame.y+frame.height+16);return {...block,frame};}
+    if(block.frame){
+      const scaled=(block.props.contentScale??100)>100;
+      const frame=clampFrame(block.frame,scaled?document.settings:{...document.settings,canvasHeight:canvasLimits.maxHeight},block.props.contentScale);
+      // Enlarging a component must not silently enlarge the page when it reloads.
+      if(!scaled)contentBottom=Math.max(contentBottom,frame.y+frame.height);
+      cursor=Math.max(cursor,(scaled?Math.min(frame.y+frame.height,document.settings.canvasHeight??1400):frame.y+frame.height)+16);
+      return {...block,frame};
+    }
     const frame=clampFrame({...defaultFrame(block.type,width,margin,cursor),x:margin,width},{...document.settings,canvasHeight:canvasLimits.maxHeight});
     contentBottom=Math.max(contentBottom,frame.y+frame.height);
     cursor+=frame.height+16;

@@ -1,4 +1,53 @@
 {
+  "dialog": {
+    "DialogContent": {
+      "showCloseButton": {
+        "value": false
+      },
+      "transition": {
+        "kind": "transition",
+        "label": "进入过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      },
+      "exitTransition": {
+        "kind": "transition",
+        "label": "退出过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      }
+    },
+    "DialogOverlay": {
+      "transition": {
+        "kind": "transition",
+        "label": "进入过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      },
+      "exitTransition": {
+        "kind": "transition",
+        "label": "退出过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      }
+    }
+  },
   "sheet": {
     "SheetContent": {
       "showCloseButton": {
@@ -13,27 +62,1769 @@
           "left": "left"
         }
       }
+    },
+    "PanelContent": {
+      "primaryLabel": {
+        "value": "保存更改",
+        "label": "主操作文字"
+      },
+      "secondaryLabel": {
+        "value": "关闭",
+        "label": "次操作文字"
+      }
     }
   },
   "dropdownMenu": {
     "AnimateUIProvider": {
-      "checkAnimation": null
+      "checkAnimation": {
+        "value": "draw",
+        "options": {
+          "draw": "draw",
+          "pop": "pop"
+        }
+      }
+    },
+    "MenuStructure": {
+      "items": {
+        "kind": "json",
+        "label": "菜单项目与分组",
+        "value": [
+          {
+            "kind": "group",
+            "label": "我的账户",
+            "children": [
+              {
+                "kind": "item",
+                "label": "个人资料",
+                "shortcut": "⇧⌘P"
+              },
+              {
+                "kind": "item",
+                "label": "账单",
+                "shortcut": "⌘B"
+              },
+              {
+                "kind": "item",
+                "label": "设置",
+                "shortcut": "⌘S"
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "item",
+                "label": "团队"
+              },
+              {
+                "kind": "submenu",
+                "label": "邀请成员",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "邮件"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "消息"
+                  },
+                  {
+                    "kind": "separator"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "更多…"
+                  }
+                ]
+              },
+              {
+                "kind": "item",
+                "label": "新建团队",
+                "shortcut": "⌘+T"
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "item",
+                "label": "GitHub"
+              },
+              {
+                "kind": "item",
+                "label": "帮助"
+              },
+              {
+                "kind": "item",
+                "label": "API",
+                "disabled": true
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "group",
+            "label": "外观",
+            "children": [
+              {
+                "kind": "checkbox",
+                "label": "状态栏",
+                "checked": true
+              },
+              {
+                "kind": "checkbox",
+                "label": "活动栏",
+                "disabled": true
+              },
+              {
+                "kind": "checkbox",
+                "label": "面板"
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "radio-group",
+            "label": "面板位置",
+            "value": "bottom",
+            "children": [
+              {
+                "kind": "radio",
+                "label": "上方",
+                "value": "top"
+              },
+              {
+                "kind": "radio",
+                "label": "下方",
+                "value": "bottom"
+              },
+              {
+                "kind": "radio",
+                "label": "右侧",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "item",
+            "label": "退出登录",
+            "shortcut": "⇧⌘Q"
+          }
+        ],
+        "schema": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "item",
+                  "group",
+                  "separator",
+                  "checkbox",
+                  "radio-group",
+                  "radio",
+                  "submenu"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "href": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "shortcut": {
+                "type": "string",
+                "maxLength": 30
+              },
+              "disabled": {
+                "type": "boolean"
+              },
+              "checked": {
+                "type": "boolean"
+              },
+              "variant": {
+                "enum": [
+                  "default",
+                  "destructive"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "item",
+                        "group",
+                        "separator",
+                        "checkbox",
+                        "radio-group",
+                        "radio",
+                        "submenu"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "href": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "shortcut": {
+                      "type": "string",
+                      "maxLength": 30
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    },
+                    "checked": {
+                      "type": "boolean"
+                    },
+                    "variant": {
+                      "enum": [
+                        "default",
+                        "destructive"
+                      ]
+                    },
+                    "children": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "item",
+                              "group",
+                              "separator",
+                              "checkbox",
+                              "radio-group",
+                              "radio",
+                              "submenu"
+                            ]
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "href": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "value": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "shortcut": {
+                            "type": "string",
+                            "maxLength": 30
+                          },
+                          "disabled": {
+                            "type": "boolean"
+                          },
+                          "checked": {
+                            "type": "boolean"
+                          },
+                          "variant": {
+                            "enum": [
+                              "default",
+                              "destructive"
+                            ]
+                          },
+                          "children": {
+                            "type": "array",
+                            "maxItems": 50,
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "item",
+                                    "group",
+                                    "separator",
+                                    "checkbox",
+                                    "radio-group",
+                                    "radio",
+                                    "submenu"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "href": {
+                                  "type": "string",
+                                  "maxLength": 2000
+                                },
+                                "value": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "shortcut": {
+                                  "type": "string",
+                                  "maxLength": 30
+                                },
+                                "disabled": {
+                                  "type": "boolean"
+                                },
+                                "checked": {
+                                  "type": "boolean"
+                                },
+                                "variant": {
+                                  "enum": [
+                                    "default",
+                                    "destructive"
+                                  ]
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "item",
+                                          "group",
+                                          "separator",
+                                          "checkbox",
+                                          "radio-group",
+                                          "radio",
+                                          "submenu"
+                                        ]
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "href": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                      },
+                                      "value": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "shortcut": {
+                                        "type": "string",
+                                        "maxLength": 30
+                                      },
+                                      "disabled": {
+                                        "type": "boolean"
+                                      },
+                                      "checked": {
+                                        "type": "boolean"
+                                      },
+                                      "variant": {
+                                        "enum": [
+                                          "default",
+                                          "destructive"
+                                        ]
+                                      },
+                                      "children": {
+                                        "type": "array",
+                                        "maxItems": 50,
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "enum": [
+                                                "item",
+                                                "group",
+                                                "separator",
+                                                "checkbox",
+                                                "radio-group",
+                                                "radio",
+                                                "submenu"
+                                              ]
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "href": {
+                                              "type": "string",
+                                              "maxLength": 2000
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "shortcut": {
+                                              "type": "string",
+                                              "maxLength": 30
+                                            },
+                                            "disabled": {
+                                              "type": "boolean"
+                                            },
+                                            "checked": {
+                                              "type": "boolean"
+                                            },
+                                            "variant": {
+                                              "enum": [
+                                                "default",
+                                                "destructive"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "kind"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        }
+      }
     }
   },
   "contextMenu": {
     "AnimateUIProvider": {
-      "checkAnimation": null
+      "checkAnimation": {
+        "value": "draw",
+        "options": {
+          "draw": "draw",
+          "pop": "pop"
+        }
+      }
+    },
+    "MenuStructure": {
+      "items": {
+        "kind": "json",
+        "label": "菜单项目与分组",
+        "value": [
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "item",
+                "label": "后退",
+                "shortcut": "⌘["
+              },
+              {
+                "kind": "item",
+                "label": "前进",
+                "shortcut": "⌘]",
+                "disabled": true
+              },
+              {
+                "kind": "item",
+                "label": "重新加载",
+                "shortcut": "⌘R"
+              },
+              {
+                "kind": "submenu",
+                "label": "更多工具",
+                "children": [
+                  {
+                    "kind": "group",
+                    "children": [
+                      {
+                        "kind": "item",
+                        "label": "保存页面…"
+                      },
+                      {
+                        "kind": "item",
+                        "label": "创建快捷方式…"
+                      },
+                      {
+                        "kind": "item",
+                        "label": "命名窗口…"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "separator"
+                  },
+                  {
+                    "kind": "group",
+                    "children": [
+                      {
+                        "kind": "item",
+                        "label": "开发者工具"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "separator"
+                  },
+                  {
+                    "kind": "group",
+                    "children": [
+                      {
+                        "kind": "item",
+                        "label": "删除",
+                        "variant": "destructive"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "checkbox",
+                "label": "显示书签",
+                "checked": true
+              },
+              {
+                "kind": "checkbox",
+                "label": "显示完整网址",
+                "checked": false
+              }
+            ]
+          },
+          {
+            "kind": "separator"
+          },
+          {
+            "kind": "radio-group",
+            "label": "用户",
+            "value": "pedro",
+            "children": [
+              {
+                "kind": "radio",
+                "label": "Pedro Duarte",
+                "value": "pedro"
+              },
+              {
+                "kind": "radio",
+                "label": "Colm Tuite",
+                "value": "colm"
+              }
+            ]
+          }
+        ],
+        "schema": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "item",
+                  "group",
+                  "separator",
+                  "checkbox",
+                  "radio-group",
+                  "radio",
+                  "submenu"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "href": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "shortcut": {
+                "type": "string",
+                "maxLength": 30
+              },
+              "disabled": {
+                "type": "boolean"
+              },
+              "checked": {
+                "type": "boolean"
+              },
+              "variant": {
+                "enum": [
+                  "default",
+                  "destructive"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "item",
+                        "group",
+                        "separator",
+                        "checkbox",
+                        "radio-group",
+                        "radio",
+                        "submenu"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "href": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "shortcut": {
+                      "type": "string",
+                      "maxLength": 30
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    },
+                    "checked": {
+                      "type": "boolean"
+                    },
+                    "variant": {
+                      "enum": [
+                        "default",
+                        "destructive"
+                      ]
+                    },
+                    "children": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "item",
+                              "group",
+                              "separator",
+                              "checkbox",
+                              "radio-group",
+                              "radio",
+                              "submenu"
+                            ]
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "href": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "value": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "shortcut": {
+                            "type": "string",
+                            "maxLength": 30
+                          },
+                          "disabled": {
+                            "type": "boolean"
+                          },
+                          "checked": {
+                            "type": "boolean"
+                          },
+                          "variant": {
+                            "enum": [
+                              "default",
+                              "destructive"
+                            ]
+                          },
+                          "children": {
+                            "type": "array",
+                            "maxItems": 50,
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "item",
+                                    "group",
+                                    "separator",
+                                    "checkbox",
+                                    "radio-group",
+                                    "radio",
+                                    "submenu"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "href": {
+                                  "type": "string",
+                                  "maxLength": 2000
+                                },
+                                "value": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "shortcut": {
+                                  "type": "string",
+                                  "maxLength": 30
+                                },
+                                "disabled": {
+                                  "type": "boolean"
+                                },
+                                "checked": {
+                                  "type": "boolean"
+                                },
+                                "variant": {
+                                  "enum": [
+                                    "default",
+                                    "destructive"
+                                  ]
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "item",
+                                          "group",
+                                          "separator",
+                                          "checkbox",
+                                          "radio-group",
+                                          "radio",
+                                          "submenu"
+                                        ]
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "href": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                      },
+                                      "value": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "shortcut": {
+                                        "type": "string",
+                                        "maxLength": 30
+                                      },
+                                      "disabled": {
+                                        "type": "boolean"
+                                      },
+                                      "checked": {
+                                        "type": "boolean"
+                                      },
+                                      "variant": {
+                                        "enum": [
+                                          "default",
+                                          "destructive"
+                                        ]
+                                      },
+                                      "children": {
+                                        "type": "array",
+                                        "maxItems": 50,
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "enum": [
+                                                "item",
+                                                "group",
+                                                "separator",
+                                                "checkbox",
+                                                "radio-group",
+                                                "radio",
+                                                "submenu"
+                                              ]
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "href": {
+                                              "type": "string",
+                                              "maxLength": 2000
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "shortcut": {
+                                              "type": "string",
+                                              "maxLength": 30
+                                            },
+                                            "disabled": {
+                                              "type": "boolean"
+                                            },
+                                            "checked": {
+                                              "type": "boolean"
+                                            },
+                                            "variant": {
+                                              "enum": [
+                                                "default",
+                                                "destructive"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "kind"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        }
+      }
     }
   },
   "menubar": {
     "AnimateUIProvider": {
-      "checkAnimation": null
+      "checkAnimation": {
+        "value": "draw",
+        "options": {
+          "draw": "draw",
+          "pop": "pop"
+        }
+      }
+    },
+    "MenuStructure": {
+      "items": {
+        "kind": "json",
+        "label": "菜单项目与分组",
+        "value": [
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "新建标签页",
+                    "shortcut": "⌘T"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "新建窗口",
+                    "shortcut": "⌘N"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "隐私窗口",
+                    "disabled": true
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "submenu",
+                    "label": "分享",
+                    "children": [
+                      {
+                        "kind": "group",
+                        "children": [
+                          {
+                            "kind": "item",
+                            "label": "邮件链接"
+                          },
+                          {
+                            "kind": "item",
+                            "label": "消息"
+                          },
+                          {
+                            "kind": "item",
+                            "label": "备忘录"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "打印…",
+                    "shortcut": "⌘P"
+                  }
+                ]
+              }
+            ],
+            "label": "文件"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "撤销",
+                    "shortcut": "⌘Z"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "重做",
+                    "shortcut": "⇧⌘Z"
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "submenu",
+                    "label": "查找",
+                    "children": [
+                      {
+                        "kind": "group",
+                        "children": [
+                          {
+                            "kind": "item",
+                            "label": "网页搜索"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "separator"
+                      },
+                      {
+                        "kind": "group",
+                        "children": [
+                          {
+                            "kind": "item",
+                            "label": "查找…"
+                          },
+                          {
+                            "kind": "item",
+                            "label": "查找下一项"
+                          },
+                          {
+                            "kind": "item",
+                            "label": "查找上一项"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "剪切"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "复制"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "粘贴"
+                  }
+                ]
+              }
+            ],
+            "label": "编辑"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "checkbox",
+                    "label": "书签栏",
+                    "checked": false
+                  },
+                  {
+                    "kind": "checkbox",
+                    "label": "完整网址",
+                    "checked": true
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "重新加载",
+                    "shortcut": "⌘R"
+                  },
+                  {
+                    "kind": "item",
+                    "label": "强制刷新",
+                    "shortcut": "⇧⌘R",
+                    "disabled": true
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "切换全屏"
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "隐藏侧栏"
+                  }
+                ]
+              }
+            ],
+            "label": "视图"
+          },
+          {
+            "kind": "group",
+            "children": [
+              {
+                "kind": "radio-group",
+                "value": "benoit",
+                "children": [
+                  {
+                    "kind": "radio",
+                    "label": "Andy",
+                    "value": "andy"
+                  },
+                  {
+                    "kind": "radio",
+                    "label": "Benoit",
+                    "value": "benoit"
+                  },
+                  {
+                    "kind": "radio",
+                    "label": "Luis",
+                    "value": "luis"
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "编辑…"
+                  }
+                ]
+              },
+              {
+                "kind": "separator"
+              },
+              {
+                "kind": "group",
+                "children": [
+                  {
+                    "kind": "item",
+                    "label": "添加用户…"
+                  }
+                ]
+              }
+            ],
+            "label": "用户"
+          }
+        ],
+        "schema": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "item",
+                  "group",
+                  "separator",
+                  "checkbox",
+                  "radio-group",
+                  "radio",
+                  "submenu"
+                ]
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "href": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "shortcut": {
+                "type": "string",
+                "maxLength": 30
+              },
+              "disabled": {
+                "type": "boolean"
+              },
+              "checked": {
+                "type": "boolean"
+              },
+              "variant": {
+                "enum": [
+                  "default",
+                  "destructive"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "item",
+                        "group",
+                        "separator",
+                        "checkbox",
+                        "radio-group",
+                        "radio",
+                        "submenu"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "href": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "shortcut": {
+                      "type": "string",
+                      "maxLength": 30
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    },
+                    "checked": {
+                      "type": "boolean"
+                    },
+                    "variant": {
+                      "enum": [
+                        "default",
+                        "destructive"
+                      ]
+                    },
+                    "children": {
+                      "type": "array",
+                      "maxItems": 50,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "item",
+                              "group",
+                              "separator",
+                              "checkbox",
+                              "radio-group",
+                              "radio",
+                              "submenu"
+                            ]
+                          },
+                          "label": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "href": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "value": {
+                            "type": "string",
+                            "maxLength": 100
+                          },
+                          "shortcut": {
+                            "type": "string",
+                            "maxLength": 30
+                          },
+                          "disabled": {
+                            "type": "boolean"
+                          },
+                          "checked": {
+                            "type": "boolean"
+                          },
+                          "variant": {
+                            "enum": [
+                              "default",
+                              "destructive"
+                            ]
+                          },
+                          "children": {
+                            "type": "array",
+                            "maxItems": 50,
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "item",
+                                    "group",
+                                    "separator",
+                                    "checkbox",
+                                    "radio-group",
+                                    "radio",
+                                    "submenu"
+                                  ]
+                                },
+                                "label": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "href": {
+                                  "type": "string",
+                                  "maxLength": 2000
+                                },
+                                "value": {
+                                  "type": "string",
+                                  "maxLength": 100
+                                },
+                                "shortcut": {
+                                  "type": "string",
+                                  "maxLength": 30
+                                },
+                                "disabled": {
+                                  "type": "boolean"
+                                },
+                                "checked": {
+                                  "type": "boolean"
+                                },
+                                "variant": {
+                                  "enum": [
+                                    "default",
+                                    "destructive"
+                                  ]
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "maxItems": 50,
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "enum": [
+                                          "item",
+                                          "group",
+                                          "separator",
+                                          "checkbox",
+                                          "radio-group",
+                                          "radio",
+                                          "submenu"
+                                        ]
+                                      },
+                                      "label": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "href": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                      },
+                                      "value": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                      },
+                                      "shortcut": {
+                                        "type": "string",
+                                        "maxLength": 30
+                                      },
+                                      "disabled": {
+                                        "type": "boolean"
+                                      },
+                                      "checked": {
+                                        "type": "boolean"
+                                      },
+                                      "variant": {
+                                        "enum": [
+                                          "default",
+                                          "destructive"
+                                        ]
+                                      },
+                                      "children": {
+                                        "type": "array",
+                                        "maxItems": 50,
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "kind": {
+                                              "enum": [
+                                                "item",
+                                                "group",
+                                                "separator",
+                                                "checkbox",
+                                                "radio-group",
+                                                "radio",
+                                                "submenu"
+                                              ]
+                                            },
+                                            "label": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "href": {
+                                              "type": "string",
+                                              "maxLength": 2000
+                                            },
+                                            "value": {
+                                              "type": "string",
+                                              "maxLength": 100
+                                            },
+                                            "shortcut": {
+                                              "type": "string",
+                                              "maxLength": 30
+                                            },
+                                            "disabled": {
+                                              "type": "boolean"
+                                            },
+                                            "checked": {
+                                              "type": "boolean"
+                                            },
+                                            "variant": {
+                                              "enum": [
+                                                "default",
+                                                "destructive"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "kind"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        }
+      }
     }
   },
   "sidebar": {
-    "SidebarProvider": {
-      "animateOnHover": {
-        "value": true
+    "SidebarStructure": {
+      "content": {
+        "kind": "json",
+        "schema": {
+          "type": "object",
+          "required": [
+            "teams",
+            "platformLabel",
+            "groups",
+            "projectsLabel",
+            "projects",
+            "user"
+          ],
+          "properties": {
+            "teams": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "plan": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "label",
+                  "plan"
+                ]
+              },
+              "maxItems": 50,
+              "minItems": 1
+            },
+            "platformLabel": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "href": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "children": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "href": {
+                          "type": "string",
+                          "maxLength": 2000
+                        }
+                      },
+                      "required": [
+                        "label"
+                      ]
+                    },
+                    "maxItems": 50
+                  },
+                  "open": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "label",
+                  "children"
+                ]
+              },
+              "maxItems": 50
+            },
+            "projectsLabel": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "projects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "href": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "label"
+                ]
+              },
+              "maxItems": 50
+            },
+            "user": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "email": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              },
+              "required": [
+                "name",
+                "email"
+              ]
+            }
+          }
+        },
+        "value": {
+          "teams": [
+            {
+              "label": "Acme Inc",
+              "plan": "Enterprise"
+            },
+            {
+              "label": "Acme Corp.",
+              "plan": "Startup"
+            },
+            {
+              "label": "Evil Corp.",
+              "plan": "Free"
+            }
+          ],
+          "platformLabel": "平台",
+          "groups": [
+            {
+              "label": "工作区",
+              "open": true,
+              "children": [
+                {
+                  "label": "历史",
+                  "href": "#"
+                },
+                {
+                  "label": "星标",
+                  "href": "#"
+                },
+                {
+                  "label": "设置",
+                  "href": "#"
+                }
+              ]
+            },
+            {
+              "label": "模型",
+              "open": false,
+              "children": [
+                {
+                  "label": "Genesis",
+                  "href": "#"
+                },
+                {
+                  "label": "Explorer",
+                  "href": "#"
+                },
+                {
+                  "label": "Quantum",
+                  "href": "#"
+                }
+              ]
+            },
+            {
+              "label": "文档",
+              "open": false,
+              "children": [
+                {
+                  "label": "简介",
+                  "href": "#"
+                },
+                {
+                  "label": "开始使用",
+                  "href": "#"
+                },
+                {
+                  "label": "教程",
+                  "href": "#"
+                },
+                {
+                  "label": "更新日志",
+                  "href": "#"
+                }
+              ]
+            },
+            {
+              "label": "设置",
+              "open": false,
+              "children": [
+                {
+                  "label": "通用",
+                  "href": "#"
+                },
+                {
+                  "label": "团队",
+                  "href": "#"
+                },
+                {
+                  "label": "账单",
+                  "href": "#"
+                },
+                {
+                  "label": "限制",
+                  "href": "#"
+                }
+              ]
+            }
+          ],
+          "projectsLabel": "项目",
+          "projects": [
+            {
+              "label": "设计工程",
+              "href": "#"
+            },
+            {
+              "label": "销售与营销",
+              "href": "#"
+            },
+            {
+              "label": "旅行",
+              "href": "#"
+            }
+          ],
+          "user": {
+            "name": "shadcn",
+            "email": "m@example.com"
+          }
+        }
+      }
+    },
+    "SidebarLayout": {
+      "variant": {
+        "value": "sidebar",
+        "options": {
+          "sidebar": "sidebar",
+          "floating": "floating",
+          "inset": "inset"
+        }
+      },
+      "collapsible": {
+        "value": "icon",
+        "options": {
+          "icon": "icon",
+          "offcanvas": "offcanvas",
+          "none": "none"
+        }
       }
     }
   },
@@ -69,6 +1860,27 @@
         "min": 0,
         "max": 2,
         "step": 0.01
+      },
+      "variant": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "accent": "accent",
+          "destructive": "destructive",
+          "outline": "outline",
+          "secondary": "secondary",
+          "ghost": "ghost",
+          "link": "link"
+        }
+      },
+      "size": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "xs": "xs",
+          "sm": "sm",
+          "lg": "lg"
+        }
       }
     }
   },
@@ -85,6 +1897,23 @@
         "min": 0,
         "max": 2,
         "step": 0.01
+      },
+      "variant": {
+        "value": "outline",
+        "options": {
+          "default": "default",
+          "accent": "accent",
+          "outline": "outline",
+          "ghost": "ghost"
+        }
+      },
+      "size": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "sm": "sm",
+          "lg": "lg"
+        }
       }
     },
     "IconButtonParticles": {
@@ -163,6 +1992,29 @@
         "max": 2,
         "step": 0.01
       }
+    },
+    "RippleButtonRipples": {
+      "color": {
+        "kind": "string",
+        "label": "涟漪颜色"
+      },
+      "scale": {
+        "kind": "number",
+        "label": "涟漪扩散倍数",
+        "min": 0,
+        "max": 10,
+        "step": 0.1
+      },
+      "transition": {
+        "kind": "transition",
+        "label": "过渡参数（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      }
     }
   },
   "countingNumber": {
@@ -188,6 +2040,23 @@
         "min": 0,
         "max": 10,
         "step": 1
+      },
+      "fromNumber": {
+        "value": true,
+        "kind": "json",
+        "label": "起始数值（true 从零开始，false 自动）",
+        "schema": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number",
+              "min": -1000000000.0,
+              "max": 1000000000.0
+            }
+          ]
+        }
       }
     }
   },
@@ -310,6 +2179,15 @@
       },
       "strokeColor": {
         "value": "#737373"
+      },
+      "particleRGBColor": {
+        "kind": "rgb",
+        "label": "粒子 RGB 颜色",
+        "example": [
+          255,
+          255,
+          255
+        ]
       }
     }
   },
@@ -331,7 +2209,56 @@
         "step": 1
       },
       "starColor": {
-        "value": "#fff"
+        "kind": "string",
+        "label": "星星颜色（留空跟随页面）"
+      }
+    },
+    "StarLayer1": {
+      "count": {
+        "value": 1000,
+        "min": 0,
+        "max": 5000,
+        "step": 1,
+        "label": "星星数量"
+      },
+      "size": {
+        "value": 1,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1,
+        "label": "星星大小（px）"
+      }
+    },
+    "StarLayer2": {
+      "count": {
+        "value": 400,
+        "min": 0,
+        "max": 5000,
+        "step": 1,
+        "label": "星星数量"
+      },
+      "size": {
+        "value": 2,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1,
+        "label": "星星大小（px）"
+      }
+    },
+    "StarLayer3": {
+      "count": {
+        "value": 200,
+        "min": 0,
+        "max": 5000,
+        "step": 1,
+        "label": "星星数量"
+      },
+      "size": {
+        "value": 3,
+        "min": 0.1,
+        "max": 20,
+        "step": 0.1,
+        "label": "星星大小（px）"
       }
     }
   },
@@ -352,6 +2279,664 @@
         "min": 0,
         "max": 300,
         "step": 10
+      }
+    }
+  },
+  "alertDialog": {
+    "AlertDialogContent": {
+      "transition": {
+        "kind": "transition",
+        "label": "进入过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      },
+      "exitTransition": {
+        "kind": "transition",
+        "label": "退出过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      },
+      "size": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "sm": "sm"
+        }
+      }
+    },
+    "AlertDialogOverlay": {
+      "transition": {
+        "kind": "transition",
+        "label": "进入过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      },
+      "exitTransition": {
+        "kind": "transition",
+        "label": "退出过渡（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      }
+    }
+  },
+  "gradientText": {
+    "GradientText": {
+      "gradient": {
+        "kind": "string",
+        "label": "渐变（CSS）",
+        "maxLength": 1000,
+        "example": "linear-gradient(90deg, #ef4444, #3b82f6, #ef4444)"
+      },
+      "transition": {
+        "kind": "transition",
+        "label": "过渡参数（秒）",
+        "unit": "秒",
+        "example": {
+          "type": "spring",
+          "stiffness": 300,
+          "damping": 30
+        }
+      }
+    }
+  },
+  "shimmeringText": {
+    "ShimmeringText": {
+      "color": {
+        "kind": "string",
+        "label": "文字颜色"
+      },
+      "shimmeringColor": {
+        "kind": "string",
+        "label": "流光颜色"
+      },
+      "duration": {
+        "value": 1,
+        "min": 0.1,
+        "max": 3,
+        "step": 0.1,
+        "unit": "秒"
+      }
+    }
+  },
+  "liquidButton": {
+    "LiquidButton": {
+      "delay": {
+        "value": 0.3,
+        "min": 0.1,
+        "max": 0.5,
+        "step": 0.05,
+        "unit": "CSS 时间",
+        "kind": "css-time"
+      },
+      "fillHeight": {
+        "value": 3,
+        "min": 0,
+        "max": 10,
+        "step": 1,
+        "unit": "CSS 长度",
+        "kind": "css-length"
+      }
+    }
+  },
+  "toast": {
+    "ToastOptions": {
+      "type": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "success": "success",
+          "info": "info",
+          "warning": "warning",
+          "error": "error",
+          "loading": "loading"
+        }
+      },
+      "priority": {
+        "value": "low",
+        "options": {
+          "low": "low",
+          "high": "high"
+        }
+      },
+      "timeout": {
+        "kind": "number",
+        "min": 0,
+        "max": 600000,
+        "label": "显示时间（毫秒，0 为持续显示）"
+      },
+      "actionLabel": {
+        "kind": "string",
+        "label": "操作按钮文字"
+      }
+    }
+  },
+  "drawer": {
+    "PanelContent": {
+      "primaryLabel": {
+        "value": "确认",
+        "label": "主操作文字"
+      },
+      "secondaryLabel": {
+        "value": "取消",
+        "label": "次操作文字"
+      }
+    },
+    "Drawer": {
+      "showSwipeHandle": {
+        "value": false,
+        "label": "显示拖动手柄"
+      }
+    }
+  },
+  "effect:page-transition": {
+    "PageTransition": {
+      "shared": {
+        "value": true,
+        "label": "共享元素过渡"
+      }
+    }
+  },
+  "slider": {
+    "Slider": {
+      "value": {
+        "kind": "json",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "min": -1000000,
+            "max": 1000000
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "defaultValue": {
+        "kind": "json",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "min": -1000000,
+            "max": 1000000
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "minStepsBetweenThumbs": {
+        "kind": "number",
+        "min": 0,
+        "max": 1000,
+        "step": 1
+      }
+    }
+  },
+  "navigationMenu": {
+    "NavigationStructure": {
+      "items": {
+        "kind": "json",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "href": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "icon": {
+                "enum": [
+                  "circle",
+                  "alert",
+                  "check"
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "href": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "icon": {
+                      "enum": [
+                        "circle",
+                        "alert",
+                        "check"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label"
+                  ]
+                },
+                "maxItems": 50
+              },
+              "columns": {
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              "width": {
+                "type": "number",
+                "min": 160,
+                "max": 960
+              }
+            },
+            "required": [
+              "label"
+            ]
+          },
+          "maxItems": 20
+        },
+        "value": [
+          {
+            "label": "开始使用",
+            "children": [
+              {
+                "label": "简介",
+                "href": "#intro",
+                "description": "使用 Tailwind CSS 构建的可复用组件。"
+              },
+              {
+                "label": "安装",
+                "href": "#install",
+                "description": "安装依赖并组织你的应用。"
+              },
+              {
+                "label": "排版",
+                "href": "#typography",
+                "description": "标题、段落与列表的样式。"
+              }
+            ]
+          },
+          {
+            "label": "组件",
+            "columns": 2,
+            "children": [
+              {
+                "label": "确认对话框",
+                "href": "#alert-dialog",
+                "description": "需要用户回应的模态对话框。"
+              },
+              {
+                "label": "悬浮卡片",
+                "href": "#hover-card",
+                "description": "悬停时预览链接背后的内容。"
+              },
+              {
+                "label": "进度条",
+                "href": "#progress",
+                "description": "显示任务完成的进度。"
+              },
+              {
+                "label": "滚动区域",
+                "href": "#scroll-area",
+                "description": "增强原生滚动体验。"
+              },
+              {
+                "label": "标签页",
+                "href": "#tabs",
+                "description": "切换不同的内容面板。"
+              },
+              {
+                "label": "文字提示",
+                "href": "#tooltip",
+                "description": "悬停或聚焦时显示补充说明。"
+              }
+            ]
+          },
+          {
+            "label": "带图标",
+            "width": 200,
+            "children": [
+              {
+                "label": "待处理",
+                "href": "#backlog",
+                "icon": "alert"
+              },
+              {
+                "label": "待办",
+                "href": "#todo",
+                "icon": "circle"
+              },
+              {
+                "label": "完成",
+                "href": "#done",
+                "icon": "check"
+              }
+            ]
+          },
+          {
+            "label": "文档",
+            "href": "#docs"
+          }
+        ]
+      }
+    }
+  },
+  "toggle": {
+    "Toggle": {
+      "variant": {
+        "value": "outline",
+        "options": {
+          "default": "default",
+          "outline": "outline"
+        }
+      },
+      "size": {
+        "value": "sm",
+        "options": {
+          "default": "default",
+          "sm": "sm",
+          "lg": "lg"
+        }
+      }
+    }
+  },
+  "toggleGroup": {
+    "ToggleGroup": {
+      "variant": {
+        "value": "outline",
+        "options": {
+          "default": "default",
+          "outline": "outline"
+        }
+      },
+      "size": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "sm": "sm",
+          "lg": "lg"
+        }
+      }
+    }
+  },
+  "githubStars": {
+    "GithubStarsIcon": {
+      "icon": {
+        "value": "star",
+        "options": {
+          "star": "star",
+          "heart": "heart"
+        }
+      }
+    }
+  },
+  "githubStarsButton": {
+    "GitHubStarsButtonIcon": {
+      "icon": {
+        "value": "star",
+        "options": {
+          "star": "star",
+          "heart": "heart"
+        }
+      }
+    }
+  },
+  "tabs": {
+    "TabsList": {
+      "variant": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "line": "line"
+        }
+      }
+    }
+  },
+  "switch": {
+    "Switch": {
+      "size": {
+        "value": "default",
+        "options": {
+          "default": "default",
+          "sm": "sm"
+        }
+      }
+    }
+  },
+  "questionnaire": {
+    "QuestionnaireStructure": {
+      "items": {
+        "kind": "json",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "title"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "disabled": {
+                "type": "boolean"
+              },
+              "multiple": {
+                "type": "boolean"
+              },
+              "choices": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 2000
+                    },
+                    "disabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ]
+                }
+              },
+              "input": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 2000
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          },
+          "minItems": 1,
+          "maxItems": 30
+        },
+        "value": [
+          {
+            "name": "direction",
+            "title": "下一步想创作什么？",
+            "description": "选择一个方向，也可以描述其他想法。",
+            "required": true,
+            "choices": [
+              {
+                "value": "design",
+                "label": "界面设计",
+                "description": "打磨页面与交互，让每个细节自然呈现。"
+              },
+              {
+                "value": "product",
+                "label": "产品开发",
+                "description": "把想法变成真正可以使用的功能。"
+              },
+              {
+                "value": "brand",
+                "label": "品牌创意",
+                "description": "为作品建立独特的视觉语言。"
+              }
+            ],
+            "input": {
+              "label": "其他创作方向",
+              "placeholder": "描述其他想法…"
+            }
+          },
+          {
+            "name": "signals",
+            "title": "希望重点关注哪些方面？",
+            "description": "可多选，也可以跳过此题。",
+            "required": false,
+            "multiple": true,
+            "choices": [
+              {
+                "value": "progress",
+                "label": "进度"
+              },
+              {
+                "value": "decisions",
+                "label": "决策"
+              },
+              {
+                "value": "risks",
+                "label": "风险"
+              },
+              {
+                "value": "next",
+                "label": "下一步"
+              }
+            ]
+          },
+          {
+            "name": "timing",
+            "title": "什么时候开始？",
+            "description": "选择适合你的开始时间。",
+            "required": true,
+            "choices": [
+              {
+                "value": "now",
+                "label": "现在开始"
+              },
+              {
+                "value": "next",
+                "label": "下一个周期"
+              },
+              {
+                "value": "later",
+                "label": "加入待办"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "collapsible": {
+    "CollapsibleFields": {
+      "statusLabel": {
+        "value": "状态",
+        "kind": "string"
+      },
+      "statusValue": {
+        "value": "已发货",
+        "kind": "string"
+      }
+    }
+  },
+  "pinnedList": {
+    "PinnedListState": {
+      "pinned": {
+        "value": [
+          1,
+          2
+        ],
+        "kind": "json",
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "min": 0,
+            "max": 99
+          },
+          "maxItems": 100
+        }
+      }
+    }
+  },
+  "progress": {
+    "Progress": {
+      "max": {
+        "kind": "number",
+        "min": 0.001,
+        "max": 1000000
+      }
+    }
+  },
+  "inputOtp": {
+    "InputOTP": {
+      "maxLength": {
+        "kind": "number",
+        "min": 1,
+        "max": 12,
+        "step": 1
       }
     }
   }

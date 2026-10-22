@@ -72,3 +72,8 @@
   .studio-tabs.inspector-tabs { margin-top: 10px; }
   .studio-menu.export-menu { max-width: calc(100vw - 24px); }
 }
+
+.official-property-group { border-top:1px solid var(--studio-200);padding-top:8px;margin-top:10px; }
+.official-property-group > summary { cursor:pointer;font-size:12px;font-weight:600;overflow-wrap:anywhere;margin-bottom:10px; }.official-property-group > summary small { font-size:10px;color:var(--studio-500);font-weight:400; }
+.official-motion-settings .property-field > label { display:flex;flex-direction:column;gap:6px;width:100%; }
+.official-motion-settings textarea { width:100%;resize:vertical;font-family:ui-monospace,monospace;font-size:11px;line-height:1.5; }.official-motion-settings .field-error { color:#b91c1c;font-size:11px;overflow-wrap:anywhere; }

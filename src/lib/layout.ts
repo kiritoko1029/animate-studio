@@ -13,7 +13,7 @@ export function fillBlockWidth(doc: PageDocument, id: string): BlockFrame {
   const index = doc.blocks.findIndex(block => block.id === id);
   if (index < 0) throw new Error('找不到要填充宽度的组件，请重新选择。');
   const frameFor = (block: Block, index: number) => block.frame ?? { x: 0, y: index * 200, width: doc.settings.maxWidth, height: 200 };
-  const frame = clampFrame(frameFor(doc.blocks[index], index), doc.settings);
+  const frame = clampFrame(frameFor(doc.blocks[index], index), doc.settings, doc.blocks[index].props.contentScale);
   const bounds = canvasBounds(doc.settings);
   let left = bounds.left, right = bounds.right;
   const end = frame.x + frame.width;

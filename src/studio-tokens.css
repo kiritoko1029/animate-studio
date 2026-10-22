@@ -1,10 +1,10 @@
 /* Platform palette. Page/theme previews continue to use their own --page-* tokens. */
-@custom-variant dark (&:where([data-studio-theme="dark"], [data-studio-theme="dark"] *));
+@custom-variant dark (&:where([data-studio-theme="dark"], [data-studio-theme="dark"] *):not(:where([data-page-scheme], [data-page-scheme] *)), &:where([data-page-scheme="dark"], [data-page-scheme="dark"] *));
 @theme inline {
   --color-background: var(--studio-0);
   --color-foreground: var(--studio-950);
-  --color-primary: var(--studio-950);
-  --color-primary-foreground: var(--studio-0);
+  --color-primary: var(--native-primary, var(--studio-950));
+  --color-primary-foreground: var(--native-primary-foreground, var(--studio-0));
   --color-secondary: var(--studio-100);
   --color-secondary-foreground: var(--studio-950);
   --color-muted: var(--studio-100);

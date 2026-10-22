@@ -1,6 +1,6 @@
 /** Animate UI v2.1.2 registry source: https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/stars/index.tsx
  * Copyright (c) 2025 Elliot Sutton. MIT + Commons Clause. See THIRD_PARTY_NOTICES.md.
- * Local adaptations: import paths and transform-independent pointer coordinates. */
+ * Local adaptations: import paths, transform-independent pointer coordinates, and optional per-layer public StarLayer props (original defaults retained). */
 'use client';
 
 import * as React from 'react';
@@ -104,6 +104,7 @@ type StarsBackgroundProps = React.ComponentProps<'div'> & {
   transition?: SpringOptions;
   starColor?: string;
   pointerEvents?: boolean;
+  layerOptions?: [Partial<StarLayerProps>?, Partial<StarLayerProps>?, Partial<StarLayerProps>?];
 };
 
 function StarsBackgroundContent({
@@ -115,6 +116,7 @@ function StarsBackgroundContent({
   transition = { stiffness: 50, damping: 20 },
   starColor = '#fff',
   pointerEvents = true,
+  layerOptions,
   onMouseMove,
   ...props
 }: StarsBackgroundProps) {
@@ -159,6 +161,7 @@ function StarsBackgroundContent({
             size={1}
             transition={{ repeat: Infinity, duration: speed, ease: 'linear' }}
             starColor={starColor}
+            {...layerOptions?.[0]}
           />
           <StarLayer
             count={400}
@@ -169,6 +172,7 @@ function StarsBackgroundContent({
               ease: 'linear',
             }}
             starColor={starColor}
+            {...layerOptions?.[1]}
           />
           <StarLayer
             count={200}
@@ -179,6 +183,7 @@ function StarsBackgroundContent({
               ease: 'linear',
             }}
             starColor={starColor}
+            {...layerOptions?.[2]}
           />
         </motion.div>
       </StarsInViewContext>

@@ -31,7 +31,7 @@ test('canvas menu targets the clicked component, supports keyboard dismissal and
         const [page, setPage] = useState({...createDocument(), blocks:[slider,button]});
         const [selected, setSelected] = useState('slider'), [creating, setCreating] = useState(null), [menuId,setMenuId]=useState(null);
         window.page = page; window.selected = selected;
-        return <><div data-free-stage>{page.blocks.map((block,index)=><CanvasComponentMenu key={block.id} block={block} layerIndex={index} layerCount={page.blocks.length} onLayerChange={(id,action)=>window.actions.push(action+':'+id)} open={menuId===block.id} disabled={false}
+        return <><div data-free-stage>{page.blocks.map((block,index)=><CanvasComponentMenu key={block.id} block={block} settings={page.settings} onBlockChange={next=>setPage(current=>({...current,blocks:current.blocks.map(item=>item.id===next.id?next:item)}))} layerIndex={index} layerCount={page.blocks.length} onLayerChange={(id,action)=>window.actions.push(action+':'+id)} open={menuId===block.id} disabled={false}
           onOpenChange={open=>{setMenuId(open?block.id:null);if(open)setSelected(block.id);}}
           onInspect={(id,tab)=>window.actions.push(tab+':'+id)} onCreateVariable={setCreating}
           onAlign={(id,alignment)=>window.actions.push(alignment+':'+id)}
@@ -66,6 +66,28 @@ test('canvas menu targets the clicked component, supports keyboard dismissal and
   assert.equal(window.selected, 'button');
   assert.equal(menu().getAttribute('aria-label'), '动效按钮操作');
   assert.equal(menu().closest('[data-free-stage]'), null, 'menu escapes the scaled and clipped stage');
+  const scaleRow = menu().querySelector('[role="menuitem"][aria-label="整体缩放"]');
+  window.perform(() => scaleRow.focus());
+  key(scaleRow, 'Enter');
+  assert.equal(doc.activeElement.getAttribute('aria-label'), '组件整体缩放百分比', 'keyboard users can enter the inline scale control');
+  fill('组件整体缩放百分比', '200');
+  key(doc.activeElement, 'Enter');
+  assert.ok(menu(), 'editing a percentage must keep the menu open');
+  assert.equal(window.page.blocks[1].props.contentScale, 200);
+  assert.equal(window.page.blocks[1].frame.width, 480);
+  assert.equal(window.page.blocks[0].props.contentScale, undefined, 'scale only the context-menu target');
+  fill('组件整体缩放百分比', '250');
+  key(doc.activeElement, 'Escape');
+  assert.equal(doc.activeElement.value, '200', 'Escape cancels the number draft');
+  assert.equal(window.page.blocks[1].props.contentScale, 200);
+  fill('组件整体缩放滑杆', '150');
+  assert.equal(window.page.blocks[1].props.contentScale, 150);
+  assert.ok(menu(), 'slider changes must keep the menu open');
+  click('重置');
+  assert.equal(window.page.blocks[1].props.contentScale, 100);
+  assert.equal(window.page.blocks[1].frame.width, 240);
+  assert.ok(menu(), 'reset must keep the menu open');
+  assert.equal(window.actions.length, 0, 'scale controls must not trigger other menu actions');
   choose('编辑属性');
   assert.equal(window.actions.at(-1), 'component:button');
   open('slider'); choose('绑定属性');

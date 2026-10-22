@@ -1,0 +1,7 @@
+.batch-selection-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 16px 0; font-size: 12px; border-bottom: 1px solid var(--studio-100); }
+.batch-selection-summary span { color: var(--studio-500); font-size: 11px; }
+.batch-number { display: flex; align-items: center; gap: 6px; }
+.batch-number input { min-width: 0; flex: 1; width: 100%; }
+.batch-number > span { font-size: 12px; color: var(--studio-500); }
+.batch-inspector .color-field > span { font-size: 11px; }
+.batch-mixed { margin-left: 8px; color: var(--studio-500); font-size: 10px; font-weight: 400; }

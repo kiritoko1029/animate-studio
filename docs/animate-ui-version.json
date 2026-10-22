@@ -2,7 +2,7 @@
   "release": "2.1.2",
   "commit": "e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72",
   "reactPackage": "2.0.0",
-  "checkedAt": "2026-10-21",
+  "checkedAt": "2026-10-22",
   "registryFiles": [
     {
       "file": "src/components/animate-ui/registry/backgrounds/gradient/index.tsx",
@@ -26,10 +26,11 @@
       "file": "src/components/animate-ui/registry/backgrounds/stars/index.tsx",
       "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/registry/backgrounds/stars/index.tsx",
       "upstreamSha256": "c9b1710fb6ab7d8cb8e7cbc5d4cafdbf8d97e02a16ff93d1d95e4a4114acf602",
-      "localSha256": "0d963d9a2e4f0d66bdf9dea82dcd2c9ed081c32d6bb4e285f0a2fc80dd9a535b",
+      "localSha256": "dbb300cf46fe39365be6f44862e69111be269aed15e8163061e09ceb432345dd",
       "localAdaptations": [
         "cn import path",
-        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases"
+        "Use component-local CSS dimensions and pointer coordinates on scaled editor canvases",
+        "Expose optional layerOptions for three StarLayer configurations; retain upstream defaults when unset"
       ]
     },
     {
@@ -154,17 +155,25 @@
     "defaults": "Pinned official demo controls; supplemental documented primitive options",
     "validation": "shared/animation-settings.mjs",
     "supplementalSettings": "shared/official-animation-overrides.json",
-    "syncScript": "scripts/sync-official-controls.mjs"
+    "syncScript": "scripts/sync-official-controls.mjs",
+    "apiSchema": "shared/official-api-controls.json",
+    "apiGenerator": "scripts/generate-official-api.mjs",
+    "validationCommands": [
+      "node scripts/sync-official-controls.mjs <pinned-demos-directory> --check",
+      "node scripts/generate-official-api.mjs --check"
+    ]
   },
   "demoFiles": [
     {
       "file": "src/components/OfficialMotionGrid.tsx",
       "source": "https://github.com/imskyleen/animate-ui/blob/e6cea6b5ae5a4985d3bf3cc0ebea173555eafd72/apps/v2/demos/animate-ui/motion-grid.tsx",
       "upstreamSha256": "1fa8e643961218c6d806b6428f34e271c4d59f57070c6d492b2eeb386503bf73",
-      "localSha256": "57b019036ebb27e46bb49d4c9a77c7380b2dbd16ba3c70d3b9473c643ba6ca25",
+      "localSha256": "096cbc2381ae8dc005b2c56b1ed6d5dfedfc959fd00825e1c7fc60f486554465",
       "localAdaptations": [
         "Read duration/animate from saved block settings",
-        "Pause state loop when animate is false"
+        "Pause state loop when animate is false",
+        "Read gridSize, frames and cell appearance from validated settings",
+        "Use block title as accessible name and preserve explicit theme styles"
       ]
     }
   ]

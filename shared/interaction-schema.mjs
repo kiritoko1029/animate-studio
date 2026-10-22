@@ -2,14 +2,15 @@ import { createInteractionRuntime } from './interactions.mjs';
 export const bindingLabels = { title: '标题', text: '文字 / 描述', label: '标签', value: '当前值', checked: '选中状态', visible: '显示条件', disabled: '禁用条件' };
 export const valueTypes = ['input', 'textarea', 'select', 'radio', 'slider', 'tabs', 'accordion', 'pagination', 'rating', 'combobox', 'inputOtp', 'toggleGroup', 'questionnaire', 'motionGrid', 'countingNumber', 'scrollingNumber', 'slidingNumber'];
 export function bindingKeys(block) {
-  return [...['title', 'text', 'label'].filter(key => block.props[key] !== undefined), ...(valueTypes.includes(block.type) || block.type === 'progress' ? ['value'] : []), ...(['checkbox', 'switch', 'toggle', 'collapsible', 'sidebar'].includes(block.type) ? ['checked'] : []), 'visible', 'disabled'];
+  return [...['title', 'text', 'label'].filter(key => block.props[key] !== undefined), ...(valueTypes.includes(block.type) || block.type === 'progress' ? ['value'] : []), ...(['checkbox', 'switch', 'toggle', 'iconButton', 'collapsible', 'sidebar'].includes(block.type) ? ['checked'] : []), 'visible', 'disabled'];
 }
 export function bindingVariableTypes(block, key) {
   if (['visible', 'disabled', 'checked'].includes(key)) return ['boolean'];
+  if (key === 'value' && (block.type === 'toggleGroup' && block.props.motion?.['ToggleGroup.type'] === 'multiple' || block.type === 'accordion' && block.props.motion?.['Accordion.type'] === 'multiple' || block.type === 'combobox' && block.props.motion?.['Combobox.multiple'] === true || block.type === 'slider' && (Array.isArray(block.props.motion?.['Slider.value']) || Array.isArray(block.props.motion?.['Slider.defaultValue'])))) return ['array'];
   if (key === 'value') return block.type === 'input' ? ['string', 'number'] : ['textarea', 'select', 'combobox', 'inputOtp'].includes(block.type) ? ['string'] : ['number'];
   return ['string', 'number', 'boolean', 'object', 'array'];
 }
-export function eventNames(type) { return ['click', ...(valueTypes.includes(type) || ['checkbox', 'switch', 'toggle', 'collapsible', 'sidebar'].includes(type) ? ['change'] : [])]; }
+export function eventNames(type) { return ['click', ...(valueTypes.includes(type) || ['checkbox', 'switch', 'toggle', 'iconButton', 'collapsible', 'sidebar'].includes(type) ? ['change'] : [])]; }
 export function validateInteractions(page) {
   const fail = message => { throw new Error(message); };
   const plain = value => value && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype;

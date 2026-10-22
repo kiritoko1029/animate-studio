@@ -43,12 +43,14 @@
       "padding": 20,
       "label": "打开侧边面板",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。"
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "items": "姓名|Pedro Duarte\n用户名|@peduarte"
     },
     "frame": {
       "width": 360,
       "height": 110
-    }
+    },
+    "itemsHint": "每行一个表单字段：名称 | 初始值"
   },
   "drawer": {
     "name": "抽屉",
@@ -60,12 +62,14 @@
       "padding": 20,
       "label": "打开抽屉",
       "title": "准备好继续了吗？",
-      "text": "在这里展示详细说明，或确认接下来的操作。"
+      "text": "在这里展示详细说明，或确认接下来的操作。",
+      "items": "标准配送|25–35 分钟 · 现在出发\n17:00 – 17:15|16:45 开始准备\n17:30 – 17:45|适合下班回家\n18:00 – 18:15|热门时段\n18:30 – 18:45|今晚最后时段"
     },
     "frame": {
       "width": 360,
       "height": 110
-    }
+    },
+    "itemsHint": "每行一个选项：名称 | 说明"
   },
   "popover": {
     "name": "气泡面板",
@@ -77,12 +81,14 @@
       "padding": 20,
       "label": "了解更多",
       "title": "让想法发生",
-      "text": "补充说明会在这里展开。"
+      "text": "补充说明会在这里展开。",
+      "items": "宽度|100%\n最大宽度|300px\n高度|25px\n最大高度|none"
     },
     "frame": {
       "width": 360,
       "height": 240
-    }
+    },
+    "itemsHint": "每行一个输入项：名称 | 初始值"
   },
   "hoverCard": {
     "name": "悬浮卡片",
@@ -94,12 +100,14 @@
       "padding": 20,
       "label": "了解更多",
       "title": "让想法发生",
-      "text": "补充说明会在这里展开。"
+      "text": "补充说明会在这里展开。",
+      "items": "2021 年 12 月加入"
     },
     "frame": {
       "width": 360,
       "height": 240
-    }
+    },
+    "itemsHint": "每行一条附加信息，显示在卡片底部。"
   },
   "tooltip": {
     "name": "文字提示",
@@ -144,10 +152,11 @@
     "docs": "https://animate-ui.com/docs/primitives/base-ui/collapsible",
     "props": {
       "padding": 20,
-      "label": "展开详情",
-      "title": "项目详情",
-      "text": "点击标题展开或收起这段内容。",
-      "checked": false
+      "label": "展开订单详情",
+      "title": "订单 #4189",
+      "text": "",
+      "checked": false,
+      "items": "收货地址|上海市创意路 100 号\n商品|2 件工作室耳机"
     },
     "frame": {
       "width": 400,
@@ -179,14 +188,14 @@
     "docs": "https://animate-ui.com/docs/primitives/base-ui/context-menu",
     "props": {
       "padding": 20,
-      "label": "更多操作",
-      "items": "查看作品|#features\n关于我们|#about\n联系我们|#contact"
+      "label": "右键或长按此处",
+      "items": ""
     },
     "frame": {
       "width": 360,
       "height": 250
     },
-    "itemsHint": "每行一项：名称 | 安全链接（可选）。菜单栏和导航菜单会把这些项目显示为入口。"
+    "itemsHint": "留空时显示官方示例结构；在「官方属性 → MenuStructure → items」编辑分组、子菜单、复选、单选、快捷键和禁用项。填写简单条目时使用兼容列表。"
   },
   "menubar": {
     "name": "菜单栏",
@@ -197,13 +206,13 @@
     "props": {
       "padding": 20,
       "label": "更多操作",
-      "items": "产品|组件库|#features\n产品|动效|#effects\n资源|使用指南|#docs\n资源|关于我们|#about"
+      "items": ""
     },
     "frame": {
       "width": 440,
       "height": 250
     },
-    "itemsHint": "每行一项：菜单名称 | 子项名称 | 链接；同名菜单的子项会自动分组。"
+    "itemsHint": "留空时显示官方示例结构；在「官方属性 → MenuStructure → items」编辑分组、子菜单、复选、单选、快捷键和禁用项。填写简单条目时使用兼容列表。"
   },
   "navigationMenu": {
     "name": "导航菜单",
@@ -214,13 +223,13 @@
     "props": {
       "padding": 20,
       "label": "更多操作",
-      "items": "产品|组件库|#features\n产品|动效|#effects\n资源|使用指南|#docs\n资源|关于我们|#about"
+      "items": ""
     },
     "frame": {
       "width": 440,
       "height": 250
     },
-    "itemsHint": "每行一项：菜单名称 | 子项名称 | 链接；同名菜单的子项会自动分组。"
+    "itemsHint": "留空显示官方结构；在官方属性 NavigationStructure.items 中修改说明、图标、列数、宽度和直接链接。"
   },
   "sidebar": {
     "name": "页面侧栏",
@@ -229,17 +238,17 @@
     "description": "页面侧栏 · Sidebar",
     "docs": "https://animate-ui.com/docs/primitives/base-ui/sidebar",
     "props": {
-      "padding": 20,
+      "padding": 0,
       "title": "创作空间",
       "label": "展开导航",
-      "items": "概览|#\n我的作品|#features\n设置|#settings",
+      "items": "",
       "checked": true
     },
     "frame": {
-      "width": 280,
-      "height": 400
+      "width": 360,
+      "height": 560
     },
-    "itemsHint": "每行一项：名称 | 链接"
+    "itemsHint": "留空显示官方侧栏示例；在 SidebarStructure.content 中编辑团队、折叠导航、项目和账户。"
   },
   "combobox": {
     "name": "可搜索选择",
@@ -284,8 +293,11 @@
     "props": {
       "padding": 20,
       "label": "视图排列",
-      "items": "列表\n网格\n紧凑",
-      "value": 0
+      "items": "加粗|bold\n斜体|italic\n下划线|underline",
+      "value": 0,
+      "motion": {
+        "ToggleGroup.type": "multiple"
+      }
     },
     "frame": {
       "width": 380,
@@ -318,16 +330,16 @@
     "docs": "https://animate-ui.com/docs/primitives/base-ui/questionnaire",
     "props": {
       "padding": 20,
-      "title": "了解你的想法",
+      "title": "",
       "label": "提交",
       "text": "感谢你的回答！",
-      "items": "你关注哪个方向？|界面设计,产品开发,品牌创意\n有什么想告诉我们？|"
+      "items": ""
     },
     "frame": {
       "width": 500,
-      "height": 340
+      "height": 520
     },
-    "itemsHint": "每行一题：问题 | 选项1,选项2；不填选项时使用文本回答。"
+    "itemsHint": "留空显示官方三步结构；在 QuestionnaireStructure.items 中配置每题、多选、描述、输入框与必填。兼容简单格式：题目 | 逗号分隔选项 | 描述 | 名称。"
   },
   "inputOtp": {
     "name": "验证码输入",
@@ -390,7 +402,7 @@
       "padding": 20,
       "title": "Animate UI",
       "url": "https://github.com/imskyleen/animate-ui",
-      "value": 0
+      "value": 3200
     },
     "frame": {
       "width": 350,
@@ -488,7 +500,7 @@
       "padding": 20,
       "label": "GitHub 星标按钮",
       "url": "https://github.com/imskyleen/animate-ui",
-      "value": 0
+      "value": 3200
     },
     "frame": {
       "width": 280,
@@ -505,7 +517,7 @@
       "padding": 20,
       "label": "图标按钮",
       "url": "#features",
-      "variant": "star"
+      "variant": "heart"
     },
     "frame": {
       "width": 280,
@@ -586,7 +598,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,
@@ -602,7 +614,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
+      "fontSize": 36,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -620,7 +632,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,
@@ -636,7 +648,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
+      "fontSize": 36,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -654,7 +666,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,
@@ -670,7 +682,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,
@@ -686,7 +698,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,
@@ -702,7 +714,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32,
+      "fontSize": 36,
       "items": "灵感\n设计\n创造"
     },
     "frame": {
@@ -720,7 +732,7 @@
     "props": {
       "padding": 20,
       "title": "让灵感自由生长",
-      "fontSize": 32
+      "fontSize": 36
     },
     "frame": {
       "width": 460,

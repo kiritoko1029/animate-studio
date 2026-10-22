@@ -38,7 +38,7 @@ test('independent theme and custom accent override page tokens without leaking t
   const style = blockThemeStyle(own, page.settings);
   assert.equal(style['--page-accent'], '#fff');
   assert.equal(style['--page-on-accent'], '#000000');
-  assert.equal(style['--page-ink'], getTheme('midnight').text);
+  assert.equal(style['--page-ink'], '#123456', 'explicit text color also reaches primitives that consume theme variables');
   assert.equal(style.color, '#123456');
   assert.equal(style.borderRadius, 3);
   assert.equal(style.background, getTheme('midnight').canvas);
@@ -125,4 +125,12 @@ test('removing a theme clears every reference and leaves other independent theme
   assert.equal(result.blocks[0].props.theme, undefined);
   assert.equal(result.blocks[1].props.theme, 'midnight');
   assert.deepEqual(result.blocks.map(block => block.frame), document.blocks.map(block => block.frame));
+});
+
+
+test('explicit surfaces keep inherited ink readable while explicit text colors retain priority',()=>{
+ const page=applyPageTheme(createDocument(true),'animate-light');
+ const block={...createBlock('glyphBackground'),props:{background:'#111827'}};
+ assert.equal(blockThemeStyle(block,page.settings)['--page-ink'],'#ffffff');
+ assert.equal(blockThemeStyle({...block,props:{...block.props,color:'#ff0000'}},page.settings)['--page-ink'],'#ff0000');
 });

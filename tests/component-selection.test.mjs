@@ -1,0 +1,136 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { JSDOM, VirtualConsole } from 'jsdom';
+import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createBlock, createDocument } from '../src/model.ts';
+import { duplicateSelection, patchSelection, selectComponentIds, sharedValue, themeSelection, translateSelection } from '../src/lib/component-selection.ts';
+import { installMatchMedia } from './helpers/media-query.mjs';
+
+test('selection toggles and batch edits retain unrelated fields, components and history', () => {
+  assert.deepEqual(selectComponentIds(['a'], 'b', true), ['a', 'b']);
+  assert.deepEqual(selectComponentIds(['a', 'b'], 'a', true), ['b']);
+  assert.deepEqual(selectComponentIds(['a', 'b'], 'c'), ['c']);
+  assert.deepEqual(selectComponentIds(['a'], null), []);
+  assert.equal(sharedValue([20, 24]).mixed, true);
+  assert.equal(sharedValue([undefined, undefined]).mixed, false);
+  const page = createDocument(true);
+  page.blocks = ['a', 'b', 'c'].map((id, i) => ({ ...createBlock('button'), id, props: { title: id, padding: i * 10, color: '#123456', motion: { 'Button.hoverScale': 1.1 } }, frame: { x: 50 + i * 300, y: 50, width: 240, height: 100 } }));
+  const before = structuredClone(page);
+  const edited = patchSelection(page, ['a', 'b'], { padding: 32 });
+  assert.deepEqual(edited.blocks.map(block => block.props.padding), [32, 32, 20]);
+  assert.equal(edited.blocks[2], page.blocks[2]);
+  assert.deepEqual(edited.blocks.map(block => block.props.title), ['a', 'b', 'c']);
+  const themed = themeSelection(edited, ['a', 'b'], 'midnight');
+  assert.deepEqual(themed.blocks.map(block => block.props.theme), ['midnight', 'midnight', undefined]);
+  assert.equal(themed.blocks[0].props.color, undefined);
+  assert.deepEqual(themed.blocks[0].props.motion, page.blocks[0].props.motion);
+  assert.equal(themed.settings, page.settings);
+  assert.deepEqual(page, before);
+});
+
+test('group translation and duplication preserve relative geometry, order and independent data', () => {
+  const page = createDocument(true);
+  page.settings = { ...page.settings, maxWidth: 1000, canvasHeight: 600, padding: 20 };
+  const frames = { a: { x: 40, y: 40, width: 200, height: 100 }, b: { x: 500, y: 300, width: 300, height: 200 } };
+  const moved = translateSelection(frames, page.settings, 500, 500);
+  assert.equal(moved.b.x + moved.b.width, 980);
+  assert.equal(moved.b.y + moved.b.height, 580);
+  assert.equal(moved.b.x - moved.a.x, 460);
+  assert.equal(moved.b.y - moved.a.y, 260);
+  page.blocks = Object.entries(frames).map(([id, frame]) => ({ ...createBlock('button'), id, frame, props: { motion: { 'Button.hoverScale': 1.1 } } }));
+  const result = duplicateSelection(page, ['a', 'b']);
+  assert.equal(result.page.blocks.length, 4);
+  assert.equal(new Set(result.page.blocks.map(block => block.id)).size, 4);
+  assert.deepEqual(result.page.blocks.filter(block => !result.ids.includes(block.id)).map(block => block.id), ['a', 'b']);
+  assert.equal(result.page.blocks[3].frame.x - result.page.blocks[1].frame.x, 460);
+  result.page.blocks[1].props.motion['Button.hoverScale'] = 1.5;
+  assert.equal(page.blocks[0].props.motion['Button.hoverScale'], 1.1);
+});
+
+test('canvas focus owns select-all, additive selection and group moves; batch controls update only chosen properties', async t => {
+  const errors = [], vc = new VirtualConsole();
+  vc.on('error', (...args) => errors.push(args.join(' ')));
+  vc.on('jsdomError', error => errors.push(error.message));
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://selection.test', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: vc });
+  const { window } = dom;
+  t.after(() => { window.unmount?.(); window.close(); });
+  installMatchMedia(window, { reducedMotion: true });
+  window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+  const captures = new Set();
+  window.HTMLElement.prototype.setPointerCapture = id => captures.add(id);
+  window.HTMLElement.prototype.hasPointerCapture = id => captures.has(id);
+  window.HTMLElement.prototype.releasePointerCapture = id => captures.delete(id);
+  const bundle = await build({ stdin: { contents: `
+    import {useState} from 'react';import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {DndContext} from '@dnd-kit/core';
+    import {FreeCanvas} from './src/components/FreeCanvas';import {BatchInspector} from './src/components/BatchInspector';
+    import {createDocument,createBlock} from './src/model';import {selectComponentIds,patchSelection,themeSelection,replaceSelectedBlocks} from './src/lib/component-selection';
+    const initial=createDocument(true);initial.blocks=['button','text','input'].map((type,i)=>({...createBlock(type),id:String(i),props:{...createBlock(type).props,padding:20+i*4},frame:{x:40+i*300,y:40,width:240,height:120}}));
+    window.commits=[];const noop=()=>{};
+    function Fixture(){const [page,setPage]=useState(initial),[ids,setIds]=useState([]);window.page=page;window.ids=ids;
+      window.configureSameType=()=>{setIds(['0','1']);setPage({...initial,blocks:initial.blocks.map((block,i)=>i<2?{...block,type:'button',props:{...createBlock('button').props,motion:{'Button.hoverScale':1.1+i*.1,'Button.tapScale':.9+i*.05}}}:block)});};
+      const commit=next=>{window.commits.push(next);setPage(next)},chosen=page.blocks.filter(block=>ids.includes(block.id));
+      return <><DndContext><FreeCanvas document={page} selected={ids.at(-1)??null} selectedIds={ids} onSelect={(id,additive)=>setIds(current=>selectComponentIds(current,id,additive))} onSelectAll={()=>setIds(page.blocks.map(block=>block.id))}
+        onFramesChange={frames=>commit({...page,blocks:page.blocks.map(block=>frames[block.id]?{...block,frame:frames[block.id]}:block)})} onFrameChange={noop} onBlockChange={noop} onCanvasSizeChange={noop} onPageMarginChange={noop} onPageSettings={noop} onDelete={noop} onDuplicate={noop} onInspect={noop} onCreateVariable={noop} onAlign={noop} onFillWidth={noop} onLayerChange={noop} isDragging={false} device="desktop"/></DndContext>
+        {chosen.length>1&&<BatchInspector blocks={chosen} document={page} onPatch={patch=>commit(patchSelection(page,ids,patch))} onTheme={theme=>commit(themeSelection(page,ids,theme))} onBlocksChange={blocks=>commit(replaceSelectedBlocks(page,blocks))} onClose={noop} onDesignTheme={noop} onDelete={noop} onDuplicate={noop}/>}</>;
+    }
+    const root=createRoot(document.getElementById('root'));window.perform=fn=>flushSync(fn);window.unmount=()=>flushSync(()=>root.unmount());window.perform(()=>root.render(<Fixture/>));
+  `, loader: 'jsx', resolveDir: fileURLToPath(new URL('../', import.meta.url)) }, bundle: true, write: false, format: 'iife', jsx: 'automatic', external: ['shiki'], loader: { '.css': 'empty' }, define: { 'process.env.NODE_ENV': '"development"' }, logLevel: 'silent',
+    plugins: [{ name: 'raw', setup(build) { build.onResolve({ filter: /\?raw$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -4)), namespace: 'raw' })); build.onLoad({ filter: /.*/, namespace: 'raw' }, async args => ({ contents: await readFile(args.path, 'utf8'), loader: 'text', resolveDir: dirname(args.path) })); } }],
+  });
+  window.eval(bundle.outputFiles[0].text);
+  const doc = window.document, frame = id => doc.querySelector('[data-block-id="'+id+'"]'), viewport = () => doc.querySelector('[data-canvas-viewport]');
+  const key = (target, key, extra = {}) => { const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...extra }); window.perform(() => target.dispatchEvent(event)); return event; };
+  const pointer = (target, type, x, y, extra = {}) => window.perform(() => { const event = new window.MouseEvent(type, { button: 0, bubbles: true, cancelable: true, clientX: x, clientY: y, ...extra }); Object.defineProperty(event, 'pointerId', { value: 1 }); target.dispatchEvent(event); });
+  const click = (id, extra = {}) => { pointer(frame(id), 'pointerdown', 60, 60, extra); pointer(frame(id), 'pointerup', 60, 60, extra); };
+  click('0'); click('1', { shiftKey: true });
+  assert.deepEqual(Array.from(window.ids), ['0', '1']);
+  assert.equal(doc.querySelectorAll('[data-selected="true"]').length, 2);
+  assert.equal(doc.querySelector('[data-selection-count]').dataset.selectionCount, '2');
+  assert.equal(captures.size, 0);
+  const padding = doc.querySelector('input[aria-label="内边距"]');
+  assert.equal(padding.placeholder, '多种值');
+  window.perform(() => padding.focus());
+  assert.equal(key(padding, 'a', { metaKey: true }).defaultPrevented, false);
+  assert.deepEqual(Array.from(window.ids), ['0', '1']);
+  window.perform(() => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(padding, '32'); padding.dispatchEvent(new window.Event('input', { bubbles: true })); });
+  key(padding, 'Enter');
+  assert.deepEqual(Array.from(window.page.blocks, block => block.props.padding), [32, 32, 28]);
+  assert.equal(window.commits.length, 1, 'one history entry for the whole batch');
+  const theme = doc.querySelector('select[aria-label="批量组件主题"]');
+  window.perform(() => { theme.value = 'midnight'; theme.dispatchEvent(new window.Event('change', { bubbles: true })); });
+  assert.deepEqual(Array.from(window.page.blocks, block => block.props.theme), ['midnight', 'midnight', undefined]);
+  assert.equal(window.commits.length, 2);
+  click('1', { shiftKey: true });
+  assert.deepEqual(Array.from(window.ids), ['0']);
+  click('1', { metaKey: true });
+  assert.deepEqual(Array.from(window.ids), ['0', '1']);
+  pointer(frame('0'), 'pointerdown', 60, 60); pointer(frame('0'), 'pointermove', 80, 80); pointer(frame('0'), 'pointerup', 80, 80);
+  assert.deepEqual(Array.from(window.ids), ['0', '1'], 'dragging an already selected component keeps the group');
+  assert.equal(window.page.blocks[1].frame.x - window.page.blocks[0].frame.x, 300);
+  assert.equal(window.page.blocks[2].frame.x, 640);
+  assert.equal(window.commits.length, 3);
+  key(viewport(), 'Escape');
+  assert.equal(window.ids.length, 0);
+  assert.equal(key(viewport(), 'a', { ctrlKey: true }).defaultPrevented, true);
+  assert.deepEqual(Array.from(window.ids), ['0', '1', '2']);
+  click('1');
+  assert.deepEqual(Array.from(window.ids), ['1'], 'a plain click without dragging returns to single selection');
+  key(viewport(), 'a', { metaKey: true });
+  assert.deepEqual(Array.from(window.ids), ['0', '1', '2']);
+  key(viewport(), 'Escape');
+  click('2'); key(frame('2'), 'Enter');
+  const input = frame('2').querySelector('input');
+  assert.equal(key(input, 'a', { metaKey: true }).defaultPrevented, false, 'component interaction preview retains native text selection');
+  assert.deepEqual(Array.from(window.ids), ['2']);
+  window.perform(() => window.configureSameType());
+  const official = doc.querySelector('[data-official-property="Button.hoverScale"] input');
+  assert.equal(official.placeholder, '多种值');
+  window.perform(() => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(official, '1.3'); official.dispatchEvent(new window.Event('input', { bubbles: true })); });
+  assert.deepEqual(Array.from(window.page.blocks.slice(0, 2), block => block.props.motion['Button.hoverScale']), [1.3, 1.3]);
+  assert.deepEqual(Array.from(window.page.blocks.slice(0, 2), block => block.props.motion['Button.tapScale']), [.9, .9500000000000001], 'a batch official field edit retains each component’s other settings');
+  assert.deepEqual(errors, []);
+});

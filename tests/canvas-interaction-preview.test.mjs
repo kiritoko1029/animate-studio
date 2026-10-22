@@ -34,7 +34,7 @@ test('component interaction preview supports controls and replay without moving 
       window.changes=[];
       const change=(...args)=>window.changes.push(args);
       const noop=()=>{};
-      function Fixture(){const [selected,setSelected]=useState('switch');return <><DndContext><FreeCanvas document={page} selected={selected} onSelect={setSelected} onFrameChange={change} onCanvasSizeChange={change} onPageMarginChange={change} onPageSettings={noop} onDelete={change} onDuplicate={change} onInspect={noop} onCreateVariable={noop} onAlign={change} onFillWidth={change} onLayerChange={change} isDragging={false} device="desktop"/></DndContext><FreePage document={page}/></>;}
+      function Fixture(){const [selected,setSelected]=useState('switch');return <><DndContext><FreeCanvas document={page} selected={selected} onSelect={setSelected} onFrameChange={change} onBlockChange={change} onCanvasSizeChange={change} onPageMarginChange={change} onPageSettings={noop} onDelete={change} onDuplicate={change} onInspect={noop} onCreateVariable={noop} onAlign={change} onFillWidth={change} onLayerChange={change} isDragging={false} device="desktop"/></DndContext><FreePage document={page}/></>;}
       const root=createRoot(document.getElementById('root'));
       window.perform=fn=>flushSync(fn);window.unmount=()=>flushSync(()=>root.unmount());
       window.perform(()=>root.render(<Fixture/>));
@@ -49,6 +49,7 @@ test('component interaction preview supports controls and replay without moving 
   const overlay=doc.querySelector('[data-selection-for="switch"]');
   assert.equal(overlay.parentElement,frame().parentElement,'selection controls live outside the component stacking context');
   assert.equal(overlay.style.zIndex,'3');
+  assert.match(overlay.querySelector('.free-canvas-measure').textContent, /420 × 120缩放 100%/);
   assert.equal(control().disabled,true);
   key(frame(),'Enter');
   assert.equal(frame().getAttribute('data-canvas-interactive'),'true');

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react';
 import type { createInteractionRuntime } from '../../shared/interactions.mjs';
 import type { Block } from '../model';
+import { animationValuesEqual } from '../../shared/animation-settings.mjs';
 import type { JsonValue } from '../lib/interactions/types';
 
 export type NativeRuntime = ReturnType<typeof createInteractionRuntime>;
@@ -12,17 +13,17 @@ export function BlockRuntimeProvider({ block, runtime, children }: { block: Bloc
 }
 
 /** Native primitives keep their own local state until the author binds it to a page variable. */
-export function useBlockValue<T extends string | number | boolean>(initial: T, property: 'value' | 'checked' = 'value'): [T, Dispatch<SetStateAction<T>>] {
+export function useBlockValue<T extends JsonValue>(initial: T, property: 'value' | 'checked' = 'value'): [T, Dispatch<SetStateAction<T>>] {
   const context = useContext(BlockRuntimeContext);
   const [local, setLocal] = useState(initial);
   const previousInitial = useRef(initial);
   useEffect(() => {
-    if (Object.is(previousInitial.current, initial)) return;
+    if (animationValuesEqual(previousInitial.current, initial)) return;
     previousInitial.current = initial; setLocal(initial);
   }, [initial]);
   const binding = context?.block.bindings?.[property];
   const raw = binding ? context!.runtime.read(binding, initial) : local;
-  const value = (typeof initial === 'number' ? Number.isFinite(Number(raw)) ? Number(raw) : initial
+  const value = (!binding ? local : property === 'checked' ? Boolean(raw) : Array.isArray(initial) ? Array.isArray(raw) ? raw : initial : typeof initial === 'number' ? Number.isFinite(Number(raw)) ? Number(raw) : initial
     : typeof initial === 'boolean' ? Boolean(raw) : String(raw ?? '')) as T;
   return [value, action => { const next = typeof action === 'function' ? action(value) : action; setLocal(next); if (context) void context.runtime.dispatch(context.block.id, 'change', next); }];
 }

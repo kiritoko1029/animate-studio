@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import type { Block } from "../model"
-import { motionProps } from "../lib/official-motion"
+import { motionProps, officialClass, officialStyle } from "../lib/official-motion"
 import {
   MotionGrid,
   MotionGridCells,
@@ -144,6 +144,7 @@ export default function OfficialMotionGrid({ block }: { block: Block }) {
   return (
     <motion.button
       type="button"
+      aria-label={block.props.title || states[state].label}
       layout
       whileTap={{ scale: 0.95 }}
       className="relative inline-flex h-11 items-center justify-center gap-x-3 rounded-lg bg-primary px-3 text-sm font-medium"
@@ -151,11 +152,11 @@ export default function OfficialMotionGrid({ block }: { block: Block }) {
       <motion.div layout="preserve-aspect">
         <MotionGrid
           {...motionProps<typeof MotionGrid>(block, 'MotionGrid')}
-          gridSize={[5, 5]}
-          frames={states[state].frames}
-          className="w-fit gap-0.5"
+          gridSize={motionProps<typeof MotionGrid>(block,'MotionGrid').gridSize ?? [5,5]}
+          frames={motionProps<typeof MotionGrid>(block,'MotionGrid').frames ?? states[state].frames}
+          className={officialClass('w-fit gap-0.5',motionProps<typeof MotionGrid>(block,'MotionGrid').className)}
         >
-          <MotionGridCells className="aspect-square size-[3px] rounded-full bg-primary-foreground/20 data-[active=true]:bg-primary-foreground/80" />
+          <MotionGridCells {...motionProps<typeof MotionGridCells>(block,'MotionGridCells')} className={officialClass('aspect-square size-[3px] rounded-full bg-primary-foreground/20 data-[active=true]:bg-primary-foreground/80',motionProps<typeof MotionGridCells>(block,'MotionGridCells').className)}/>
         </MotionGrid>
       </motion.div>
       <RotatingTextContainer

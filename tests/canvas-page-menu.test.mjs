@@ -36,7 +36,7 @@ test('canvas menu edits page settings, mirrors view controls and leaves componen
           onPageSettings={section=>{window.actions.push(section);document.getElementById('inspector').focus();}}
           onGridChange={patch=>setGrid(current=>({...current,...patch}))} onFit={()=>window.actions.push('fit')} onActualSize={()=>window.actions.push('100%')}>
           <div id="canvas" tabIndex={0}><div id="blank" data-free-stage/>
-            <CanvasComponentMenu block={{...createBlock('button'),id:'button'}} open={open&&selected==='button'} disabled={disabled}
+            <CanvasComponentMenu settings={createDocument().settings} onBlockChange={()=>{}} block={{...createBlock('button'),id:'button'}} open={open&&selected==='button'} disabled={disabled}
               onOpenChange={next=>{setOpen(next);if(next)setSelected('button');}} onInspect={()=>{}} onCreateVariable={()=>{}}
               onAlign={()=>{}} onFillWidth={()=>{}} onDuplicate={()=>{}} onDelete={()=>{}}>
               <div id="component" data-block-id="button" tabIndex={0}>Button</div>
@@ -49,7 +49,7 @@ test('canvas menu edits page settings, mirrors view controls and leaves componen
       window.unmount=()=>flushSync(()=>root.unmount());
       window.perform(()=>root.render(<Demo/>));
     `, loader: 'jsx', resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
-    bundle: true, write: false, format: 'iife', jsx: 'automatic', logLevel: 'silent', define: { 'process.env.NODE_ENV': '"development"' },
+    bundle: true, loader: { '.css': 'empty' }, write: false, format: 'iife', jsx: 'automatic', logLevel: 'silent', define: { 'process.env.NODE_ENV': '"development"' },
   });
   window.eval(bundle.outputFiles[0].text);
   const doc = window.document;

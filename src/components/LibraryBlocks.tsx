@@ -1,7 +1,9 @@
+import { officialClass, officialStyle } from '../lib/official-motion';
+import { useOfficialOpen } from './useOfficialOpen';
 import { usePageImage } from './PageAssets';
 import { motionProps } from '../lib/official-motion';
-import { useId, useState } from 'react';
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Quote, Star, TrendingUp } from 'lucide-react';
+import { useContext, useId, useState } from 'react';
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Minus, Quote, Star, TrendingUp } from 'lucide-react';
 import { safeUrl, type Block, type BlockProps } from '../model';
 import { navigate } from '../lib/navigation';
 import { AnimatedButton } from './animate-ui';
@@ -12,6 +14,7 @@ import * as RadioGroup from '@animate-ui/react/primitives/radix-ui/radio-group';
 import * as Slider from '@animate-ui/react/primitives/radix-ui/slider';
 import * as Progress from '@animate-ui/react/primitives/radix-ui/progress';
 import * as Select from '@animate-ui/react/primitives/radix-ui/select';
+import { PageBlockTheme } from './PagePreviewTheme';
 import { useBlockValue } from './NativeInteractions';
 
 function rows(items = '') {
@@ -28,33 +31,51 @@ function Avatar({ name = '', imageUrl = '', radius = 28 }: { name?: string; imag
   </span>;
 }
 
-function SliderBlock({ props: p, interactive }: { props: BlockProps; interactive: boolean }) {
+function SliderBlock({ block, interactive }: { block: Block; interactive: boolean }) {
+  const p=block.props;
+  const settings=motionProps<typeof Slider.Root>(block,'Slider');
   const id = useId();
-  const max = p.max ?? 100;
-  const [value, setValue] = useBlockValue(Math.min(max, p.value ?? 60));
+  const min = settings.min ?? 0;
+  const max = Math.max(min, settings.max ?? p.max ?? 100);
+  const [value, setValue] = useBlockValue(Math.max(min, Math.min(max, p.value ?? 60)));
+  const initial = (block.props.motion?.['Slider.value'] ?? block.props.motion?.['Slider.defaultValue']) as number[] | undefined;
+  const [range, setRange] = useBlockValue<number[]>(initial ?? []);
+  const multiple = !!initial;
+  const values = multiple ? (range.length ? range : initial).map((v,i) => Math.max(min, Math.min(max, Number.isFinite(v) ? v : initial[i] ?? min))).sort((a,b)=>a-b) : [Math.max(min, Math.min(max, value))];
+  const thumb = motionProps<typeof Slider.Thumb>(block,'SliderThumb');
+  const inputId = settings.id ?? id;
   return <div className="page-slider-field">
-    <div className="page-field-heading"><label htmlFor={id}>{p.label || '数值'}</label><output htmlFor={id}>{value}<small> / {max}</small></output></div>
-    <Slider.Root className="native-page-slider" min={0} max={max} step={1} value={[value]} disabled={!interactive} onValueChange={values => setValue(values[0])}><Slider.Track className="native-page-slider-track"><Slider.Range className="native-page-slider-range" /></Slider.Track><Slider.Thumb className="native-page-slider-thumb" id={id} aria-label={p.label || '数值'} aria-describedby={p.text ? `${id}-hint` : undefined} /></Slider.Root>
+    <div className="page-field-heading"><label htmlFor={`${inputId}-0`}>{p.label || '数值'}</label><output htmlFor={inputId}>{values.join(' – ')}<small> / {max}</small></output></div>
+    <Slider.Root {...settings} id={inputId} className={officialClass("native-page-slider", settings.className)} min={min} max={max} step={settings.step ?? 1} value={values} disabled={!interactive || settings.disabled} onValueChange={next => multiple ? setRange(next) : setValue(next[0])}><Slider.Track {...motionProps<typeof Slider.Track>(block,'SliderTrack')} className={officialClass("native-page-slider-track", (motionProps<typeof Slider.Track>(block,'SliderTrack')).className)}><Slider.Range {...motionProps<typeof Slider.Range>(block,'SliderRange')} className={officialClass("native-page-slider-range", (motionProps<typeof Slider.Range>(block,'SliderRange')).className)} /></Slider.Track>{values.map((_,i)=><Slider.Thumb {...thumb} key={i} className={officialClass("native-page-slider-thumb", thumb.className)} id={`${thumb.id ?? inputId}-${i}`} aria-label={thumb['aria-label'] ?? `${p.label || '数值'}${values.length>1 ? ` ${i+1}` : ''}`} aria-describedby={p.text ? `${id}-hint` : undefined}/>)}</Slider.Root>
     {p.text && <p className="page-detail" id={`${id}-hint`}>{p.text}</p>}
   </div>;
 }
 
-function PaginationBlock({ props: p, interactive }: { props: BlockProps; interactive: boolean }) {
+function PaginationBlock({ block, interactive }: { block: Block; interactive: boolean }) {
+  const p=block.props;
   const total = Math.max(1, Math.min(100, Math.round(p.max ?? 5)));
   const [current, setCurrent] = useBlockValue(Math.max(1, Math.min(total, Math.round(p.value ?? 1))));
   const visible = Array.from(new Set([1, total, current - 1, current, current + 1].filter(n => n >= 1 && n <= total))).sort((a, b) => a - b);
   const pages = total <= 7 ? Array.from({ length: total }, (_, i) => i + 1) : visible;
-  return <Pagination className="page-pagination" aria-label={p.label || '分页'}>
+  return <Pagination {...motionProps<typeof Pagination>(block,'Pagination')} className={officialClass("page-pagination", (motionProps<typeof Pagination>(block,'Pagination')).className)} aria-label={motionProps<typeof Pagination>(block,'Pagination')['aria-label'] ?? p.label ?? '分页'}>
     <div className="page-pagination-buttons">
-      <button type="button" aria-label="上一页" disabled={!interactive || current === 1} onClick={() => setCurrent(n => n - 1)}><ChevronLeft size={16} /></button>
+      <button type="button" aria-label="上一页" disabled={!interactive || current === 1} onClick={() => setCurrent(n => n - 1)} className="native-pagination-step"><ChevronLeft size={16} /><span>上一页</span></button>
       {pages.map((page, index) => <span className="page-pagination-item" key={page}>
-        {index > 0 && page - pages[index - 1] > 1 && <span className="page-pagination-gap" aria-hidden="true">…</span>}
-        <button type="button" aria-label={`第 ${page} 页`} aria-current={page === current ? 'page' : undefined} disabled={!interactive} onClick={() => setCurrent(page)}>{page}</button>
+        {index > 0 && page - pages[index - 1] > 1 && <span data-slot="pagination-ellipsis" className="page-pagination-gap" aria-hidden="true">…</span>}
+        <button type="button" data-slot="pagination-link" className={page === current ? 'native-pagination-active' : undefined} aria-label={`第 ${page} 页`} aria-current={page === current ? 'page' : undefined} disabled={!interactive} onClick={() => setCurrent(page)}>{page}</button>
       </span>)}
-      <button type="button" aria-label="下一页" disabled={!interactive || current === total} onClick={() => setCurrent(n => n + 1)}><ChevronRight size={16} /></button>
+      <button type="button" aria-label="下一页" disabled={!interactive || current === total} onClick={() => setCurrent(n => n + 1)} className="native-pagination-step"><span>下一页</span><ChevronRight size={16} /></button>
     </div>
-    <p className="page-detail" aria-live="polite">{p.label ? `${p.label} · ` : ''}第 {current} / {total} 页</p>
+    <p className="page-detail native-pagination-status" aria-live="polite">{p.label ? `${p.label} · ` : ''}第 {current} / {total} 页</p>
   </Pagination>;
+}
+
+function CheckboxBlock({block,interactive}:{block:Block;interactive:boolean}) {
+  const generatedId=useId(),p=block.props;
+  const id=motionProps<typeof Checkbox.Root>(block,'Checkbox').id ?? generatedId;
+  const settings=motionProps<typeof Checkbox.Root>(block,'Checkbox');
+  const [checked,setChecked]=useBlockValue<boolean|'indeterminate'>(settings.checked ?? p.checked ?? false,'checked');
+  return <div className="page-choice"><Checkbox.Root {...settings} className={officialClass("native-page-checkbox", (settings).className)} id={id} checked={checked} onCheckedChange={setChecked} disabled={!interactive || settings.disabled} aria-describedby={p.text ? `${id}-hint` : undefined}><Checkbox.Indicator {...motionProps<typeof Checkbox.Indicator>(block,'CheckboxIndicator')}>{checked==='indeterminate' ? <Minus size={13}/> : <Check size={13}/>}</Checkbox.Indicator></Checkbox.Root><div><label htmlFor={id}>{p.label}</label>{p.text && <p className="page-detail" id={`${id}-hint`}>{p.text}</p>}</div></div>;
 }
 
 function RatingBlock({ props: p, interactive }: { props: BlockProps; interactive: boolean }) {
@@ -75,22 +96,26 @@ function RatingBlock({ props: p, interactive }: { props: BlockProps; interactive
 
 /** Additional library components share the page theme and editor's inert preview. */
 export function LibraryBlock({ block, interactive }: { block: Block; interactive: boolean }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = motionProps<typeof RadioGroup.Item>(block,'RadioGroupItem').id ?? generatedId;
   const p = block.props;
+  const opening=useOfficialOpen(block,'Select');
+  const portalTheme = useContext(PageBlockTheme);
   const [inputValue, setInputValue] = useBlockValue<string>('');
   const [checked, setChecked] = useBlockValue(p.checked ?? false, 'checked');
   const [index, setIndex] = useBlockValue(p.value ?? 0);
   switch (block.type) {
     case 'textarea': return <label className="page-input-label">{p.label}<textarea className="page-input page-textarea" placeholder={p.text} value={inputValue} onChange={event => setInputValue(event.target.value)} rows={4} disabled={!interactive} style={{ borderRadius: p.radius }} /></label>;
-    case 'select': return <label className="page-input-label">{p.label}<Select.Root disabled={!interactive} value={inputValue} onValueChange={setInputValue}><Select.Trigger className="page-input native-page-select" style={{ borderRadius: p.radius }} aria-label={p.label}><Select.Value placeholder={p.text || '请选择'} /><Select.Icon>⌄</Select.Icon></Select.Trigger><Select.Portal><Select.Content className="native-page-select-content" {...motionProps<typeof Select.Content>(block, 'SelectContent')}><Select.Viewport>{rows(p.items).map(([title], i) => <Select.Item className="native-page-select-item" value={`option-${i}`} key={i}><Select.ItemText>{title}</Select.ItemText><Select.ItemIndicator><Check size={14}/></Select.ItemIndicator></Select.Item>)}</Select.Viewport></Select.Content></Select.Portal></Select.Root></label>;
-    case 'checkbox': return <div className="page-choice"><Checkbox.Root className="native-page-checkbox" id={id} checked={checked} onCheckedChange={value => setChecked(value === true)} disabled={!interactive} aria-describedby={p.text ? `${id}-hint` : undefined}><Checkbox.Indicator><Check size={13}/></Checkbox.Indicator></Checkbox.Root><div><label htmlFor={id}>{p.label}</label>{p.text && <p className="page-detail" id={`${id}-hint`}>{p.text}</p>}</div></div>;
-    case 'radio': return <RadioGroup.Root className="page-radio-group" disabled={!interactive} value={String(index)} onValueChange={value => setIndex(Number(value))} aria-label={p.label || '选择选项'}><strong>{p.label || '选择选项'}</strong>{rows(p.items).map(([title, text], i) => <div className="page-choice page-radio-option" key={i}><RadioGroup.Item className="native-page-radio" id={`${id}-${i}`} value={String(i)} aria-describedby={text ? `${id}-${i}-hint` : undefined}><RadioGroup.Indicator className="native-page-radio-indicator" /></RadioGroup.Item><div><label htmlFor={`${id}-${i}`}>{title}</label>{text && <p className="page-detail" id={`${id}-${i}-hint`}>{text}</p>}</div></div>)}</RadioGroup.Root>;
-    case 'slider': return <SliderBlock props={p} interactive={interactive} />;
+    case 'select': return <label className="page-input-label">{p.label}<Select.Root {...motionProps<typeof Select.Root>(block,'Select')} {...opening} disabled={!interactive || motionProps<typeof Select.Root>(block,'Select').disabled} value={inputValue} onValueChange={setInputValue}><Select.Trigger {...motionProps<typeof Select.Trigger>(block,'SelectTrigger')} className={officialClass("page-input native-page-select",motionProps<typeof Select.Trigger>(block,'SelectTrigger').className)} style={officialStyle({borderRadius:p.radius},motionProps<typeof Select.Trigger>(block,'SelectTrigger').style)} aria-label={motionProps<typeof Select.Trigger>(block,'SelectTrigger')['aria-label'] ?? p.label}><Select.Value {...motionProps<typeof Select.Value>(block,'SelectValue')} placeholder={motionProps<typeof Select.Value>(block,'SelectValue').placeholder ?? p.text ?? '请选择'} /><Select.Icon {...motionProps<typeof Select.Icon>(block,'SelectIcon')}>⌄</Select.Icon></Select.Trigger><Select.Portal {...motionProps<typeof Select.Portal>(block,'SelectPortal')}><Select.Content {...motionProps<typeof Select.Content>(block, 'SelectContent')} className={officialClass("native-page-select-content", (motionProps<typeof Select.Content>(block, 'SelectContent')).className)} data-page-scheme={portalTheme?.colorScheme} style={officialStyle(portalTheme, (motionProps<typeof Select.Content>(block, 'SelectContent')).style)}><Select.Viewport {...motionProps<typeof Select.Viewport>(block,'SelectViewport')}>{rows(p.items).map(([title], i) => <Select.Item {...motionProps<typeof Select.Item>(block,'SelectItem')} className={officialClass("native-page-select-item", (motionProps<typeof Select.Item>(block,'SelectItem')).className)} value={`option-${i}`} key={i}><Select.ItemText {...motionProps<typeof Select.ItemText>(block,'SelectItemText')}>{title}</Select.ItemText><Select.ItemIndicator {...motionProps<typeof Select.ItemIndicator>(block,'SelectItemIndicator')}><Check size={14}/></Select.ItemIndicator></Select.Item>)}</Select.Viewport></Select.Content></Select.Portal></Select.Root></label>;
+    case 'checkbox': return <CheckboxBlock block={block} interactive={interactive}/>;
+    case 'radio': return <RadioGroup.Root {...motionProps<typeof RadioGroup.Root>(block,'RadioGroup')} className={officialClass("page-radio-group", (motionProps<typeof RadioGroup.Root>(block,'RadioGroup')).className)} disabled={!interactive || motionProps<typeof RadioGroup.Root>(block,'RadioGroup').disabled} value={String(index)} onValueChange={value => setIndex(Number(value))} aria-label={motionProps<typeof RadioGroup.Root>(block,'RadioGroup')['aria-label'] ?? p.label ?? '选择选项'}><strong>{p.label || '选择选项'}</strong>{rows(p.items).map(([title, text], i) => <div className="page-choice page-radio-option" key={i}><RadioGroup.Item {...motionProps<typeof RadioGroup.Item>(block,'RadioGroupItem')} className={officialClass("native-page-radio", (motionProps<typeof RadioGroup.Item>(block,'RadioGroupItem')).className)} id={`${id}-${i}`} value={String(i)} aria-describedby={text ? `${id}-${i}-hint` : undefined}><RadioGroup.Indicator {...motionProps<typeof RadioGroup.Indicator>(block,'RadioGroupIndicator')} className={officialClass("native-page-radio-indicator", (motionProps<typeof RadioGroup.Indicator>(block,'RadioGroupIndicator')).className)} /></RadioGroup.Item><div><label htmlFor={`${id}-${i}`}>{title}</label>{text && <p className="page-detail" id={`${id}-${i}-hint`}>{text}</p>}</div></div>)}</RadioGroup.Root>;
+    case 'slider': return <SliderBlock block={block} interactive={interactive} />;
     case 'avatar': return <div className="page-avatar-row"><Avatar key={p.imageUrl} name={p.title} imageUrl={p.imageUrl} radius={p.radius} /><div><strong>{p.title}</strong>{p.text && <p className="page-detail">{p.text}</p>}</div></div>;
     case 'progress': {
-      const max = p.max ?? 100;
+      const progressId=motionProps<typeof Progress.Root>(block,'Progress').id ?? id;
+      const max = motionProps<typeof Progress.Root>(block,'Progress').max ?? p.max ?? 100;
       const value = Math.min(max, p.value ?? 72);
-      return <div className="page-progress-field"><div className="page-field-heading"><label htmlFor={id}>{p.label || '进度'}</label><span>{Math.round(value / max * 100)}%</span></div><Progress.Root className="native-page-progress" id={id} max={max} value={value} aria-label={p.label || '进度'}><Progress.Indicator className="native-page-progress-indicator" style={{ transform: `translateX(-${100 - value / max * 100}%)` }} /></Progress.Root>{p.text && <p className="page-detail">{p.text}</p>}</div>;
+      return <div className="page-progress-field"><div className="page-field-heading"><label htmlFor={progressId}>{p.label || '进度'}</label><span>{Math.round(value / max * 100)}%</span></div><Progress.Root {...motionProps<typeof Progress.Root>(block,'Progress')} className={officialClass("native-page-progress", (motionProps<typeof Progress.Root>(block,'Progress')).className)} id={progressId} max={max} value={value} aria-label={motionProps<typeof Progress.Root>(block,'Progress')['aria-label'] ?? p.label ?? '进度'}><Progress.Indicator {...motionProps<typeof Progress.Indicator>(block,'ProgressIndicator')} className={officialClass("native-page-progress-indicator", (motionProps<typeof Progress.Indicator>(block,'ProgressIndicator')).className)} style={officialStyle({ transform: `translateX(-${100 - value / max * 100}%)` }, (motionProps<typeof Progress.Indicator>(block,'ProgressIndicator')).style)} /></Progress.Root>{p.text && <p className="page-detail">{p.text}</p>}</div>;
     }
     case 'statistic': return <article className="page-statistic"><div className="page-statistic-heading"><h3>{p.title}</h3><span className="page-statistic-icon"><TrendingUp size={19} aria-hidden="true" /></span></div><p className="page-statistic-value">{p.text}</p>{p.label && <span className="page-statistic-change">{p.label}</span>}</article>;
     case 'table': {
@@ -104,7 +129,7 @@ export function LibraryBlock({ block, interactive }: { block: Block; interactive
       const items = rows(p.items);
       return <nav className="page-breadcrumb" aria-label="面包屑"><ol>{items.map(([title, url], i) => <li key={i}>{i > 0 && <ChevronRight size={13} aria-hidden="true" />}{i === items.length - 1 ? <span aria-current="page">{title}</span> : <a href={safeUrl(url)} tabIndex={interactive ? 0 : -1} onClick={event => navigate(event, url)}>{title}</a>}</li>)}</ol></nav>;
     }
-    case 'pagination': return <PaginationBlock props={p} interactive={interactive} />;
+    case 'pagination': return <PaginationBlock block={block} interactive={interactive} />;
     case 'rating': return <RatingBlock props={p} interactive={interactive} />;
     default: return null;
   }

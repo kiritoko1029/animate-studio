@@ -109,6 +109,23 @@ async function mount(format, document, copies = 1) {
 }
 
 for (const format of ['html', 'vue', 'react']) {
+  test(`${format}: overall component scale is retained without adding CSS length units`, async t => {
+    const page = createDocument(true);
+    page.blocks = [{ ...createBlock('navbar'), id: 'scaled-navbar', props: { ...createBlock('navbar').props, contentScale: 200 }, frame: { x: 40, y: 40, width: 1600, height: 170 } }];
+    const fixture = await mount(format, page);
+    t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
+    const frame = fixture.root.querySelector('[data-block-id="scaled-navbar"]');
+    assert.equal(frame.style.width, '1600px');
+    assert.equal(frame.style.height, '170px');
+    const content = frame.querySelector('.as-page-block');
+    // jsdom lacks CSS zoom; inspect Vue's generated style and React's assigned property.
+    if (format === 'html') assert.match(content.getAttribute('style'), /(?:^|;)\s*zoom:\s*2(?:;|$)/);
+    else if (format === 'vue') assert.match(fixture.output.content, /(?:^|;)zoom:2(?:;|")/);
+    else assert.equal(String(content.style.zoom), '2');
+    assert.equal(frame.querySelector('.as-page-brand-title').textContent, 'Forma');
+    assert.deepEqual(fixture.errors, []);
+  });
+
   test(`${format}: overlapping components retain the saved layer order`, async t => {
     let page = createDocument(true);
     page.blocks = ['background', 'foreground', 'middle'].map(id => ({ ...createBlock('card'), id, frame: { x: 40, y: 40, width: 400, height: 300 } }));
@@ -427,6 +444,10 @@ for (const format of ['html', 'vue', 'react']) {
   test(`${format}: catalog dialogs, grouped menus, pinning, questionnaire and clipboard work`, async t => {
     const page = createDocument(true);
     page.blocks = ['dialog', 'menubar', 'pinnedList', 'questionnaire', 'copyButton', 'themeTogglerButton'].map(type => createBlock(type));
+    // This suite exercises the legacy text-list export contract. New catalog defaults
+    // use the native renderer's structured menus, tested through that entry point.
+    page.blocks.find(block => block.type === 'questionnaire').props.items = '你关注哪个方向？|界面设计,产品开发,品牌创意\n有什么想告诉我们？';
+    page.blocks.find(block => block.type === 'menubar').props.items = '产品|组件库|#features\n产品|动效|#effects\n资源|使用指南|#docs\n资源|关于我们|#about';
     const fixture = await mount(format, page);
     t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
     const { root, window, act, errors } = fixture;

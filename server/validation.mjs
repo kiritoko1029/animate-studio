@@ -2,12 +2,13 @@ import extendedComponents from '../shared/extended-components.json' with { type:
 import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
 import { validateInteractions } from '../shared/interaction-schema.mjs';
 import { canvasLimits } from '../shared/canvas-sizes.mjs';
+import { componentScaleLimits } from '../shared/component-scale.mjs';
 import themes from '../shared/themes.json' with { type: 'json' };
 import { validateAnimationSettings } from '../shared/animation-settings.mjs';
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300 };
-const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100] };
+const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100], contentScale: [componentScaleLimits.min, componentScaleLimits.max] };
 const enumValues = { brandIcon: [...Object.keys(navbarIcons), 'none'], effect: ['none','auto-height','blur','click','effect','fade','highlight','magnetic','particles','scroll-fade','shine','slide','theme-toggler','tilt','zoom','spring','page-transition','cursor'], align: ['left', 'center', 'right'], animation: ['none', 'fade', 'slide', 'scale'] };
 const colorPattern = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
@@ -103,12 +104,14 @@ export function validatePage(page) {
     ids.add(block.id);
     if (!componentTypes.has(block.type)) fail('不支持的组件类型');
     if (Object.hasOwn(block, 'frame')) {
+      const frameScale = typeof block.props?.contentScale === 'number' && Number.isFinite(block.props.contentScale)
+        ? Math.max(1, Math.min(componentScaleLimits.max, block.props.contentScale) / 100) : 1;
       record(block.frame, ['x', 'y', 'width', 'height'], 'block.frame');
       required(block.frame, ['x', 'y', 'width', 'height'], 'block.frame');
       number(block.frame.x, 0, canvasLimits.maxWidth, 'block.frame.x');
       number(block.frame.y, 0, canvasLimits.maxHeight, 'block.frame.y');
-      number(block.frame.width, 40, canvasLimits.maxWidth, 'block.frame.width');
-      number(block.frame.height, 32, 3000, 'block.frame.height');
+      number(block.frame.width, 40, canvasLimits.maxWidth * frameScale, 'block.frame.width');
+      number(block.frame.height, 32, 3000 * frameScale, 'block.frame.height');
     }
     record(block.props, [...Object.keys(stringLimits), ...Object.keys(numberLimits), ...Object.keys(enumValues), 'background', 'color', 'accent', 'checked', 'theme', 'motion', 'effectOptions'], 'block.props');
     for (const [key, value] of Object.entries(block.props)) {
@@ -126,6 +129,7 @@ export function validatePage(page) {
       if ((key === 'url' || key === 'imageUrl') && !safeUrl(value, key === 'imageUrl')) fail(`block.props.${key} 必须是安全的链接`);
     }
     const { value, max } = block.props;
+    if (block.props.contentScale !== undefined && !Number.isInteger(block.props.contentScale)) fail('组件整体缩放必须为整数百分比');
     if (['slider', 'progress', 'pagination'].includes(block.type) && value !== undefined && value > (max ?? (block.type === 'pagination' ? 5 : 100))) fail('组件当前值不能大于最大值');
     if (block.type === 'inputOtp' && max !== undefined && (!Number.isInteger(max) || max > 12)) fail('验证码位数必须是 1–12 的整数');
     if (block.type === 'rating' && value !== undefined && (!Number.isInteger(value) || value > 5)) fail('评分必须是 0–5 的整数');

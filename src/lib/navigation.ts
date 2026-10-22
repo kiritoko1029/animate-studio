@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react';
 import { safeUrl } from '../model';
 
-export function navigate(event: MouseEvent<HTMLButtonElement | HTMLAnchorElement>, rawUrl?: string) {
+export function navigate(event: MouseEvent<HTMLElement>, rawUrl?: string) {
   event.preventDefault();
   const url = safeUrl(rawUrl);
   if (url.startsWith('#')) {

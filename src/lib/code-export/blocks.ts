@@ -1,3 +1,4 @@
+import { componentScaleStyle } from '../component-scale.ts';
 import { catalogContent } from './catalog-blocks.ts';
 import navbarIcons from '../../../shared/navbar-icons.json' with { type: 'json' };
 import { createInteractionRuntime } from '../../../shared/interactions.mjs';
@@ -213,7 +214,7 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
     const style: Style = {
       textAlign: p.align, fontSize: p.fontSize, '--block-padding': `${p.padding ?? 20}px`, '--block-font-size': p.fontSize ? `${p.fontSize}px` : undefined,
       '--block-color': p.color, '--block-items': p.align === 'left' ? 'flex-start' : p.align === 'right' ? 'flex-end' : 'center',
-      ...blockThemeStyle(block, document.settings),
+      ...blockThemeStyle(block, document.settings), ...componentScaleStyle(block),
     };
     function mark(value: string) {
       let expression = js(value), changed = false;

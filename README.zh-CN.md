@@ -1,5 +1,7 @@
 # Animate Studio
 
+**当前版本：[v2026.10.22](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.22)** · [更新日志（中文 / English）](CHANGELOG.md)
+
 **自由搭建页面，编写交互脚本，直接导出前端代码。**
 
 [在线体验](https://animate-studio.vme5.de/) · [English](README.md) · **简体中文** · [详细使用指南](docs/user-guide.zh-CN.md)
