@@ -1,3 +1,4 @@
+import { t, translateMessage } from '../i18n';
 import { useEffect, useId, useRef, useState } from 'react';
 import { RotateCcw, Sparkles } from 'lucide-react';
 import { officialAnimationControls, animationValuesEqual, validateAnimationSetting, type AnimationControl, type AnimationValue, type AnimationSettings as Settings } from '../../shared/animation-settings.mjs';
@@ -11,13 +12,13 @@ const labels: Record<string, string> = {
 const options: Record<string, string> = {single:'单选',multiple:'多选',null:'不设置',instant:'即时',ease:'缓动',spring:'弹簧',attract:'吸引',repel:'排斥',bounce:'反弹',merge:'合并',top:'上方',bottom:'下方',left:'左侧',right:'右侧',up:'向上',down:'向下',start:'起点',center:'居中',end:'末端',none:'自动',false:'关闭',true:'开启',x:'仅横向',y:'仅纵向','inline-start':'行首','inline-end':'行末',draw:'描画',pop:'弹出',horizontal:'水平',vertical:'垂直',hover:'悬停',click:'点击',chars:'字符',words:'单词',lines:'行',default:'默认',vibe:'跃动',writing:'书写',btt:'自下向上',ttb:'自上向下',ltr:'自左向右',rtl:'自右向左',text:'跟随文字颜色',white:'白色',blue:'蓝色',violet:'紫色',emerald:'绿色',amber:'琥珀色',rose:'玫瑰色',popper:'浮动定位','item-aligned':'对齐选项',children:'子元素',parent:'父容器',fade:'淡入淡出',slide:'滑动',push:'推入',zoom:'缩放',iris:'圆形展开',wipe:'擦除',bands:'条带',stack:'堆叠',flow:'流动',chop:'切片',random:'随机'};
 
 function fieldLabel(group: string, key: string, type: string) {
-  if (key === 'type' && ['toggleGroup','accordion'].includes(type)) return '选择方式';
-  if (key === 'type' && group === 'QuestionnaireInput') return '输入类型';
-  if (type === 'starsBackground' && key === 'speed') return '运动周期（秒）';
-  if (type === 'copyButton' && key === 'delay') return '复制提示保持（毫秒）';
-  if (type === 'slidingNumber' && key === 'fromNumber') return '从零开始';
-  const label = labels[key] ?? key;
-  if (['delay','duration','holdDelay','loopDelay','exitDelay'].includes(key)) return `${label}（${['LiquidButton','ShimmeringText','ParticlesEffect','IconButtonParticles'].includes(group) ? '秒' : '毫秒'}）`;
+  if (key === 'type' && ['toggleGroup','accordion'].includes(type)) return t("选择方式");
+  if (key === 'type' && group === 'QuestionnaireInput') return t("输入类型");
+  if (type === 'starsBackground' && key === 'speed') return t("运动周期（秒）");
+  if (type === 'copyButton' && key === 'delay') return t("复制提示保持（毫秒）");
+  if (type === 'slidingNumber' && key === 'fromNumber') return t("从零开始");
+  const label = t(labels[key] ?? key);
+  if (['delay','duration','holdDelay','loopDelay','exitDelay'].includes(key)) return `${t(label)}（${['LiquidButton','ShimmeringText','ParticlesEffect','IconButtonParticles'].includes(group) ? t("秒") : t("毫秒")}）`;
   return label;
 }
 
@@ -35,8 +36,8 @@ function StructuredField({ field, name, value, onChange }: { field: AnimationCon
       const next = text.trim() ? JSON.parse(text) as AnimationValue : undefined;
       if (next !== undefined) validateAnimationSetting(field, next, name);
       setError(''); previous.current = next === undefined ? '' : JSON.stringify(next, null, 2); onChange(next);
-    } catch (error) { setError(error instanceof Error ? error.message : '请输入有效 JSON'); }
-  }}/>{error && <span id={id} role="alert" className="field-error">{error}；尚未应用</span>}</>;
+    } catch (error) { setError(error instanceof Error ? error.message : t("请输入有效 JSON")); }
+  }}/>{error && <span id={id} role="alert" className="field-error">{translateMessage(error)}{t("；尚未应用")}</span>}</>;
 }
 
 function TextSettingField({field,name,value,onChange}:{field:AnimationControl;name:string;value:AnimationValue|undefined;onChange:(value:AnimationValue|undefined)=>void}) {
@@ -44,7 +45,7 @@ function TextSettingField({field,name,value,onChange}:{field:AnimationControl;na
   const [draft,setDraft]=useState(shown),[error,setError]=useState('');
   const previous=useRef(shown),id=useId();
   useEffect(()=>{if(shown!==previous.current){previous.current=shown;setDraft(shown);setError('');}},[shown]);
-  return <><input aria-label={name} aria-invalid={!!error} aria-describedby={error?id:undefined} placeholder="沿用默认" value={draft} maxLength={field.maxLength??200} onChange={event=>{const text=event.target.value;setDraft(text);try{const next=text===''&&field.value===undefined?undefined:text;if(next!==undefined)validateAnimationSetting(field,next,name);setError('');previous.current=text;onChange(next);}catch(error){setError(error instanceof Error?error.message:'输入无效');}}}/>{error&&<span id={id} role="alert" className="field-error">{error}；尚未应用</span>}</>;
+  return <><input aria-label={name} aria-invalid={!!error} aria-describedby={error?id:undefined} placeholder={t("沿用默认")} value={draft} maxLength={field.maxLength??200} onChange={event=>{const text=event.target.value;setDraft(text);try{const next=text===''&&field.value===undefined?undefined:text;if(next!==undefined)validateAnimationSetting(field,next,name);setError('');previous.current=text;onChange(next);}catch(error){setError(error instanceof Error?error.message:t("输入无效"));}}}/>{error&&<span id={id} role="alert" className="field-error">{translateMessage(error)}{t("；尚未应用")}</span>}</>;
 }
 
 export function AnimationSettings({ type, value = {}, onChange, extra = false, mixedKeys = [], onFieldChange }: { type: string; value?: Settings; onChange: (value: Settings) => void; extra?: boolean; mixedKeys?: string[]; onFieldChange?: (key: string, value: AnimationValue | undefined) => void }) {
@@ -55,7 +56,7 @@ export function AnimationSettings({ type, value = {}, onChange, extra = false, m
       const name = `${group}.${key}`;
       const mixed = mixedKeys.includes(name);
       const current = Object.hasOwn(value, name) ? value[name] : field.value;
-      const label = field.label ?? (key==='size'&&field.options ? '尺寸' : field.unit ? `${labels[key] ?? key}（${field.unit}）` : fieldLabel(group, key, type));
+      const label = t(field.label ?? (key==='size'&&field.options ? t("尺寸") : field.unit ? `${t(labels[key] ?? key)}（${field.unit}）` : fieldLabel(group, key, type)));
       const update = (next: AnimationValue | undefined) => {
         if (next !== undefined) validateAnimationSetting(field, next, name);
         const settings = { ...value };
@@ -65,20 +66,20 @@ export function AnimationSettings({ type, value = {}, onChange, extra = false, m
       const structured = ['spring-options','transition','rgb','json','motion-target','style','element-props','grid-size','frames','motion-element-props','variants'].includes(field.kind ?? '');
       const kind = field.kind ?? typeof field.value;
       return <div className="field property-field" key={`${type}:${name}:${resetVersion}`} data-official-property={name}>
-        <label><span className="field-label">{label}{mixed && <small className="batch-mixed">多种值</small>}</span>
-          {structured ? <StructuredField field={field} name={`${group} · ${label}`} value={mixed ? undefined : current} onChange={update}/> : field.options ? <select aria-label={label} value={mixed ? '__mixed' : JSON.stringify(current) ?? ''} onChange={event => update(event.target.value ? JSON.parse(event.target.value) : undefined)}>{mixed && <option value="__mixed" disabled>多种值</option>}{field.value === undefined && <option value="">沿用默认</option>}{Object.entries(field.options).map(([label, option]) => <option key={label} value={JSON.stringify(option)}>{options[label] ?? label}</option>)}</select> : kind === 'boolean' ? <span className="studio-switch-field"><Switch aria-label={label} checked={!mixed && Boolean(current)} onCheckedChange={update}/><span>{mixed ? '多种值' : current ? '开启' : '关闭'}</span></span> : kind === 'number' ? <input type="number" aria-label={label} placeholder={mixed ? '多种值' : '沿用默认'} min={field.min ?? -10000} max={field.max ?? 100000} step={field.step ?? 'any'} value={mixed || current === undefined ? '' : Number(current)} onChange={event => { const n=event.target.valueAsNumber; if (event.target.value === '' && field.value === undefined) update(undefined); else if (Number.isFinite(n)) update(Math.max(field.min ?? -10000,Math.min(field.max ?? 100000, field.step === 1 ? Math.round(n) : n))); }}/> : <TextSettingField field={field} name={label} value={mixed ? undefined : current} onChange={update}/>}
+        <label><span className="field-label">{t(label)}{mixed && <small className="batch-mixed">{t("多种值")}</small>}</span>
+          {structured ? <StructuredField field={field} name={`${group} · ${t(label)}`} value={mixed ? undefined : current} onChange={update}/> : field.options ? <select aria-label={t(label)} value={mixed ? '__mixed' : JSON.stringify(current) ?? ''} onChange={event => update(event.target.value ? JSON.parse(event.target.value) : undefined)}>{mixed && <option value="__mixed" disabled>{t("多种值")}</option>}{field.value === undefined && <option value="">{t("沿用默认")}</option>}{Object.entries(field.options).map(([label, option]) => <option key={t(label)} value={JSON.stringify(option)}>{t(options[label] ?? label)}</option>)}</select> : kind === 'boolean' ? <span className="studio-switch-field"><Switch aria-label={t(label)} checked={!mixed && Boolean(current)} onCheckedChange={update}/><span>{mixed ? t("多种值") : current ? t("开启") : t("关闭")}</span></span> : kind === 'number' ? <input type="number" aria-label={t(label)} placeholder={mixed ? t("多种值") : t("沿用默认")} min={field.min ?? -10000} max={field.max ?? 100000} step={field.step ?? 'any'} value={mixed || current === undefined ? '' : Number(current)} onChange={event => { const n=event.target.valueAsNumber; if (event.target.value === '' && field.value === undefined) update(undefined); else if (Number.isFinite(n)) update(Math.max(field.min ?? -10000,Math.min(field.max ?? 100000, field.step === 1 ? Math.round(n) : n))); }}/> : <TextSettingField field={field} name={t(label)} value={mixed ? undefined : current} onChange={update}/>}
         </label>
-        <span className="field-hint">{name}{field.value === undefined ? ' · 可选' : ''}</span>
+        <span className="field-hint">{name}{field.value === undefined ? t(" · 可选") : ''}</span>
       </div>;
   }
   return <div className="property-section official-motion-settings">
-    <h3><Sparkles size={13}/>{extra ? '附加动效设置' : '官方属性'}<StudioButton className="text-button" onClick={() => { setResetVersion(n => n + 1); onChange({}); }} aria-label={extra ? '恢复附加动效默认' : '恢复官方动效默认'}><RotateCcw size={12}/>恢复默认</StudioButton></h3>
-    {!extra && <p className="field-hint">默认沿用官方示例。留空的可选属性使用组件默认值；修改后即时生效。</p>}
+    <h3><Sparkles size={13}/>{extra ? t("附加动效设置") : t("官方属性")}<StudioButton className="text-button" onClick={() => { setResetVersion(n => n + 1); onChange({}); }} aria-label={extra ? t("恢复附加动效默认") : t("恢复官方动效默认")}><RotateCcw size={12}/>{t("恢复默认")}</StudioButton></h3>
+    {!extra && <p className="field-hint">{t("默认沿用官方示例。留空的可选属性使用组件默认值；修改后即时生效。")}</p>}
     {Object.entries(groups).map(([group, fields], groupIndex) => {
       const basic=Object.entries(fields).filter(([,field])=>!field.advanced), advanced=Object.entries(fields).filter(([,field])=>field.advanced);
-      return <details className="official-property-group" key={group} open={groupIndex === 0}><summary>{group} <small>{Object.keys(fields).length} 个属性</small></summary>
+      return <details className="official-property-group" key={group} open={groupIndex === 0}><summary>{group} <small>{Object.keys(fields).length} {t("个属性")}</small></summary>
         {basic.map(([key,field])=>renderField(group,key,field))}
-        {advanced.length>0 && (basic.length ? <details className="official-advanced"><summary>更多官方属性（{advanced.length}）</summary>{advanced.map(([key,field])=>renderField(group,key,field))}</details> : advanced.map(([key,field])=>renderField(group,key,field)))}
+        {advanced.length>0 && (basic.length ? <details className="official-advanced"><summary>{t("更多官方属性（{0}）", { 0: advanced.length })}</summary>{advanced.map(([key,field])=>renderField(group,key,field))}</details> : advanced.map(([key,field])=>renderField(group,key,field)))}
       </details>;
     })}
 

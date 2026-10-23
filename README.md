@@ -55,7 +55,7 @@ NODE_ENV=production npm start
 3. Open **Data & scripts / 数据与脚本** above the canvas to define variables. Use **Component interactions / 组件联动** to connect properties and events.
 4. Test the result in the preview, then use **Export / 导出** to download code or page JSON.
 
-The workbench currently uses a Chinese interface. The [detailed user guide](docs/user-guide.zh-CN.md) covers expressions, event actions, scripts, themes, and export integration.
+Open **More (⋯) → Language** in the header to switch between English and Simplified Chinese. New pages, imports and exports are grouped in the **Page** menu. The first visit follows your browser language (Chinese variants use Simplified Chinese; other languages use English), and your choice is remembered in this browser. Language changes preserve page content and undo history. The [detailed user guide](docs/user-guide.zh-CN.md) covers expressions, event actions, scripts, themes, and export integration.
 
 | Canvas action | macOS | Windows / Linux |
 | --- | --- | --- |

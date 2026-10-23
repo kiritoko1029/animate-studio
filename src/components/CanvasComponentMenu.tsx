@@ -1,7 +1,9 @@
+import { blockLabel } from '../i18n/catalog';
+import { t } from '../i18n';
 import { useRef, type ReactElement, type KeyboardEvent } from 'react';
 import { ContextMenu } from '@animate-ui/react/primitives/radix-ui/context-menu';
 import { AlignHorizontalDistributeCenter, AlignHorizontalJustifyEnd, AlignHorizontalJustifyStart, ArrowLeftRight, ArrowDown, ArrowUp, ArrowUpToLine, ArrowDownToLine, Copy, Database, Link2, Settings2, Trash2 } from 'lucide-react';
-import { blockLabel, type Block, type PageDocument } from '../model';
+import { type Block, type PageDocument } from '../model';
 import { ComponentScaleControls } from './ComponentScaleControls';
 import type { HorizontalAlignment } from '../lib/canvas-bounds';
 import type { LayerAction } from '../lib/layers';
@@ -55,21 +57,21 @@ export function CanvasComponentMenu({ block, selectionCount = 1, settings, onBlo
         event.currentTarget.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: Math.max(8, Math.min(rect.left + 24, window.innerWidth - 8)), clientY: Math.max(8, Math.min(rect.top + 24, window.innerHeight - 8)) }));
       }}>{children}</ContextMenu.Trigger>
     {/* Retire the dismissal layer immediately so an exiting menu cannot intercept the next menu. */}
-    {open && !disabled && <ContextMenu.Portal><ContextMenu.Content className="studio-menu canvas-component-menu" aria-label={selectionCount > 1 ? '所选组件操作' : `${blockLabel(block)}操作`} collisionPadding={8} loop
+    {open && !disabled && <ContextMenu.Portal><ContextMenu.Content className="studio-menu canvas-component-menu" aria-label={selectionCount > 1 ? t("所选组件操作") : t("{0}操作", { 0: blockLabel(block) })} collisionPadding={8} loop
       onEscapeKeyDown={event => {
         // Let the percentage field discard its draft before the menu dismisses.
         if (event.target instanceof HTMLElement && event.target.closest('.canvas-menu-scale input[type="number"]')) event.preventDefault();
       }}
       onCloseAutoFocus={event => { event.preventDefault(); if (restoreFocus.current) trigger.current?.focus({ preventScroll: true }); }}
       onInteractOutside={() => { restoreFocus.current = false; }}>
-      <ContextMenu.Label className="canvas-menu-label">{selectionCount > 1 ? `已选 ${selectionCount} 个组件` : blockLabel(block)}</ContextMenu.Label>
-      <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'component'))}><Settings2 size={15} />{selectionCount > 1 ? '批量编辑属性' : '编辑属性'}</ContextMenu.Item>
+      <ContextMenu.Label className="canvas-menu-label">{selectionCount > 1 ? t("已选 {0} 个组件", { 0: selectionCount }) : blockLabel(block)}</ContextMenu.Label>
+      <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'component'))}><Settings2 size={15} />{selectionCount > 1 ? t("批量编辑属性") : t("编辑属性")}</ContextMenu.Item>
       {selectionCount <= 1 && <>
-      <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'logic'))}><Link2 size={15} />绑定属性</ContextMenu.Item>
-      <ContextMenu.Item onSelect={() => run(() => onCreateVariable(block.id))}><Database size={15} />创建变量并绑定…</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'logic'))}><Link2 size={15} />{t("绑定属性")}</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onCreateVariable(block.id))}><Database size={15} />{t("创建变量并绑定…")}</ContextMenu.Item>
       <ContextMenu.Separator className="canvas-menu-separator" />
-      <ContextMenu.Item asChild textValue="整体缩放" onSelect={event => event.preventDefault()}>
-        <div className="canvas-menu-scale" aria-label="整体缩放" onKeyDown={event => {
+      <ContextMenu.Item asChild textValue={t("整体缩放")} onSelect={event => event.preventDefault()}>
+        <div className="canvas-menu-scale" aria-label={t("整体缩放")} onKeyDown={event => {
           if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault(); event.stopPropagation();
             event.currentTarget.querySelector<HTMLInputElement>('input[type="number"]')?.focus();
@@ -82,27 +84,27 @@ export function CanvasComponentMenu({ block, selectionCount = 1, settings, onBlo
         </div>
       </ContextMenu.Item>
       <ContextMenu.Separator className="canvas-menu-separator" />
-      <ContextMenu.Label className="canvas-menu-label">对齐到页面边距</ContextMenu.Label>
-      <ContextMenu.Group className="canvas-menu-align-row" aria-label="对齐到页面边距" onKeyDown={navigateRow}>
-        {alignments.map(({ value, label, Icon }) => <ContextMenu.Item key={value} asChild textValue={label} onSelect={() => run(() => onAlign(block.id, value))}>
-          <button type="button" aria-label={label} title={label}><Icon size={17} aria-hidden="true"/></button>
+      <ContextMenu.Label className="canvas-menu-label">{t("对齐到页面边距")}</ContextMenu.Label>
+      <ContextMenu.Group className="canvas-menu-align-row" aria-label={t("对齐到页面边距")} onKeyDown={navigateRow}>
+        {alignments.map(({ value, label, Icon }) => <ContextMenu.Item key={value} asChild textValue={t(label)} onSelect={() => run(() => onAlign(block.id, value))}>
+          <button type="button" aria-label={t(label)} title={t(label)}><Icon size={17} aria-hidden="true"/></button>
         </ContextMenu.Item>)}
       </ContextMenu.Group>
-      <ContextMenu.Item onSelect={() => run(() => onFillWidth(block.id))} title="填满当前区域的可用宽度，保留页面边距与组件间距"><ArrowLeftRight size={15}/>一键宽度填充</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onFillWidth(block.id))} title={t("填满当前区域的可用宽度，保留页面边距与组件间距")}><ArrowLeftRight size={15}/>{t("一键宽度填充")}</ContextMenu.Item>
       <ContextMenu.Separator className="canvas-menu-separator" />
-      <ContextMenu.Label className="canvas-menu-label">图层顺序</ContextMenu.Label>
-      <ContextMenu.Group className="canvas-menu-align-row canvas-menu-layer-row" aria-label="图层顺序" onKeyDown={navigateRow}>
+      <ContextMenu.Label className="canvas-menu-label">{t("图层顺序")}</ContextMenu.Label>
+      <ContextMenu.Group className="canvas-menu-align-row canvas-menu-layer-row" aria-label={t("图层顺序")} onKeyDown={navigateRow}>
         {layers.map(({ value, label, Icon }) => {
           const unavailable = value === 'lower' || value === 'bottom' ? layerIndex === 0 : layerIndex === layerCount - 1;
-          return <ContextMenu.Item key={value} asChild textValue={label} disabled={unavailable} onSelect={() => run(() => onLayerChange(block.id, value))}>
-            <button type="button" disabled={unavailable} aria-label={label} title={label}><Icon size={17} aria-hidden="true"/></button>
+          return <ContextMenu.Item key={value} asChild textValue={t(label)} disabled={unavailable} onSelect={() => run(() => onLayerChange(block.id, value))}>
+            <button type="button" disabled={unavailable} aria-label={t(label)} title={t(label)}><Icon size={17} aria-hidden="true"/></button>
           </ContextMenu.Item>;
         })}
       </ContextMenu.Group>
       <ContextMenu.Separator className="canvas-menu-separator" />
       </>}
-      <ContextMenu.Item onSelect={() => run(() => onDuplicate(block.id))}><Copy size={15} />{selectionCount > 1 ? '复制所选组件' : '复制组件'}</ContextMenu.Item>
-      <ContextMenu.Item onSelect={() => run(() => onDelete(block.id))}><Trash2 size={15} />{selectionCount > 1 ? '删除所选组件' : '删除组件'}</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onDuplicate(block.id))}><Copy size={15} />{selectionCount > 1 ? t("复制所选组件") : t("复制组件")}</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onDelete(block.id))}><Trash2 size={15} />{selectionCount > 1 ? t("删除所选组件") : t("删除组件")}</ContextMenu.Item>
     </ContextMenu.Content></ContextMenu.Portal>}
   </ContextMenu.Root>;
 }

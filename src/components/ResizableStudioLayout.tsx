@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { fitPanelWidths, panelMinimums, panelStorageKey, panelWidthLimit, readPanelWidths, type PanelSide, type PanelWidths } from '../lib/studio-panels';
 
@@ -58,10 +59,10 @@ export function ResizableStudioLayout({ inspectorOpen, disabled = false, childre
     {children}
     {(['left', 'right'] as const).filter(side => side === 'left' ? width > 600 : inspectorOpen && width > 800).map(side => <div key={side}
       className={`studio-panel-resizer studio-panel-resizer--${side}${resizing === side ? ' is-resizing' : ''}`}
-      role="separator" tabIndex={disabled ? -1 : 0} aria-label={side === 'left' ? '调整组件库宽度' : '调整属性面板宽度'} aria-orientation="vertical"
+      role="separator" tabIndex={disabled ? -1 : 0} aria-label={side === 'left' ? t("调整组件库宽度") : t("调整属性面板宽度")} aria-orientation="vertical"
       aria-controls={side === 'left' ? 'component-sidebar-panel' : 'inspector-sidebar-panel'} aria-disabled={disabled}
-      aria-valuemin={panelMinimums[side]} aria-valuemax={panelWidthLimit(side, widths, width, inspectorOpen)} aria-valuenow={widths[side]} aria-valuetext={`${widths[side]} 像素`}
-      title="拖动调整宽度；双击恢复默认；方向键微调，Shift 加速，Esc 取消拖动"
+      aria-valuemin={panelMinimums[side]} aria-valuemax={panelWidthLimit(side, widths, width, inspectorOpen)} aria-valuenow={widths[side]} aria-valuetext={t("{0} 像素", { 0: widths[side] })}
+      title={t("拖动调整宽度；双击恢复默认；方向键微调，Shift 加速，Esc 取消拖动")}
       onPointerDown={event => start(event, side)}
       onPointerMove={event => {
         const active = gesture.current;

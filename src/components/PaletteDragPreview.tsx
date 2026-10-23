@@ -1,6 +1,7 @@
+import { blockName } from '../i18n/catalog';
 import { DragOverlay, type Modifier } from '@dnd-kit/core';
 import type { CSSProperties } from 'react';
-import { blockName, defaultFrame, type Block, type PageDocument } from '../model';
+import { defaultFrame, type Block, type PageDocument } from '../model';
 import { pageThemeStyle } from '../lib/themes';
 import { palettePointer } from '../lib/palette-drag';
 import { canvasBounds } from '../lib/canvas-bounds';

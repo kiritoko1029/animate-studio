@@ -10,14 +10,16 @@ import { NativeRuntimeContext, type NativeRuntime } from './NativeInteractions';
 import { safeUrl } from '../model';
 import '../interactions.css';
 
-function PreviewNotice({ message, onClose }: { message: string; onClose: () => void }) {
-  return <StudioDialog role="alertdialog" title="提示" className="studio-notice" onClose={onClose}>
-    <h2>提示</h2><p>{message}</p><div><StudioButton className="primary-button" onClick={onClose}>确定</StudioButton></div>
+function PreviewNotice({ message, onClose, translate }: { message: string; onClose: () => void; translate: (message: string) => string }) {
+  return <StudioDialog role="alertdialog" title={translate('提示')} className="studio-notice" onClose={onClose}>
+    <h2>{translate('提示')}</h2><p>{message}</p><div><StudioButton className="primary-button" onClick={onClose}>{translate('确定')}</StudioButton></div>
   </StudioDialog>;
 }
 
+const keepText = (message: string) => message;
+
 export type PreviewHandle = { runScript: (id: string) => void; reset: () => void };
-export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview' }, ref) {
+export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string; translate?: (message: string) => string; locale?: string }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview', translate = keepText, locale = 'zh-CN' }, ref) {
   const container = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<Record<string, JsonValue>>({});
   const [logs, setLogs] = useState<RuntimeLog[]>([]);
@@ -56,10 +58,10 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
   }, [runtime]);
   return <div className="interactive-preview" ref={container}>
     <NativeRuntimeContext.Provider value={{ runtime, state }}><FreePage key={revision} document={document} /></NativeRuntimeContext.Provider>
-    {notice !== null && <PreviewNotice message={notice} onClose={() => setNotice(null)} />}
+    {notice !== null && <PreviewNotice translate={translate} message={notice} onClose={() => setNotice(null)} />}
     <div className="runtime-debug">
-      <div className="runtime-debug-heading"><StudioButton onClick={() => setExpanded(!expanded)}><Bug size={14} />运行调试<span className="logic-status ready">运行中</span><ChevronDown size={13} /></StudioButton><StudioButton onClick={reset} title="重置运行数据"><RotateCcw size={13} />重置</StudioButton></div>
-      {expanded && <div className="runtime-debug-content"><div><h4>当前变量</h4>{Object.keys(state).length ? Object.entries(state).map(([name, value]) => <div className="runtime-variable" key={name}><code>{name}</code><span>{JSON.stringify(value)}</span></div>) : <p>还没有页面变量</p>}</div><div><h4><Terminal size={12} />事件与脚本日志<StudioButton onClick={() => setLogs([])}>清空</StudioButton></h4><div className="runtime-logs" role="log">{logs.length ? logs.map((entry, i) => <div key={i} className={`runtime-log ${entry.level}`}><time>{new Date(entry.time).toLocaleTimeString('zh-CN', { hour12: false })}</time><span>{entry.message}</span></div>) : <p>操作预览中的组件，查看状态变化。</p>}</div></div></div>}
+      <div className="runtime-debug-heading"><StudioButton onClick={() => setExpanded(!expanded)}><Bug size={14} />{translate('运行调试')}<span className="logic-status ready">{translate('运行中')}</span><ChevronDown size={13} /></StudioButton><StudioButton onClick={reset} title={translate('重置运行数据')}><RotateCcw size={13} />{translate('重置')}</StudioButton></div>
+      {expanded && <div className="runtime-debug-content"><div><h4>{translate('当前变量')}</h4>{Object.keys(state).length ? Object.entries(state).map(([name, value]) => <div className="runtime-variable" key={name}><code>{name}</code><span>{JSON.stringify(value)}</span></div>) : <p>{translate('还没有页面变量')}</p>}</div><div><h4><Terminal size={12} />{translate('事件与脚本日志')}<StudioButton onClick={() => setLogs([])}>{translate('清空')}</StudioButton></h4><div className="runtime-logs" role="log">{logs.length ? logs.map((entry, i) => <div key={i} className={`runtime-log ${entry.level}`}><time>{new Date(entry.time).toLocaleTimeString(locale, { hour12: false })}</time><span>{entry.message}</span></div>) : <p>{translate('操作预览中的组件，查看状态变化。')}</p>}</div></div></div>}
     </div>
   </div>;
 });

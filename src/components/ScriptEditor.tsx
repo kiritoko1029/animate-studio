@@ -1,10 +1,12 @@
+import { t, translateMessage } from '../i18n';
+import { useLocale } from '../i18n/react';
 import { StudioButton } from './StudioUI';
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { javascript, javascriptLanguage, scopeCompletionSource } from '@codemirror/lang-javascript';
-import { acceptCompletion, startCompletion, closeCompletion, completionStatus } from '@codemirror/autocomplete';
+import { acceptCompletion, startCompletion, closeCompletion, completionStatus, type CompletionContext } from '@codemirror/autocomplete';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { Prec } from '@codemirror/state';
+import { Prec, Compartment } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { scriptCompletionSource, scriptGlobals } from '../lib/interactions/script-assistance';
@@ -22,6 +24,8 @@ const highlighting = HighlightStyle.define([
 ]);
 
 const ScriptEditor = forwardRef<ScriptEditorHandle, { value: string; variables: Variable[]; onChange: (value: string) => void }>(function ScriptEditor({ value, variables, onChange }, ref) {
+  const locale = useLocale();
+  const languageAttributes = useRef(new Compartment());
   const parent = useRef<HTMLDivElement>(null), editor = useRef<EditorView | null>(null);
   const update = useRef(onChange); update.current = onChange;
   const availableVariables = useRef(variables); availableVariables.current = variables;
@@ -35,10 +39,10 @@ const ScriptEditor = forwardRef<ScriptEditorHandle, { value: string; variables: 
   } }), []);
   useEffect(() => {
     const view = new EditorView({ parent: parent.current!, doc: value, extensions: [basicSetup, javascript(), EditorView.lineWrapping,
-      EditorView.contentAttributes.of({ 'aria-label': 'JavaScript 脚本编辑器' }),
+      languageAttributes.current.of(EditorView.contentAttributes.of({ 'aria-label': t("JavaScript 脚本编辑器") })),
       EditorView.updateListener.of(updateEvent => { if (updateEvent.docChanged) update.current(updateEvent.state.doc.toString()); }),
       // Add sources to JavaScript's language data so local-variable/keyword completion remains available.
-      javascriptLanguage.data.of({ autocomplete: scriptCompletionSource(() => availableVariables.current) }),
+      javascriptLanguage.data.of({ autocomplete: (context: CompletionContext) => { const result = scriptCompletionSource(() => availableVariables.current)(context); if (!result || 'then' in result) return result; return { ...result, options: result.options.map(option => ({ ...option, detail: option.detail && t(option.detail), info: typeof option.info === 'string' ? translateMessage(option.info) : option.info })) }; } }),
       javascriptLanguage.data.of({ autocomplete: scopeCompletionSource(scriptGlobals) }),
       Prec.highest(keymap.of([{ key: 'Tab', run: acceptCompletion }])),
       syntaxHighlighting(highlighting),
@@ -47,13 +51,14 @@ const ScriptEditor = forwardRef<ScriptEditorHandle, { value: string; variables: 
     editor.current = view;
     return () => { view.destroy(); editor.current = null; };
   }, []);
+  useEffect(() => { editor.current?.dispatch({ effects: languageAttributes.current.reconfigure(EditorView.contentAttributes.of({ 'aria-label': t('JavaScript 脚本编辑器') })) }); }, [locale]);
   useEffect(() => { const view = editor.current; if (view && view.state.doc.toString() !== value) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } }); }, [value]);
-  return <><div className="script-editor-tools"><span>JavaScript · async / await</span><StudioButton type="button" onMouseDown={event => event.preventDefault()} onClick={() => { const view = editor.current; if (view) { view.focus(); view.dispatch({ scrollIntoView: true }); startCompletion(view); } }}>代码补全</StudioButton></div><div className="script-code-editor" ref={parent} onKeyDownCapture={event => {
+  return <><div className="script-editor-tools"><span>JavaScript · async / await</span><StudioButton type="button" onMouseDown={event => event.preventDefault()} onClick={() => { const view = editor.current; if (view) { view.focus(); view.dispatch({ scrollIntoView: true }); startCompletion(view); } }}>{t("代码补全")}</StudioButton></div><div className="script-code-editor" ref={parent} onKeyDownCapture={event => {
     const view = editor.current;
     if (event.key === 'Escape' && view && completionStatus(view.state)) {
       // The dialog reserves Escape in capture phase; CodeMirror still owns closing its completion UI.
       closeCompletion(view); event.preventDefault(); event.stopPropagation();
     }
-  }} /><p className="script-editor-shortcuts">输入时自动补全 · Ctrl + Space 手动触发 · Enter / Tab 选用 · Tab 切换代码片段参数</p></>;
+  }} /><p className="script-editor-shortcuts">{t("输入时自动补全 · Ctrl + Space 手动触发 · Enter / Tab 选用 · Tab 切换代码片段参数")}</p></>;
 });
 export default ScriptEditor;

@@ -1,3 +1,5 @@
+import { blockLabel } from '../i18n/catalog';
+import { t } from '../i18n';
 import { useCanvasViewport } from './useCanvasViewport';
 import { canvasZoomSteps, minCanvasScale, maxCanvasScale } from '../lib/canvas-view';
 import { canvasModifierLabel } from '../lib/canvas-shortcuts';
@@ -6,7 +8,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Keyb
 import { createPortal } from 'react-dom';
 import { useDroppable } from '@dnd-kit/core';
 import { Copy, Grid3X3, Magnet, Move, MousePointer2, Plus, Minus, Hand, Scan, Ruler, SquareDashed, Trash2, Play, Square, RotateCcw, Settings2 } from 'lucide-react';
-import { blockLabel, type Block, type PageDocument } from '../model';
+import { type Block, type PageDocument } from '../model';
 import { pageThemeStyle } from '../lib/themes';
 import { BlockRenderer } from './PageRenderer';
 import { CanvasSizeSelect, DimensionInput } from './CanvasSizeControls';
@@ -242,33 +244,33 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
   return <CanvasScrollProgress.Provider value={scrollPercentage(-camera.view.y, designHeight * scale, camera.viewportRef.current?.clientHeight ?? 0)}><div className={`free-canvas ${device === 'mobile' ? 'free-canvas--mobile' : ''} ${camera.canPan ? 'free-canvas--hand' : ''} ${camera.panning ? 'free-canvas--panning' : ''} ${live ? 'free-canvas--manipulating' : ''}`}>
     <div className="free-canvas-meta">
       <span><Ruler size={13} /><CanvasSizeSelect width={designWidth} height={designHeight} onChange={onCanvasSizeChange} disabled={!!live||isDragging||camera.panning}/></span>
-      <div className="free-canvas-meta-controls" role="toolbar" aria-label="画布辅助工具">
+      <div className="free-canvas-meta-controls" role="toolbar" aria-label={t("画布辅助工具")}>
         <div className="free-canvas-grid-controls">
-          <StudioButton type="button" aria-label="平移画布工具" aria-pressed={camera.handTool} title="平移画布；也可按住空格拖动或使用鼠标中键" className={camera.handTool ? 'is-active' : ''} onClick={() => camera.setHandTool(!camera.handTool)}><Hand size={13}/><span>平移</span></StudioButton>
-          <StudioButton type="button" className={grid.showGrid ? 'is-active' : ''} aria-label="显示网格" title="显示网格" aria-pressed={grid.showGrid} onClick={() => setGrid(current => ({ ...current, showGrid: !current.showGrid }))}><Grid3X3 size={13} /><span>网格</span></StudioButton>
-          <StudioButton type="button" className={grid.snapToGrid ? 'is-active' : ''} aria-label="网格吸附" title="网格吸附" aria-pressed={grid.snapToGrid} onClick={() => setGrid(current => ({ ...current, snapToGrid: !current.snapToGrid }))}><Magnet size={13} /><span>吸附</span></StudioButton>
-          <select aria-label="网格间距" title={`实际网格与吸附间距；缩小视图仅显示主网格，当前显示 ${displayGridSize} px 间隔`} value={grid.gridSize} onChange={event => setGrid(current => ({ ...current, gridSize: Number(event.target.value) as GridPreferences['gridSize'] }))}>{[8, 16, 24, 32].map(size => <option key={size} value={size}>{size} px</option>)}</select>
+          <StudioButton type="button" aria-label={t("平移画布工具")} aria-pressed={camera.handTool} title={t("平移画布；也可按住空格拖动或使用鼠标中键")} className={camera.handTool ? 'is-active' : ''} onClick={() => camera.setHandTool(!camera.handTool)}><Hand size={13}/><span>{t("平移")}</span></StudioButton>
+          <StudioButton type="button" className={grid.showGrid ? 'is-active' : ''} aria-label={t("显示网格")} title={t("显示网格")} aria-pressed={grid.showGrid} onClick={() => setGrid(current => ({ ...current, showGrid: !current.showGrid }))}><Grid3X3 size={13} /><span>{t("网格")}</span></StudioButton>
+          <StudioButton type="button" className={grid.snapToGrid ? 'is-active' : ''} aria-label={t("网格吸附")} title={t("网格吸附")} aria-pressed={grid.snapToGrid} onClick={() => setGrid(current => ({ ...current, snapToGrid: !current.snapToGrid }))}><Magnet size={13} /><span>{t("吸附")}</span></StudioButton>
+          <select aria-label={t("网格间距")} title={t("实际网格与吸附间距；缩小视图仅显示主网格，当前显示 {0} px 间隔", { 0: displayGridSize })} value={grid.gridSize} onChange={event => setGrid(current => ({ ...current, gridSize: Number(event.target.value) as GridPreferences['gridSize'] }))}>{[8, 16, 24, 32].map(size => <option key={size} value={size}>{size} px</option>)}</select>
         </div>
-        <label className="canvas-margin-control" title="全局页边距（0–120 px）；Enter 或移开焦点应用，Esc 取消">
-          <SquareDashed size={13} aria-hidden="true"/><span>页边距</span>
-          <DimensionInput label="全局页边距" value={document.settings.padding} min={0} max={120} onChange={onPageMarginChange} disabled={!!live || isDragging || camera.panning}/><span className="canvas-margin-unit">px</span>
+        <label className="canvas-margin-control" title={t("全局页边距（0–120 px）；Enter 或移开焦点应用，Esc 取消")}>
+          <SquareDashed size={13} aria-hidden="true"/><span>{t("页边距")}</span>
+          <DimensionInput label={t("全局页边距")} value={document.settings.padding} min={0} max={120} onChange={onPageMarginChange} disabled={!!live || isDragging || camera.panning}/><span className="canvas-margin-unit">px</span>
         </label>
         <div className="free-canvas-zoom-controls">
-          <StudioButton aria-label="缩小画布" title="缩小画布（−）" disabled={scale <= minCanvasScale || !!live || isDragging} onClick={() => camera.zoomTo(scale / 1.2)}><Minus size={13}/></StudioButton>
-          <select className="free-canvas-zoom" aria-label="画布缩放" disabled={!!live || isDragging} value={camera.view.mode === 'fit' ? 'fit' : String(scale)} onChange={event => event.target.value === 'fit' ? camera.fit() : camera.zoomTo(Number(event.target.value))}>
-            <option value="fit">适应画布{camera.view.mode === 'fit' ? ` · ${Math.round(scale * 100)}%` : ''}</option>
-            {!canvasZoomSteps.includes(scale) && camera.view.mode !== 'fit' && <option value={String(scale)}>当前 {Math.round(scale * 1000) / 10}%</option>}
+          <StudioButton aria-label={t("缩小画布")} title={t("缩小画布（−）")} disabled={scale <= minCanvasScale || !!live || isDragging} onClick={() => camera.zoomTo(scale / 1.2)}><Minus size={13}/></StudioButton>
+          <select className="free-canvas-zoom" aria-label={t("画布缩放")} disabled={!!live || isDragging} value={camera.view.mode === 'fit' ? 'fit' : String(scale)} onChange={event => event.target.value === 'fit' ? camera.fit() : camera.zoomTo(Number(event.target.value))}>
+            <option value="fit">{t("适应画布")}{camera.view.mode === 'fit' ? ` · ${Math.round(scale * 100)}%` : ''}</option>
+            {!canvasZoomSteps.includes(scale) && camera.view.mode !== 'fit' && <option value={String(scale)}>{t("当前 {0}%", { 0: Math.round(scale * 1000) / 10 })}</option>}
             {canvasZoomSteps.map(step => <option key={step} value={String(step)}>{Math.round(step * 100)}%</option>)}
           </select>
-          <StudioButton aria-label="放大画布" title="放大画布（+）" disabled={scale >= maxCanvasScale || !!live || isDragging} onClick={() => camera.zoomTo(scale * 1.2)}><Plus size={13}/></StudioButton>
-          <StudioButton aria-label="适应画布" title={`适应画布（${canvasModifierLabel} + 0）`} disabled={!!live || isDragging} onClick={camera.fit}><Scan size={14}/></StudioButton>
+          <StudioButton aria-label={t("放大画布")} title={t("放大画布（+）")} disabled={scale >= maxCanvasScale || !!live || isDragging} onClick={() => camera.zoomTo(scale * 1.2)}><Plus size={13}/></StudioButton>
+          <StudioButton aria-label={t("适应画布")} title={t("适应画布（{0} + 0）", { 0: canvasModifierLabel })} disabled={!!live || isDragging} onClick={camera.fit}><Scan size={14}/></StudioButton>
         </div>
       </div>
     </div>
     <CanvasPageMenu disabled={isDragging || !!live || camera.panning} settings={document.settings} grid={grid}
       onSelectCanvas={() => { setMenuId(null); onSelect(null); }} onSizeChange={onCanvasSizeChange} onMarginChange={onPageMarginChange}
       onPageSettings={onPageSettings} onGridChange={patch => setGrid(current => ({ ...current, ...patch }))} onFit={camera.fit} onActualSize={() => camera.zoomTo(1)}>
-    <div className="free-canvas-viewport" ref={camera.viewportRef} data-canvas-viewport tabIndex={0} role="region" aria-label="画布视野" {...camera.handlers}
+    <div className="free-canvas-viewport" ref={camera.viewportRef} data-canvas-viewport tabIndex={0} role="region" aria-label={t("画布视野")} {...camera.handlers}
       onKeyDownCapture={event => {
         if (event.defaultPrevented || isSelectionInput(event.target) || isDragging || camera.panning) return;
         if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'a' && onSelectAll) {
@@ -285,11 +287,11 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
             data-scale={scale}
             className={`free-canvas-stage page-surface ${grid.showGrid ? 'free-canvas-stage--grid' : ''} ${document.blocks.some(block => block.id === selected) ? 'free-canvas-stage--has-selection' : ''} ${isOver && isDragging ? 'free-canvas-stage--over' : ''}`}
             style={stageStyle}
-            aria-label="自由编辑画布"
+            aria-label={t("自由编辑画布")}
             onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && !isDragging) { onSelect(null); camera.viewportRef.current?.focus({ preventScroll: true }); } }}
           >
             {bounds.margin > 0 && <div className="free-canvas-margin" aria-hidden="true" style={{ left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }} />}
-            {!document.blocks.length && <div className="free-canvas-empty"><div><Plus size={25} strokeWidth={1.4} /></div><h3>从一个组件开始</h3><p>从左侧拖入组件，放在你想要的位置</p><span><Move size={13} /> 自由移动 <span>·</span> 拖动边角调整大小</span></div>}
+            {!document.blocks.length && <div className="free-canvas-empty"><div><Plus size={25} strokeWidth={1.4} /></div><h3>{t("从一个组件开始")}</h3><p>{t("从左侧拖入组件，放在你想要的位置")}</p><span><Move size={13} /> {t("自由移动")}<span>·</span> {t("拖动边角调整大小")}</span></div>}
             {document.blocks.map((block, index) => {
               const frame = live?.frames?.[block.id] ?? (live?.id === block.id && !live.frames ? live.frame : defaultFrame(block, index, document.settings));
               const active = selection.has(block.id);
@@ -304,7 +306,7 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
                 className={`free-canvas-frame ${active ? 'free-canvas-frame--selected' : ''} ${interacting ? 'free-canvas-frame--interactive' : ''} ${live?.id === block.id ? 'free-canvas-frame--active' : ''}`}
                 style={{ left: frame.x, top: frame.y, width: frame.width, height: frame.height, zIndex: index + 1 }}
                 role="group"
-                aria-label={`${name}，位置 ${Math.round(frame.x)}, ${Math.round(frame.y)}，尺寸 ${Math.round(frame.width)} × ${Math.round(frame.height)}。方向键移动，Shift 加方向键移动 8 像素；右键或 Shift + F10 打开组件菜单；双击或 Enter 预览交互，Esc 返回编辑。`}
+                aria-label={t("{0}，位置 {1}, {2}，尺寸 {3} × {4}。方向键移动，Shift 加方向键移动 8 像素；右键或 Shift + F10 打开组件菜单；双击或 Enter 预览交互，Esc 返回编辑。", { 0: name, 1: Math.round(frame.x), 2: Math.round(frame.y), 3: Math.round(frame.width), 4: Math.round(frame.height) })}
                 tabIndex={0}
                 onFocus={event => { if (event.target === event.currentTarget && !active) onSelect(block.id); }}
                 onPointerDown={event => {
@@ -325,20 +327,20 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
                   <div className={`free-canvas-selection-bar ${frame.x + 280 / scale > designWidth ? 'free-canvas-selection-bar--right' : ''}`} onPointerDown={event => begin(event, block, frame, 'move')}>
                     <span className="free-canvas-selection-label"><Move size={12} /><strong>{name}</strong></span>
                     <span className="free-canvas-selection-actions">
-                      <StudioButton className="canvas-interaction-toggle" type="button" aria-label={interacting ? `结束${name}交互预览` : `预览${name}交互`} title={interacting ? '结束交互预览（Esc）' : '测试组件自身交互（也可双击）；页面联动请使用预览页面'} aria-pressed={interacting} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); if (interacting) setInteractingId(null); else interact(block.id); }}>{interacting ? <Square size={12}/> : <Play size={12}/>}<span>{interacting ? '结束' : '交互'}</span></StudioButton>
-                      <StudioButton type="button" aria-label={`重播${name}动效`} title="重播组件动效" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); replay(block.id); }}><RotateCcw size={12}/></StudioButton>
-                      {onInsertAfter && <StudioButton type="button" title="在此组件后插入" aria-label="在此组件后插入" onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onInsertAfter(block.id); }}><Plus size={13} /></StudioButton>}
-                      <StudioButton type="button" title={`复制${name}`} aria-label={`复制${name}`} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onDuplicate(block.id); }}><Copy size={12} /></StudioButton>
-                      <StudioButton type="button" title={`删除${name}`} aria-label={`删除${name}`} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onDelete(block.id); }}><Trash2 size={12} /></StudioButton>
+                      <StudioButton className="canvas-interaction-toggle" type="button" aria-label={interacting ? t("结束{0}交互预览", { 0: name }) : t("预览{0}交互", { 0: name })} title={interacting ? t("结束交互预览（Esc）") : t("测试组件自身交互（也可双击）；页面联动请使用预览页面")} aria-pressed={interacting} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); if (interacting) setInteractingId(null); else interact(block.id); }}>{interacting ? <Square size={12}/> : <Play size={12}/>}<span>{interacting ? t("结束") : t("交互")}</span></StudioButton>
+                      <StudioButton type="button" aria-label={t("重播{0}动效", { 0: name })} title={t("重播组件动效")} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); replay(block.id); }}><RotateCcw size={12}/></StudioButton>
+                      {onInsertAfter && <StudioButton type="button" title={t("在此组件后插入")} aria-label={t("在此组件后插入")} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onInsertAfter(block.id); }}><Plus size={13} /></StudioButton>}
+                      <StudioButton type="button" title={t("复制{0}", { 0: name })} aria-label={t("复制{0}", { 0: name })} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onDuplicate(block.id); }}><Copy size={12} /></StudioButton>
+                      <StudioButton type="button" title={t("删除{0}", { 0: name })} aria-label={t("删除{0}", { 0: name })} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); onDelete(block.id); }}><Trash2 size={12} /></StudioButton>
                     </span>
                   </div>
-                  <div className="free-canvas-measure"><strong>{Math.round(frame.width)} × {Math.round(frame.height)}</strong><span>缩放 {componentScale(block)}%</span><span>X {Math.round(frame.x)} · Y {Math.round(frame.y)}</span></div>
+                  <div className="free-canvas-measure"><strong>{Math.round(frame.width)} × {Math.round(frame.height)}</strong><span>{t("缩放 {0}%", { 0: componentScale(block) })}</span><span>X {Math.round(frame.x)} · Y {Math.round(frame.y)}</span></div>
                   {!interacting && handles.map(handle => <button
                     key={handle.direction}
                     type="button"
                     tabIndex={-1}
-                    aria-label={`拖动${name}${handle.label}调整大小`}
-                    title={`拖动${handle.label}调整大小`}
+                    aria-label={t("拖动{0}{1}调整大小", { 0: name, 1: t(handle.label) })}
+                    title={t("拖动{0}调整大小", { 0: t(handle.label) })}
                     className={`free-canvas-resize-handle free-canvas-resize-handle--${handle.direction}`}
                     onPointerDown={event => begin(event, block, frame, handle.direction)}
                   />)}
@@ -348,20 +350,20 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
             {groupFrame && <div className="free-canvas-selection-overlay" data-selection-count={selectedBlocks.length} style={{ left: groupFrame.x, top: groupFrame.y, width: groupFrame.width, height: groupFrame.height, zIndex: document.blocks.length + 1 }}
               onPointerMove={move} onPointerUp={event => finish(event)} onPointerCancel={event => finish(event, true)} onLostPointerCapture={event => finish(event, true)}>
               <div className="free-canvas-selection-bar" onPointerDown={event => begin(event, selectedBlocks[0], groupFrame, 'move')}>
-                <span className="free-canvas-selection-label"><Move size={12}/><strong>已选 {selectedBlocks.length} 个组件</strong></span>
+                <span className="free-canvas-selection-label"><Move size={12}/><strong>{t("已选 {0} 个组件", { 0: selectedBlocks.length })}</strong></span>
                 <span className="free-canvas-selection-actions">
-                  <StudioButton aria-label="批量编辑组件属性" title="批量编辑组件属性" onPointerDown={event => event.stopPropagation()} onClick={() => onInspect(selectedBlocks[0].id, 'component')}><Settings2 size={12}/></StudioButton>
-                  <StudioButton aria-label="复制所选组件" title="复制所选组件" onPointerDown={event => event.stopPropagation()} onClick={() => onDuplicate(selectedBlocks[0].id)}><Copy size={12}/></StudioButton>
-                  <StudioButton aria-label="删除所选组件" title="删除所选组件" onPointerDown={event => event.stopPropagation()} onClick={() => onDelete(selectedBlocks[0].id)}><Trash2 size={12}/></StudioButton>
+                  <StudioButton aria-label={t("批量编辑组件属性")} title={t("批量编辑组件属性")} onPointerDown={event => event.stopPropagation()} onClick={() => onInspect(selectedBlocks[0].id, 'component')}><Settings2 size={12}/></StudioButton>
+                  <StudioButton aria-label={t("复制所选组件")} title={t("复制所选组件")} onPointerDown={event => event.stopPropagation()} onClick={() => onDuplicate(selectedBlocks[0].id)}><Copy size={12}/></StudioButton>
+                  <StudioButton aria-label={t("删除所选组件")} title={t("删除所选组件")} onPointerDown={event => event.stopPropagation()} onClick={() => onDelete(selectedBlocks[0].id)}><Trash2 size={12}/></StudioButton>
                 </span>
               </div>
-              <div className="free-canvas-measure"><strong>{Math.round(groupFrame.width)} × {Math.round(groupFrame.height)}</strong><span>{selectedScales.size === 1 ? `缩放 ${componentScale(selectedBlocks[0])}%` : '多种缩放'}</span></div>
+              <div className="free-canvas-measure"><strong>{Math.round(groupFrame.width)} × {Math.round(groupFrame.height)}</strong><span>{selectedScales.size === 1 ? t("缩放 {0}%", { 0: componentScale(selectedBlocks[0]) }) : t("多种缩放")}</span></div>
             </div>}
             {live && <div className="free-canvas-guides" aria-hidden="true"><i className="free-canvas-guide-v" style={{ left: live.frame.x }} /><i className="free-canvas-guide-v" style={{ left: live.frame.x + live.frame.width }} /><i className="free-canvas-guide-h" style={{ top: live.frame.y }} /><i className="free-canvas-guide-h" style={{ top: live.frame.y + live.frame.height }} /></div>}
 
           </div>
-      {isDragging && <div className="free-canvas-drop-status" role="status"><Plus size={14}/>{isOver ? '松开鼠标后放置组件' : '拖入画布，松开鼠标后放置'}</div>}
+      {isDragging && <div className="free-canvas-drop-status" role="status"><Plus size={14}/>{isOver ? t("松开鼠标后放置组件") : t("拖入画布，松开鼠标后放置")}</div>}
     </div></CanvasPageMenu>
-    <div className="free-canvas-footnote"><MousePointer2 size={12}/><span>⌘ / Ctrl + A 全选 · Shift 点击多选 · {canvasModifierLabel} + 滚轮缩放 · 空格 / 中键平移 · 双击预览交互，Esc 返回编辑</span></div>
+    <div className="free-canvas-footnote"><MousePointer2 size={12}/><span>{t("⌘ / Ctrl + A 全选 · Shift 点击多选 ·")}{canvasModifierLabel} {t("+ 滚轮缩放 · 空格 / 中键平移 · 双击预览交互，Esc 返回编辑")}</span></div>
   </div></CanvasScrollProgress.Provider>;
 }

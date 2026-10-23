@@ -1,3 +1,5 @@
+import { ensureBrowserRandomUUID } from './lib/browser-crypto';
+import { initializeLocale } from './i18n';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { MotionConfig } from 'motion/react';
@@ -9,6 +11,9 @@ import { SharedComponentPage } from './components/custom/SharedComponentPage';
 import './styles.css';
 import './studio-ui.css';
 import './studio-layout.css';
+
+ensureBrowserRandomUUID();
+initializeLocale();
 
 const sharedMatch = window.location.pathname.match(/^\/p\/([^/]+)\/?$/);
 const sharedComponentMatch = window.location.pathname.match(/^\/c\/([^/]+)\/?$/);

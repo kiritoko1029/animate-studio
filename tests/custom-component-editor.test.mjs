@@ -227,7 +227,7 @@ test('signing in never uploads local components; account saves and sharing are e
 
   const f = fixture(t, { user: { id: 'owner', email: 'owner@studio.test', name: 'Owner' }, storage: { 'animate-studio:custom-components:v1': JSON.stringify({ version: 1, components: [local] }) } });
   await openMyComponents(f);
-  await until(() => f.doc.querySelector('[aria-label="账号：owner@studio.test"]'), 'signed in');
+  await until(() => f.doc.querySelector('.more-actions-button[title="账号：owner@studio.test"]'), 'signed in');
   await pause(100);
   assert.equal(f.state.requests.filter(request => request.path.startsWith('/api/account/components')).length, 0, 'signing in reads and writes no components');
   f.openMenu(f.labelled('「信息卡片」的更多操作'));
@@ -313,7 +313,7 @@ test('account switches close a private designer and keep its draft visible only 
   f.type(f.labelled('组件名称'), 'A 的未保存修改');
   f.state.user = { id: 'owner-b', email: 'b@studio.test', name: 'B' };
   f.win.dispatchEvent(new f.win.Event('focus'));
-  await until(() => f.labelled('账号：b@studio.test') && !f.doc.querySelector('.component-designer'), 'private designer closes on account change');
+  await until(() => f.doc.querySelector('.more-actions-button[title="账号：b@studio.test"]') && !f.doc.querySelector('.component-designer'), 'private designer closes on account change');
   assert.doesNotMatch(f.doc.querySelector('.custom-drafts')?.textContent ?? '', /A 的未保存修改/);
   const stored = JSON.parse(f.win.localStorage.getItem('animate-studio:custom-component-drafts:v1'));
   const draft = Object.values(stored.drafts).find(value => value.ownerId === owner.id);
