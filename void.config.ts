@@ -2,10 +2,12 @@ import { defineConfig } from 'void/config';
 
 export default defineConfig({
   target: 'cloudflare',
-  // The editor lives at /. Unknown API paths must keep their JSON 404 response.
-  routing: { notFound: 'none' },
+  // The editor lives at /. 'none' keeps unknown /api/* paths as JSON 404s from
+  // the worker; the scoped fallback serves the SPA shell for share deep links.
+  routing: { notFound: 'none', fallbacks: { '/p/*': '/index.html' } },
   inference: {
     appType: 'void',
+    bindings: { db: true },
   },
   worker: {
     compatibility_date: '2026-10-19',
@@ -13,7 +15,13 @@ export default defineConfig({
   },
   cloudflare: {
     name: 'animate-studio',
+    // Runtime configuration is managed in the Cloudflare dashboard.
+    keep_vars: true,
+    keep_secrets: true,
     workers_dev: true,
     preview_urls: true,
+    routes: [{ pattern: 'animate-studio.vme5.de', custom_domain: true }],
+    // Void replaces this local placeholder with a provisioned ID on deploy.
+    d1_databases: [{ binding: 'DB', database_name: 'animate-studio-accounts', database_id: 'local', migrations_dir: './db/migrations' }],
   },
 });

@@ -37,6 +37,10 @@ import { createComponentVariable } from './lib/interactions/component-variable';
 import { createAutosave } from './lib/autosave';
 import { canvasModifierLabel } from './lib/canvas-shortcuts';
 import { fetchPageApi } from './lib/page-api';
+import { readGuestDraft, writeGuestDraft, type DraftRecord } from './lib/guest-draft';
+import { accountApi, cloudPagePath, type CloudPageRecord, type Preferences } from './lib/account-api';
+import { useAccount } from './components/AccountProvider';
+import { AccountControls } from './components/AccountControls';
 import { placeBlock, insertBlockAfter, fillBlockWidth, type PlacementResult } from './lib/layout';
 import { downloadCode } from './lib/code-export/download';
 import type { Format } from './lib/code-export/generate';
@@ -195,6 +199,12 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
 }
 
 export default function App() {
+  const { user } = useAccount();
+  const userRef = useRef(user); userRef.current = user;
+  const [cloudTarget,setCloudTarget]=useState<{id:string;userId:string}|null>(null);
+  const cloudTargetRef=useRef(cloudTarget);cloudTargetRef.current=cloudTarget;
+  const requestedCloudPage=useRef(new URL(window.location.href).searchParams.get('page'));
+  const restoredAccount=useRef<string|null>(null);
   const [document,setDocument]=useState<PageDocument|null>(null);
   const [selection,setSelection]=useState<string[]>([]);
   const selectedIds=useMemo(()=>selection.filter(id=>document?.blocks.some(block=>block.id===id)),[selection,document?.blocks]);
@@ -225,7 +235,7 @@ export default function App() {
   const [replay,setReplay]=useState(0);
   const [fullPreview,setFullPreview]=useState(false);
   const [studioTheme,setStudioTheme]=useState<'light'|'dark'>(()=>{try{return localStorage.getItem('animate-studio:appearance')==='dark'?'dark':'light';}catch{return 'light';}});
-  useEffect(()=>{window.document.documentElement.dataset.studioTheme=studioTheme;try{localStorage.setItem('animate-studio:appearance',studioTheme);}catch{/* Appearance is still usable when storage is unavailable. */}},[studioTheme]);
+  useEffect(()=>{window.document.documentElement.dataset.studioTheme=studioTheme;},[studioTheme]);
   const [showExport,setShowExport]=useState(false);
   const [showNew,setShowNew]=useState(false);
   const [logicTarget,setLogicTarget]=useState<InteractionStudioTarget|null>(null);
@@ -235,43 +245,147 @@ export default function App() {
   const current=useRef(document); current.current=document;
   const autosave=useRef<ReturnType<typeof createAutosave<PageDocument>>|null>(null);
   const loadVersion=useRef(0);
+  const persistenceVersion=useRef(0);
+  const preferencesVersion=useRef(0);
+  const preferencesQueue=useRef(Promise.resolve());
   const fileRef=useRef<HTMLInputElement>(null);
   const sensors=useSensors(useSensor(PointerSensor,{activationConstraint:{distance:6}}),useSensor(KeyboardSensor));
   const notify=useCallback((message:string)=>setToast(message),[]);
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),3200);return()=>clearTimeout(t);},[toast]);
 
+  useEffect(()=>{
+    const controller=new AbortController();const version=++preferencesVersion.current;
+    if(user){
+      void accountApi<Preferences>('/api/account/preferences',{signal:controller.signal}).then(value=>{if(!controller.signal.aborted&&version===preferencesVersion.current)setStudioTheme(value.studioTheme);}).catch(()=>{});
+    }else{try{setStudioTheme(localStorage.getItem('animate-studio:appearance')==='dark'?'dark':'light');}catch{/* Retain the usable theme. */}}
+    return()=>controller.abort();
+  },[user?.id]);
+  function changeStudioTheme(){
+    const next=studioTheme==='light'?'dark':'light';preferencesVersion.current++;setStudioTheme(next);
+    const owner=userRef.current?.id;if(!owner){try{localStorage.setItem('animate-studio:appearance',next);}catch{/* The theme still applies. */}return;}
+    preferencesQueue.current=preferencesQueue.current.then(async()=>{
+      if(userRef.current?.id!==owner)return;
+      await accountApi('/api/account/preferences',{method:'PATCH',body:{version:1,studioTheme:next}});
+    }).catch(()=>{if(userRef.current?.id===owner)notify('外观已应用，云端同步失败，请稍后重试切换。');});
+  }
+
+  const activateDocument=useCallback((next:PageDocument,record:DraftRecord,target:{id:string;userId:string}|null,resetHistory=true,syncLocation=true)=>{
+    autosave.current?.dispose();const version=++persistenceVersion.current;
+    cloudTargetRef.current=target;setCloudTarget(target);
+    if(syncLocation){
+      requestedCloudPage.current=null;const url=new URL(window.location.href);
+      if(target)url.searchParams.set('page',target.id);else url.searchParams.delete('page');
+      window.history.replaceState(window.history.state,'',url);
+    }
+    autosave.current=createAutosave<PageDocument>({
+      ...(record.page?{initialSaved:record.page}:{}),
+      write:async page=>{
+        if(target&&userRef.current?.id!==target.userId)throw new Error('登录状态已改变，请重新登录或导出当前页面。');
+        const saved=target?await accountApi<CloudPageRecord>(cloudPagePath(target.id),{method:'PUT',body:{page}}):writeGuestDraft(page);
+        if(version===persistenceVersion.current)setSavedAt(saved.savedAt);
+      },
+      onState:(state,error)=>{if(version===persistenceVersion.current){setSaveState(state);setSaveError(error instanceof Error?error.message:'');}},
+    });
+    current.current=next;setDocument(next);setSavedAt(record.savedAt);setSaveState(record.page?'saved':'pending');
+    if(resetHistory){setPast([]);setFuture([]);setSelected(null);setInsertAfterId(null);}
+    autosave.current.schedule(next);
+  },[setSelected]);
+
   const load=useCallback(async()=>{
     const request=++loadVersion.current;
     setLoadError('');setSaveState('loading');
     try {
-      const response=await fetchPageApi('/api/page');
-      if(!response.ok)throw new Error('暂时无法读取页面，请确认服务正在运行。');
-      const data=await response.json();
+      const data=await readGuestDraft();
       if(request!==loadVersion.current)return;
       const next:PageDocument=toFreeDocument(data.page||createDocument());
-      autosave.current?.dispose();
-      autosave.current=createAutosave<PageDocument>({
-        ...(data.page?{initialSaved:data.page}:{}),
-        write:async page=>{
-          const response=await fetchPageApi('/api/page',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({page})});
-          const data=await response.json();
-          if(!response.ok)throw new Error(data.error||'保存失败，请重试。');
-          setSavedAt(data.savedAt);
-        },
-        onState:(state,error)=>{setSaveState(state);setSaveError(error instanceof Error?error.message:'');},
-      });
-      setDocument(next);setSavedAt(data.savedAt);setSelected(next.blocks.find(b=>b.type==='hero')?.id||null);
-      setSaveState(data.page?'saved':'pending');
+      activateDocument(next,data,null,true,false);setSelected(next.blocks.find(b=>b.type==='hero')?.id||null);
     } catch(error){if(request===loadVersion.current)setLoadError(error instanceof Error?error.message:'读取失败');}
-  },[]);
-  useEffect(()=>{void load();return()=>{loadVersion.current++;autosave.current?.dispose();};},[load]);
+  },[activateDocument,setSelected]);
+  useEffect(()=>{void load();return()=>{loadVersion.current++;persistenceVersion.current++;autosave.current?.dispose();};},[load]);
+
+  useEffect(()=>{
+    const id=requestedCloudPage.current;
+    if(!user||!document||!id||restoredAccount.current===user.id)return;
+    restoredAccount.current=user.id;
+    void openCloud(id).catch(error=>{
+      requestedCloudPage.current=null;const url=new URL(window.location.href);url.searchParams.delete('page');window.history.replaceState(window.history.state,'',url);
+      notify(error instanceof Error?error.message:'无法恢复云端页面，请从云端页面列表重新打开。');
+    });
+  },[user?.id,!!document]);
+
+  useEffect(()=>{
+    const target=cloudTargetRef.current;
+    if(target&&target.userId!==user?.id&&current.current){
+      activateDocument(current.current,{page:null,savedAt:null},null,false);
+      notify('登录状态已改变，当前内容已转为浏览器草稿，云端保存已停止');
+    }
+  },[user?.id,activateDocument,notify]);
+
+  async function flushCurrent(){
+    if(current.current)autosave.current?.schedule(current.current);
+    await autosave.current?.flush();
+    if(autosave.current?.isDirty())throw new Error('当前页面尚未保存，请先重试保存或导出备份。');
+  }
+  async function saveCloud():Promise<CloudPageRecord>{
+    const owner=userRef.current?.id;const page=current.current;
+    if(!owner||!page)throw new Error('请先登录，再保存页面到云端。');
+    const target=cloudTargetRef.current;
+    if(target&&target.userId!==owner)throw new Error('当前页面属于另一账号，请先导出备份并返回浏览器草稿。');
+    if(target){await flushCurrent();const result=await accountApi<CloudPageRecord>(cloudPagePath(target.id));if(userRef.current?.id!==owner)throw new Error('登录状态已改变，请重试。');return result;}
+    const result=await accountApi<CloudPageRecord>('/api/account/pages',{method:'POST',body:{page}});
+    if(userRef.current?.id!==owner)throw new Error('登录状态已改变。页面已保存至原账号，请重新登录查看。');
+    activateDocument(current.current??page,result,{id:result.id,userId:owner},false);
+    await flushCurrent();return result;
+  }
+  async function openCloud(id:string){
+    const owner=userRef.current?.id;if(!owner)throw new Error('请先登录。');
+    await flushCurrent();const expected=current.current;
+    const record=await accountApi<CloudPageRecord>(cloudPagePath(id));
+    if(userRef.current?.id!==owner)throw new Error('登录状态已改变，请重试。');
+    if(current.current!==expected)throw new Error('当前页面又有新修改，请保存后重新打开。');
+    activateDocument(toFreeDocument(record.page),record,{id,userId:owner});
+  }
+  async function returnToGuest(){
+    await flushCurrent();if(!cloudTargetRef.current)return;
+    const expected=current.current;const record=await readGuestDraft();
+    if(current.current!==expected)throw new Error('当前页面又有新修改，请保存后重试。');
+    activateDocument(toFreeDocument(record.page??createDocument()),record,null);
+  }
+  async function publishCloud(){
+    const owner=userRef.current?.id;const record=await saveCloud();await flushCurrent();
+    if(!owner||userRef.current?.id!==owner)throw new Error('登录状态已改变，请重试。');
+    return accountApi<{token:string;publishedAt:string}>(cloudPagePath(record.id)+'/share',{method:'POST',body:{}});
+  }
+  async function deleteCloud(id:string){
+    const target=cloudTargetRef.current;const active=target?.id===id;
+    if(active)await flushCurrent();
+    const expected=current.current;const guest=active?await readGuestDraft():null;
+    if(active&&expected!==current.current)throw new Error('当前页面又有新修改，请保存后重试删除。');
+    await accountApi(cloudPagePath(id),{method:'DELETE'});
+    if(active&&cloudTargetRef.current?.id===id){
+      if(current.current!==expected){activateDocument(current.current!,{page:null,savedAt:null},null);notify('云端页面已删除，操作期间的新修改已保留为浏览器草稿');}
+      else activateDocument(toFreeDocument(guest!.page??createDocument()),guest!,null);
+    }
+  }
+  async function startNewDocument(next:PageDocument){
+    try{
+      await flushCurrent();
+      if(cloudTargetRef.current){activateDocument(next,{page:null,savedAt:null},null);notify('已开始新页面，原有云端页面已保留');}
+      else{
+        requestedCloudPage.current=null;const url=new URL(window.location.href);url.searchParams.delete('page');window.history.replaceState(window.history.state,'',url);
+        update(next);setSelected(null);setInsertAfterId(null);notify('已开始新页面，可撤销恢复浏览器草稿');
+      }
+      setShowNew(false);
+    }
+    catch(error){notify(error instanceof Error?error.message:'暂时无法新建页面');}
+  }
 
   const save=useCallback((page:PageDocument)=>{
     autosave.current?.schedule(page);
     return autosave.current?.flush();
   },[]);
   useEffect(()=>{
-    if(!document)return;
+    if(!document||current.current!==document)return;
     autosave.current?.schedule(document);
   },[document]);
   useEffect(()=>{
@@ -423,7 +537,7 @@ export default function App() {
     if(fileRef.current)fileRef.current.value='';
   }
 
-  function loadInteractionDemo() { const next=createInteractionDemo(); next.settings.customThemes=document?.settings.customThemes; update(next); setSelected(next.blocks.find(b=>b.type==='input')?.id||null); setInsertAfterId(null); setShowNew(false); notify('已载入联动示例，可通过撤销恢复原页面'); }
+  function loadInteractionDemo() { const next=createInteractionDemo(); next.settings.customThemes=document?.settings.customThemes; void startNewDocument(next); }
 
   function openThemeDesigner(scope:'component'|'page', id?:ThemeId) {
     const doc=current.current;if(!doc)return;
@@ -447,13 +561,13 @@ export default function App() {
   const selectedBlocks=document.blocks.filter(block=>selectedIds.includes(block.id));
   const variableBlock=document.blocks.find(b=>b.id===variableBlockId);
   const filtered=catalog.filter(c=>(group==='全部'||c.group===group)&&`${c.name} ${c.english} ${c.description}`.toLowerCase().includes(query.toLowerCase()));
-  const saveText=saveState==='saved'?'已保存':saveState==='saving'?'保存中':saveState==='error'?'保存失败':'待保存';
+  const saveText=saveState==='saved'?(cloudTarget?'已保存到云端':'已保存到浏览器'):saveState==='saving'?'保存中':saveState==='error'?'保存失败':'待保存';
   return <div className="studio-app">
     <header className="app-header">
       <div className="header-brand"><IconButton label="打开组件与页面工具" className="mobile-menu" onClick={()=>setShowSidebar(!showSidebar)}><Menu size={18}/></IconButton><Brand/><a className="version-label" href={`https://github.com/kiritoko1029/animate-studio/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" aria-label={`当前版本 v${appVersion}，查看更新日志`} title={`v${appVersion} · 查看更新日志`}>v{appVersion}</a></div>
-      <div className="document-heading"><span className="header-slash">/</span><input aria-label="页面名称" value={document.name} onChange={e=>update({...document,name:e.target.value})} maxLength={100}/><span className={`save-status ${saveState}`} title={saveState==='error'?saveError:savedAt?`保存于 ${new Date(savedAt).toLocaleTimeString('zh-CN')}`:'自动保存到服务'}>{saveState==='saved'?<CheckCircle2 size={13}/>:saveState==='saving'?<LoaderCircle size={13} className="spin"/>:saveState==='error'?<AlertCircle size={13}/>:<span className="pending-dot"/>}{saveText}</span>{saveState==='error'&&<StudioButton className="retry-save" onClick={()=>void save(document)}>重试</StudioButton>}</div>
-      <div className="header-actions"><IconButton label={studioTheme==='light'?'切换工作台深色主题':'切换工作台浅色主题'} onClick={()=>setStudioTheme(value=>value==='light'?'dark':'light')}>{studioTheme==='light'?<Moon size={16}/>:<Sun size={16}/>}</IconButton><div className="history-controls"><IconButton label="撤销 (⌘Z)" onClick={undo} disabled={!past.length}><Undo2 size={16}/></IconButton><IconButton label="重做 (⌘⇧Z)" onClick={redo} disabled={!future.length}><Redo2 size={16}/></IconButton></div><span className="header-divider"/>
-        <DropdownMenu open={showNew} onOpenChange={setShowNew}><DropdownMenuTrigger asChild><StudioButton className="secondary-button create-page-button" aria-label="新建页面" title="新建页面"><Plus size={15}/><span>新建页面</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu new-page-menu" align="end" sideOffset={8}><DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;update(next);setSelected(null);setInsertAfterId(null);setShowNew(false);notify('已新建空白页面，可撤销恢复');}}><FilePlus2 size={15}/>空白页面</DropdownMenuItem><DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;update(next);setSelected(next.blocks[1].id);setInsertAfterId(null);setShowNew(false);notify('已载入灵感模板，可撤销恢复');}}><LayoutTemplate size={15}/>从灵感模板开始</DropdownMenuItem><DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>组件联动示例</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+      <div className="document-heading"><span className="header-slash">/</span><input aria-label="页面名称" value={document.name} onChange={e=>update({...document,name:e.target.value})} maxLength={100}/><span className={`save-status ${saveState}`} title={saveState==='error'?saveError:savedAt?`保存于 ${new Date(savedAt).toLocaleTimeString('zh-CN')}`:cloudTarget?'自动保存到云端':'自动保存到当前浏览器'}>{saveState==='saved'?<CheckCircle2 size={13}/>:saveState==='saving'?<LoaderCircle size={13} className="spin"/>:saveState==='error'?<AlertCircle size={13}/>:<span className="pending-dot"/>}{saveText}</span>{saveState==='error'&&<StudioButton className="retry-save" onClick={()=>void save(document)}>重试</StudioButton>}</div>
+      <div className="header-actions"><IconButton label={studioTheme==='light'?'切换工作台深色主题':'切换工作台浅色主题'} onClick={changeStudioTheme}>{studioTheme==='light'?<Moon size={16}/>:<Sun size={16}/>}</IconButton><div className="history-controls"><IconButton label="撤销 (⌘Z)" onClick={undo} disabled={!past.length}><Undo2 size={16}/></IconButton><IconButton label="重做 (⌘⇧Z)" onClick={redo} disabled={!future.length}><Redo2 size={16}/></IconButton></div><span className="header-divider"/>
+        <DropdownMenu open={showNew} onOpenChange={setShowNew}><DropdownMenuTrigger asChild><StudioButton className="secondary-button create-page-button" aria-label="新建页面" title="新建页面"><Plus size={15}/><span>新建页面</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu new-page-menu" align="end" sideOffset={8}><DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;void startNewDocument(next);}}><FilePlus2 size={15}/>空白页面</DropdownMenuItem><DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;void startNewDocument(next);}}><LayoutTemplate size={15}/>从灵感模板开始</DropdownMenuItem><DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>组件联动示例</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
         <DropdownMenu open={showExport} onOpenChange={setShowExport}><DropdownMenuTrigger asChild><StudioButton className="secondary-button export-button"><Download size={14}/>导出<ChevronDown size={12}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu export-menu" align="end" sideOffset={8}>
           <DropdownMenuItem onSelect={()=>exportCode('html')}><Code2 size={15}/><span>导出 HTML<small>单文件页面 · 浏览器直接打开</small></span></DropdownMenuItem>
           <DropdownMenuItem onSelect={()=>exportCode('vue')}><Code2 size={15}/><span>导出 Vue<small>Vue 3.5+ · 无额外 UI 依赖</small></span></DropdownMenuItem>
@@ -462,7 +576,7 @@ export default function App() {
           <DropdownMenuItem onSelect={download}><Download size={15}/><span>导出页面 JSON<small>保存可再次编辑的页面配置</small></span></DropdownMenuItem>
           <DropdownMenuItem onSelect={()=>{fileRef.current?.click();setShowExport(false);}}><Upload size={15}/><span>导入页面 JSON<small>载入已有页面配置</small></span></DropdownMenuItem>
         </DropdownMenuContent></DropdownMenu>
-        <StudioButton className="primary-button preview-button" onClick={()=>setFullPreview(true)}><Play size={13} fill="currentColor"/>预览页面</StudioButton><div className="user-avatar" title="创作空间">C</div>
+        <StudioButton className="primary-button preview-button" onClick={()=>setFullPreview(true)}><Play size={13} fill="currentColor"/>预览页面</StudioButton><AccountControls targetId={cloudTarget?.id??null} onSaveCloud={saveCloud} onOpenPage={openCloud} onDeletePage={deleteCloud} onPublish={publishCloud} onBeforeSignOut={returnToGuest} onGuest={returnToGuest} notify={notify}/>
       </div>
     </header>
     <DndContext sensors={sensors} collisionDetection={collision} autoScroll={false} onDragStart={onDragStart} onDragMove={onDragMove} onDragOver={onDragMove} onDragEnd={onDragEnd} onDragCancel={clearDrag}>

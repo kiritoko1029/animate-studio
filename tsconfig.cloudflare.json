@@ -11,7 +11,10 @@
   },
   "include": [
     "void.config.ts",
+    "env.ts",
     "routes",
-    "durable-objects"
+    "durable-objects",
+    "server",
+    "db"
   ]
 }

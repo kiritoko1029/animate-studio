@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1792721419206,
+      "tag": "20261023021019_soft_xorn",
+      "breakpoints": true
+    }
+  ]
+}

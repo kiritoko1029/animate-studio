@@ -20,7 +20,7 @@ function page(name = '测试页面') {
 async function fixture(t, options = {}) {
   const dataDir = options.dataDir || await fs.mkdtemp(join(tmpdir(), 'animate-studio-'));
   if (!options.dataDir) t.after(() => fs.rm(dataDir, { recursive: true, force: true }));
-  const app = await createApp({ dataDir, serveFrontend: false, ...options });
+  const app = await createApp({ dataDir, serveFrontend: false, accounts: null, ...options });
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   const close = () => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   t.after(close);

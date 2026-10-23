@@ -2,13 +2,39 @@
   "version": 1,
   "source": {
     "name": "animate-studio",
+    "keep_vars": true,
+    "keep_secrets": true,
     "workers_dev": true,
-    "preview_urls": true
+    "preview_urls": true,
+    "routes": [
+      {
+        "pattern": "animate-studio.vme5.de",
+        "custom_domain": true
+      }
+    ],
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "animate-studio-accounts",
+        "database_id": "local",
+        "migrations_dir": "./db/migrations"
+      }
+    ]
   },
   "resolved": {
     "name": "animate-studio",
+    "keep_vars": true,
+    "keep_secrets": true,
     "workers_dev": true,
     "preview_urls": true,
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "animate-studio-accounts",
+        "database_id": "cac81075-6a23-49a7-b148-bb6dc90b82c7",
+        "migrations_dir": "./db/migrations"
+      }
+    ],
     "durable_objects": {
       "bindings": [
         {
@@ -26,7 +52,13 @@
       }
     ],
     "account_id": "154e524c717271f31f39c0c8ad67cf3e",
-    "compatibility_date": "2026-02-24"
+    "compatibility_date": "2026-02-24",
+    "routes": [
+      {
+        "pattern": "animate-studio.vme5.de",
+        "custom_domain": true
+      }
+    ]
   },
-  "text": "{\n  \"name\": \"animate-studio\",\n  \"workers_dev\": true,\n  \"preview_urls\": true,\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"PAGE_STORE\",\n        \"class_name\": \"PageStoreDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-page-store-v1\",\n      \"new_sqlite_classes\": [\n        \"PageStoreDurableObject\"\n      ]\n    }\n  ],\n  \"account_id\": \"154e524c717271f31f39c0c8ad67cf3e\",\n  \"compatibility_date\": \"2026-02-24\"\n}\n"
+  "text": "{\n  \"name\": \"animate-studio\",\n  \"keep_vars\": true,\n  \"keep_secrets\": true,\n  \"workers_dev\": true,\n  \"preview_urls\": true,\n  \"d1_databases\": [\n    {\n      \"binding\": \"DB\",\n      \"database_name\": \"animate-studio-accounts\",\n      \"database_id\": \"cac81075-6a23-49a7-b148-bb6dc90b82c7\",\n      \"migrations_dir\": \"./db/migrations\"\n    }\n  ],\n  \"durable_objects\": {\n    \"bindings\": [\n      {\n        \"name\": \"PAGE_STORE\",\n        \"class_name\": \"PageStoreDurableObject\"\n      }\n    ]\n  },\n  \"migrations\": [\n    {\n      \"tag\": \"void-durable-page-store-v1\",\n      \"new_sqlite_classes\": [\n        \"PageStoreDurableObject\"\n      ]\n    }\n  ],\n  \"account_id\": \"154e524c717271f31f39c0c8ad67cf3e\",\n  \"compatibility_date\": \"2026-02-24\",\n  \"routes\": [\n    {\n      \"pattern\": \"animate-studio.vme5.de\",\n      \"custom_domain\": true\n    }\n  ]\n}\n"
 }

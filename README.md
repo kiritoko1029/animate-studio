@@ -1,6 +1,6 @@
 # Animate Studio
 
-**Current release: [v2026.10.22](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.22)** · [Changelog (中文 / English)](CHANGELOG.md)
+**Current release: [v2026.10.23](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.23)** · [Changelog (中文 / English)](CHANGELOG.md)
 
 **A visual page builder with a free-form canvas, interactive scripts, and portable code exports.**
 
@@ -18,7 +18,8 @@ Build a page by placing components on the canvas, editing their properties, and 
 - **Component interactions** — shared variables, property bindings, expressions, conditional actions, and click/change events. Expression suggestions use the variables defined in your page.
 - **JavaScript editor** — syntax highlighting, autocomplete, syntax checks, test runs, and runtime logs. Built-in helpers include `ctx.fetchJSON`, `ctx.setState`, `ctx.notify`, and `ctx.sleep`.
 - **Portable exports** — standalone HTML, Vue/React wrappers around an embedded page, and JSON for continued editing. Exported pages do not require Animate UI, Motion, Radix, or Tailwind.
-- **Local or Cloudflare hosting** — Express with file storage locally, or a Void-powered Cloudflare Worker with an independent Durable Object for each browser workspace.
+- **Accounts and saved pages** — email OTP and GitHub sign-in, multiple saved pages, read-only share links, and synced appearance. Guests can keep editing and exporting.
+- **Local or Cloudflare hosting** — Express with SQLite/PostgreSQL, or a Cloudflare Worker with D1. See [account and storage setup](docs/accounts-and-storage.md).
 
 Workbench controls and canvas primitives use `@animate-ui/react` 2.0.0 (the latest npm release), Motion 14.5.0, and registry backgrounds/buttons pinned to Animate UI v2.1.2. Canvas, plain previews, and previews with bindings/scripts use the same official React primitives and default motion. The property panel exposes supported effect settings. HTML downloads embed this runtime; Vue/React downloads wrap the same isolated page in an iframe. See the [version record](docs/animate-ui-version.json) and [component coverage reference](docs/animate-ui-coverage.md).
 
@@ -33,7 +34,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:4173**. The local server binds to the loopback address by default. Edits are saved to `data/page.json`; restarting the server preserves them.
+Open **http://127.0.0.1:4173**. The local server binds to the loopback address by default. Guest drafts are saved in the browser. Configure sign-in to save multiple pages to an account database and restore them across devices.
 
 `npm run dev` watches the server and its imported validation/schema files and restarts the backend when they change. Vite handles frontend hot updates. This keeps new editor properties in sync with the save API during development. `npm start` runs without the watcher.
 
@@ -91,7 +92,7 @@ npm run build:cloudflare    # Worker + frontend production build
 npm run preview:cloudflare # run that build locally
 ```
 
-Cloud workspaces are **anonymous and browser-specific**. A random identifier in localStorage selects an independent Durable Object. Clearing site data, changing browsers, or switching domains loses access to that workspace. Export page JSON for backups and migration. Local `data/page.json` is not uploaded automatically.
+Guest drafts stay in the browser; account pages, published snapshots, and preferences use D1. Existing anonymous Durable Object drafts can be restored, and their resource history is preserved. See [account and storage setup](docs/accounts-and-storage.md) for Resend, GitHub OAuth, PostgreSQL, and migrations. Local pages are not uploaded automatically.
 
 The [GitHub Actions workflow](.github/workflows/cloudflare.yml) tests and builds pull requests and `main`. Production deployment runs on `main` after verification when the `CLOUDFLARE_API_TOKEN` repository secret is configured. Without the token, verification still runs and deployment is explicitly skipped. Automatic deployment can be enabled later; browser login is sufficient for local CLI deployment.
 

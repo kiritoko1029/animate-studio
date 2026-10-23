@@ -1,6 +1,6 @@
 # Animate Studio
 
-**当前版本：[v2026.10.22](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.22)** · [更新日志（中文 / English）](CHANGELOG.md)
+**当前版本：[v2026.10.23](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.23)** · [更新日志（中文 / English）](CHANGELOG.md)
 
 **自由搭建页面，编写交互脚本，直接导出前端代码。**
 
@@ -18,7 +18,8 @@
 - **组件联动**：共享变量、属性绑定、表达式、条件动作、点击与值变化事件。表达式提示会使用当前页面已有变量。
 - **JavaScript 编辑器**：代码高亮、自动补全、语法检查、测试运行和调试日志；内置 `ctx.fetchJSON`、`ctx.setState`、`ctx.notify`、`ctx.sleep` 等函数。
 - **可移植代码导出**：导出独立 HTML 或内嵌页面的 Vue/React 包装组件，无需额外安装 Animate UI、Motion、Radix 或 Tailwind；页面 JSON 可用于继续编辑。
-- **本地与云端部署**：本地使用 Express 和文件存储，云端通过 Void 发布到 Cloudflare Workers，每个浏览器拥有独立的持久化工作区。
+- **账号与云端页面**：邮箱验证码、GitHub 登录，多页面保存、只读分享链接与个人外观同步；访客仍可自由编辑和导出。
+- **本地与云端部署**：Express 支持 SQLite / PostgreSQL，Cloudflare 使用 D1；账号与邮件配置见 [接入指南](docs/accounts-and-storage.md)。
 
 工作台控件与画布原语已使用 `@animate-ui/react` 2.0.0（npm 最新版）和 Motion 14.5.0；背景与样式按钮固定使用 Animate UI v2.1.2 的 Registry 源码。画布、普通预览和带联动的预览共用官方 React 原语与默认动效；属性面板可调整官方支持的效果参数。下载的 HTML 内嵌同一运行时，Vue/React 组件通过 iframe 承载该独立页面。详见 [版本记录](docs/animate-ui-version.json) 和 [组件覆盖说明](docs/animate-ui-coverage.md)。
 
@@ -33,7 +34,7 @@ npm ci
 npm run dev
 ```
 
-打开 **http://127.0.0.1:4173**。本地服务默认仅监听本机地址，修改自动保存到 `data/page.json`，重启服务后仍可恢复。
+打开 **http://127.0.0.1:4173**。本地服务默认仅监听本机地址。访客草稿自动保存到浏览器；配置登录后可将页面保存到账号数据库，刷新后恢复。
 
 构建并运行本地生产版本：
 
@@ -89,7 +90,7 @@ npm run build:cloudflare    # 构建 Worker 与前端
 npm run preview:cloudflare # 在本机运行云端构建
 ```
 
-云端是**每个浏览器独立的匿名工作区**：localStorage 中的随机标识对应一个独立的 Durable Object。清除站点数据、更换浏览器或切换域名后，将无法访问原工作区；请用页面 JSON 备份与迁移。本地的 `data/page.json` 不会自动上传。
+访客草稿保存在浏览器，登录后的页面、分享快照和设置保存在 D1。旧匿名 Durable Object 工作区可恢复为浏览器草稿，原存储与迁移历史保留。Resend、GitHub OAuth、PostgreSQL 和迁移步骤见 [账号与存储指南](docs/accounts-and-storage.md)。本地页面不会自动上传。
 
 [GitHub Actions](.github/workflows/cloudflare.yml) 会对 pull request 和 `main` 执行测试与构建。在仓库配置 `CLOUDFLARE_API_TOKEN` Secret 后，`main` 验证通过即可自动发布；未配置时只验证，并明确跳过发布。可以先使用本机登录发布，之后再启用自动发布。
 

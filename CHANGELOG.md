@@ -1,5 +1,35 @@
 # 更新日志 / Changelog
 
+## v2026.10.23 — 2026-10-23
+
+### 中文
+
+本次版本加入账号与云端页面管理。访客继续使用全部基础编辑、预览和导出功能，登录后可保存页面、分享预览链接并同步工作台外观。
+
+- 支持邮箱验证码登录（Resend）和 GitHub OAuth 登录。
+- 支持 Cloudflare D1，Node 部署可使用本地 SQLite 或 PostgreSQL；提供数据库迁移。
+- 支持云端页面保存、列表、打开、重命名和删除，刷新后可恢复当前页面。
+- 分享链接直接打开独立交互预览，支持更新已发布快照、保留链接以及撤销分享。
+- 访客草稿在浏览器保存；登录不会自动上传或替换草稿。保存失败时保留编辑内容并阻止页面切换。
+- 云端数据按账号隔离；同步工作台外观，保留原有匿名工作区恢复入口。
+- Cloudflare 部署保留控制台设置的运行时变量和密钥。
+
+**验证**：218 项自动化测试、16 项真实 PostgreSQL 测试、本地 workerd/D1 集成验证，以及 Node 和 Cloudflare 构建通过。真实邮件投递和用户 GitHub 授权需要生产凭据及实际登录验证。
+
+### English
+
+This release adds accounts and cloud page management. Guests retain basic editing, previews, and exports; signed-in users can save pages, share previews, and sync workbench appearance.
+
+- Added email OTP sign-in through Resend and GitHub OAuth sign-in.
+- Added Cloudflare D1 storage, with SQLite and PostgreSQL options for Node deployments and database migrations.
+- Added cloud page saving, listing, opening, renaming, deletion, and restoration after reload.
+- Shared links open standalone interactive previews. Published snapshots can be updated while retaining the link, or revoked.
+- Guest drafts persist in the browser. Signing in does not upload or replace them; failed saves preserve edits and prevent page switching.
+- Isolated cloud data by account, synchronized workbench appearance, and retained legacy workspace recovery.
+- Cloudflare deployments preserve runtime variables and secrets managed in the dashboard.
+
+**Validation**: 218 automated tests, 16 tests against PostgreSQL, local workerd/D1 integration checks, and Node and Cloudflare builds passed. Real email delivery and user GitHub authorization require production credentials and an actual sign-in.
+
 ## v2026.10.22 — 2026-10-22
 
 ### 中文
