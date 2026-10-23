@@ -13,6 +13,7 @@
 - 访客草稿在浏览器保存；登录不会自动上传或替换草稿。保存失败时保留编辑内容并阻止页面切换。
 - 云端数据按账号隔离；同步工作台外观，保留原有匿名工作区恢复入口。
 - Cloudflare 部署保留控制台设置的运行时变量和密钥。
+- 修正 Cloudflare 静态资源规范化跳转导致分享地址返回首页的问题，保留 `/p/<token>` 预览路径。
 
 **验证**：218 项自动化测试、16 项真实 PostgreSQL 测试、本地 workerd/D1 集成验证，以及 Node 和 Cloudflare 构建通过。真实邮件投递和用户 GitHub 授权需要生产凭据及实际登录验证。
 
@@ -27,6 +28,7 @@ This release adds accounts and cloud page management. Guests retain basic editin
 - Guest drafts persist in the browser. Signing in does not upload or replace them; failed saves preserve edits and prevent page switching.
 - Isolated cloud data by account, synchronized workbench appearance, and retained legacy workspace recovery.
 - Cloudflare deployments preserve runtime variables and secrets managed in the dashboard.
+- Fixed Cloudflare asset canonicalization redirecting shared links to the homepage; preview URLs retain `/p/<token>`.
 
 **Validation**: 218 automated tests, 16 tests against PostgreSQL, local workerd/D1 integration checks, and Node and Cloudflare builds passed. Real email delivery and user GitHub authorization require production credentials and an actual sign-in.
 
