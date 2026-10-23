@@ -1,11 +1,13 @@
 import { createInteractionRuntime } from '../../../shared/interactions.mjs';
 import type { PageDocument } from '../../model';
 import { js } from './nodes.ts';
+import { variableStorageKey } from '../interactions/persistence.ts';
 
 export function interactionSource(document: PageDocument) {
   const config = { variables: document.variables ?? [], scripts: document.scripts ?? [], blocks: document.blocks.map(block => ({ id: block.id, type: block.type, name: block.props.label || block.props.title || block.type, bindings: block.bindings, events: block.events })) };
   return {
     config: js(config),
+    storageKey: js(variableStorageKey(document, 'published')),
     initial: js(createInteractionRuntime(config).getState()),
     factory: createInteractionRuntime.toString().replace(/<\/script/gi, '<\\/script'),
     helpers: `function readProp(id, key, fallback, snapshot) {

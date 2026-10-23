@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Keyb
 import { createPortal } from 'react-dom';
 import { useDroppable } from '@dnd-kit/core';
 import { Copy, Grid3X3, Magnet, Move, MousePointer2, Plus, Minus, Hand, Scan, Ruler, SquareDashed, Trash2, Play, Square, RotateCcw, Settings2 } from 'lucide-react';
-import { blockName, type Block, type PageDocument } from '../model';
+import { blockLabel, type Block, type PageDocument } from '../model';
 import { pageThemeStyle } from '../lib/themes';
 import { BlockRenderer } from './PageRenderer';
 import { CanvasSizeSelect, DimensionInput } from './CanvasSizeControls';
@@ -294,7 +294,7 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
               const frame = live?.frames?.[block.id] ?? (live?.id === block.id && !live.frames ? live.frame : defaultFrame(block, index, document.settings));
               const active = selection.has(block.id);
               const interacting = active && interactingId === block.id;
-              const name = blockName(block.type);
+              const name = blockLabel(block);
               return <CanvasComponentMenu key={block.id} block={block} selectionCount={active ? selectedBlocks.length : 1} settings={document.settings} onBlockChange={onBlockChange} layerIndex={index} layerCount={document.blocks.length} onLayerChange={onLayerChange} open={menuId === block.id && active} disabled={interacting || isDragging || !!live || camera.panning}
                 onOpenChange={open => { setMenuId(open ? block.id : null); if (open && !active) onSelect(block.id); }}
                 onInspect={onInspect} onCreateVariable={onCreateVariable} onAlign={onAlign} onFillWidth={onFillWidth} onDuplicate={onDuplicate} onDelete={onDelete}><div

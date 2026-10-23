@@ -5,8 +5,9 @@ import { canvasLimits } from '../shared/canvas-sizes.mjs';
 import { componentScaleLimits } from '../shared/component-scale.mjs';
 import themes from '../shared/themes.json' with { type: 'json' };
 import { validateAnimationSettings } from '../shared/animation-settings.mjs';
+import { customComponentLimits, validateCustomBlockProps } from '../shared/custom-components.mjs';
 const themeIds = Object.keys(themes);
-const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents)]);
+const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'custom', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300 };
 const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100], contentScale: [componentScaleLimits.min, componentScaleLimits.max] };
 const enumValues = { brandIcon: [...Object.keys(navbarIcons), 'none'], effect: ['none','auto-height','blur','click','effect','fade','highlight','magnetic','particles','scroll-fade','shine','slide','theme-toggler','tilt','zoom','spring','page-transition','cursor'], align: ['left', 'center', 'right'], animation: ['none', 'fade', 'slide', 'scale'] };
@@ -81,9 +82,10 @@ function safeUrl(value, image = false) {
 }
 
 export function validatePage(page) {
-  record(page, ['version', 'name', 'settings', 'blocks', 'variables', 'scripts'], 'page');
+  record(page, ['version', 'name', 'id', 'settings', 'blocks', 'variables', 'scripts'], 'page');
   required(page, ['version', 'name', 'settings', 'blocks'], 'page');
   if (page.version !== 1) fail('仅支持版本 1 的页面');
+  if (Object.hasOwn(page, 'id') && (typeof page.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(page.id))) fail('页面 id 无效');
   string(page.name, 120, 'page.name', false);
   record(page.settings, ['background', 'accent', 'maxWidth', 'padding', 'layout', 'canvasHeight', 'theme', 'customThemes'], 'page.settings');
   required(page.settings, ['background', 'accent', 'maxWidth', 'padding'], 'page.settings');
@@ -97,6 +99,7 @@ export function validatePage(page) {
   if (Object.hasOwn(page.settings, 'canvasHeight')) number(page.settings.canvasHeight, canvasLimits.minHeight, canvasLimits.maxHeight, 'page.settings.canvasHeight');
   if (!Array.isArray(page.blocks) || page.blocks.length > 200) fail('页面最多包含 200 个组件');
   const ids = new Set();
+  let customBlocks = 0;
   for (const block of page.blocks) {
     record(block, ['id', 'type', 'props', 'frame', 'bindings', 'events'], 'block');
     required(block, ['id', 'type', 'props'], 'block');
@@ -113,8 +116,14 @@ export function validatePage(page) {
       number(block.frame.width, 40, canvasLimits.maxWidth * frameScale, 'block.frame.width');
       number(block.frame.height, 32, 3000 * frameScale, 'block.frame.height');
     }
-    record(block.props, [...Object.keys(stringLimits), ...Object.keys(numberLimits), ...Object.keys(enumValues), 'background', 'color', 'accent', 'checked', 'theme', 'motion', 'effectOptions'], 'block.props');
+    if (block.type === 'custom') {
+      // Custom components carry their own definition; only the instance fields and
+      // wrapper appearance are page props. The code is validated, never executed.
+      if (++customBlocks > customComponentLimits.perPage) fail(`页面最多包含 ${customComponentLimits.perPage} 个自定义组件`);
+      try { validateCustomBlockProps(block.props); } catch (error) { fail(error.message); }
+    } else record(block.props, [...Object.keys(stringLimits), ...Object.keys(numberLimits), ...Object.keys(enumValues), 'background', 'color', 'accent', 'checked', 'theme', 'motion', 'effectOptions'], 'block.props');
     for (const [key, value] of Object.entries(block.props)) {
+      if (key === 'custom') continue;
       if (Object.hasOwn(stringLimits, key)) string(value, stringLimits[key], `block.props.${key}`);
       else if (Object.hasOwn(numberLimits, key)) number(value, ...((key === 'value' && ['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(block.type)) ? [0, 1000000000] : numberLimits[key]), `block.props.${key}`);
       else if (key === 'motion' || key === 'effectOptions') {

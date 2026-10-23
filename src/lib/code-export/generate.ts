@@ -36,6 +36,7 @@ ${markup}
   const interactionConfig = ${interaction.config};
   let data = ${interaction.initial};
   const logic = (${interaction.factory})(interactionConfig, {
+    storageKey: ${interaction.storageKey},
     onState(next) { data = next; sync(); ${resources.previewToken ? `parent.postMessage({ type: 'as-state', token: ${js(resources.previewToken)}, state: data }, '*');` : ''} },
     onLog(entry) { ${resources.previewToken ? `parent.postMessage({ type: 'as-log', token: ${js(resources.previewToken)}, entry }, '*');` : `if (entry.level === 'error') showNotice(root, entry.message);`} },
     onNotify: message => ${resources.previewToken ? `parent.postMessage({ type: 'as-notify', token: ${js(resources.previewToken)}, message }, '*')` : 'showNotice(root, message)'}, onNavigate: url => followLink(root, url),
@@ -61,6 +62,7 @@ ${markup}
   function update(key, value) { state[key] = value; sync(); }
   ${listeners.join('\n  ')}
   ${browserHelpers}
+  logic.activate();
   sync();
   const dispose = mountPage(root, ${width}, ${height});
   window.addEventListener('pagehide', () => { logic.dispose(); dispose(); }, {once:true});
@@ -84,6 +86,7 @@ const state = reactive(${js(state)});
 const interactionConfig = ${interaction.config};
 const data = reactive(${interaction.initial});
 const logic = (${interaction.factory})(interactionConfig, {
+  storageKey: ${interaction.storageKey},
   onState(next) { Object.assign(data, next); },
   onLog(entry) { if (entry.level === 'error') showNotice(rootRef.value, entry.message); },
   onNotify: message => showNotice(rootRef.value, message), onNavigate: url => followLink(rootRef.value, url),
@@ -92,7 +95,7 @@ ${interaction.helpers}
 function update(key, value) { state[key] = value; }
 ${browserHelpers}
 let dispose;
-onMounted(() => { dispose = mountPage(rootRef.value, ${width}, ${height}); });
+onMounted(() => { logic.activate(); dispose = mountPage(rootRef.value, ${width}, ${height}); });
 onUnmounted(() => { dispose?.(); logic.dispose(); });
 </script>
 
@@ -122,6 +125,7 @@ export default function GeneratedPage() {
   const interactionConfig = ${interaction.config};
   const [data, setData] = useState(${interaction.initial});
   const [logic] = useState(() => (${interaction.factory})(interactionConfig, {
+    storageKey: ${interaction.storageKey},
     onState: setData,
     onLog(entry) { if (entry.level === 'error') showNotice(rootRef.current, entry.message); },
     onNotify: message => showNotice(rootRef.current, message), onNavigate: url => followLink(rootRef.current, url),

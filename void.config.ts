@@ -3,10 +3,11 @@ import { defineConfig } from 'void/config';
 export default defineConfig({
   target: 'cloudflare',
   // The editor lives at /. 'none' keeps unknown /api/* paths as JSON 404s from
-  // the worker; the scoped fallback serves the SPA shell for share deep links.
+  // the worker; the scoped fallbacks serve the SPA shell for page (/p/*) and
+  // component (/c/*) share deep links.
   // Use the canonical root asset: Cloudflare redirects /index.html to /,
   // which would otherwise discard the share token in the browser URL.
-  routing: { notFound: 'none', fallbacks: { '/p/*': '/' } },
+  routing: { notFound: 'none', fallbacks: { '/p/*': '/', '/c/*': '/' } },
   inference: {
     appType: 'void',
     bindings: { db: true },

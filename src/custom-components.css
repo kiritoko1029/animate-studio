@@ -1,0 +1,11 @@
+/* Custom component instances: the sandboxed frame fills the component's box.
+   Used by the canvas, previews, shared pages and exported pages. */
+.page-block--custom { padding: 0 !important; overflow: hidden !important; border-radius: var(--block-radius, 0); }
+.page-block--custom > .page-block-content { height: 100%; min-height: 0; }
+.custom-component-frame { position: relative; width: 100%; height: 100%; min-height: 32px; border-radius: inherit; }
+.custom-component-frame > iframe { display: block; width: 100%; height: 100%; border: 0; background: transparent; color-scheme: normal; border-radius: inherit; }
+.page-block-content[data-interactive=false] .custom-component-frame > iframe { pointer-events: none; }
+.custom-component-fallback { box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; width: 100%; height: 100%; min-height: 32px; padding: 12px 14px; border: 1px dashed var(--page-border, #d4d4d4); border-radius: inherit; background: var(--page-panel, #f5f5f5); color: var(--page-ink, #171717); font: 12px/1.5 Inter, -apple-system, "PingFang SC", sans-serif; overflow: auto; }
+.custom-component-fallback strong { font-size: 13px; }
+.custom-component-fallback span { color: var(--page-muted, #525252); }
+.custom-component-fallback button { margin-top: 4px; padding: 5px 10px; border: 1px solid currentColor; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }

@@ -6,6 +6,8 @@
 
 [在线体验](https://animate-studio.vme5.de/) · [English](README.md) · **简体中文** · [详细使用指南](docs/user-guide.zh-CN.md)
 
+品牌标识「跃帧 / Keyframe A」的设计来源、图标素材和生成方式见 [品牌规范](docs/brand-guidelines.md)。
+
 ![Animate Studio 工作台](docs/images/studio.png)
 
 把组件放到画布上，调整内容和外观，通过共享变量与事件连接组件。边搭建边预览，完成后导出 HTML、Vue、React 或可继续编辑的页面 JSON。
@@ -22,6 +24,8 @@
 - **本地与云端部署**：Express 支持 SQLite / PostgreSQL，Cloudflare 使用 D1；账号与邮件配置见 [接入指南](docs/accounts-and-storage.md)。
 
 工作台控件与画布原语已使用 `@animate-ui/react` 2.0.0（npm 最新版）和 Motion 14.5.0；背景与样式按钮固定使用 Animate UI v2.1.2 的 Registry 源码。画布、普通预览和带联动的预览共用官方 React 原语与默认动效；属性面板可调整官方支持的效果参数。下载的 HTML 内嵌同一运行时，Vue/React 组件通过 iframe 承载该独立页面。详见 [版本记录](docs/animate-ui-version.json) 和 [组件覆盖说明](docs/animate-ui-coverage.md)。
+
+自定义组件：在 **组件 → 我的组件** 中编写 HTML、CSS、JavaScript，使用模板、实时预览和编写指南。支持本机保存、登录后保存到账号与发布组件分享；插入页面的是独立副本。见 [自定义组件指南](docs/custom-components.zh-CN.md)。
 
 ## 快速开始
 

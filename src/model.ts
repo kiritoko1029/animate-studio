@@ -4,6 +4,7 @@ import type { AnimationSettings } from '../shared/animation-settings.mjs';
 import { canvasLimits, defaultCanvasSize } from '../shared/canvas-sizes.mjs';
 import { canvasBounds, clampFrame } from './lib/canvas-bounds.ts';
 import type { CatalogEffect } from './lib/catalog-effects';
+import type { CustomComponentSnapshot } from '../shared/custom-components.mjs';
 export type ExtendedComponentType = keyof typeof extendedComponents;
 export const extendedCatalog = extendedComponents;
 export const isExtendedComponent = (type: string): type is ExtendedComponentType => Object.hasOwn(extendedComponents, type);
@@ -11,7 +12,10 @@ import type { Bindings, Action, Variable, Script } from './lib/interactions/type
 import type { CustomTheme, ThemeId } from './lib/themes';
 
 export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents) as ExtendedComponentType[]] as const;
-export type ComponentType = typeof componentTypes[number];
+/** Built-in library types, created from catalog defaults. */
+export type BuiltinComponentType = typeof componentTypes[number];
+/** `custom` blocks are user-written components created from a definition, never from defaults. */
+export type ComponentType = BuiltinComponentType | 'custom';
 export type BlockProps = {
   duration?: number; effect?: CatalogEffect;
   motion?: AnimationSettings; effectOptions?: AnimationSettings;
@@ -23,15 +27,17 @@ export type BlockProps = {
   value?: number; max?: number; checked?: boolean;
   theme?: ThemeId; accent?: string;
   animation?: 'none' | 'fade' | 'slide' | 'scale';
+  /** `custom` blocks only: the component definition copied into the page. */
+  custom?: CustomComponentSnapshot;
 };
 export type BlockFrame = { x: number; y: number; width: number; height: number };
 export type Block = { id: string; type: ComponentType; props: BlockProps; frame?: BlockFrame; bindings?: Bindings; events?: { click?: Action[]; change?: Action[] } };
 export type PageDocument = {
-  version: 1; name: string;
+  version: 1; name: string; id?: string;
   settings: { background: string; accent: string; theme?: ThemeId; customThemes?: CustomTheme[]; maxWidth: number; padding: number; layout?: 'flow' | 'free'; canvasHeight?: number };
   blocks: Block[]; variables?: Variable[]; scripts?: Script[];
 };
-export const catalog: {type: ComponentType; name: string; english: string; group: string; description: string}[] = [
+export const catalog: {type: BuiltinComponentType; name: string; english: string; group: string; description: string}[] = [
   { type: 'navbar', name: '导航栏', english: 'Navigation', group: '布局', description: '品牌与页面导航' },
   { type: 'hero', name: '首屏区块', english: 'Hero', group: '布局', description: '引人注目的页面开场' },
   { type: 'heading', name: '动态标题', english: 'Highlight', group: '基础', description: '带高亮动画的标题' },
@@ -64,7 +70,7 @@ export const catalog: {type: ComponentType; name: string; english: string; group
   { type: 'rating', name: '评分', english: 'Rating', group: '交互', description: '交互式五星评分与反馈' },
   ...Object.entries(extendedComponents).map(([type, entry]) => ({ type: type as ExtendedComponentType, name: entry.name, english: entry.english, group: entry.group, description: entry.description })),
 ];
-const defaults: Record<ComponentType, BlockProps> = {
+const defaults: Record<BuiltinComponentType, BlockProps> = {
   ...Object.fromEntries(Object.entries(extendedComponents).map(([type, entry]) => [type, entry.props])) as Record<ExtendedComponentType, BlockProps>,
   navbar: {title:'Forma', brandIcon:'leaf', items:'产品,关于我们,联系我们', padding:20},
   hero: {label:'让每一个想法，都能被看见',title:'好想法，\n值得一个好页面。',text:'从一个灵感开始，把想象变成触手可及的体验。\n自由搭建，让创作自然发生。',variant:'开始探索',url:'#features',align:'center',padding:46,animation:'fade'},
@@ -97,7 +103,7 @@ const defaults: Record<ComponentType, BlockProps> = {
   pagination: {label:'作品列表',value:1,max:5,padding:20},
   rating: {label:'这次体验怎么样？',text:'你的反馈，让下一次体验更好。',value:4,padding:20},
 };
-export const createBlock = (type: ComponentType): Block => ({id:crypto.randomUUID(),type,props:{...defaults[type]}});
+export const createBlock = (type: BuiltinComponentType): Block => ({id:crypto.randomUUID(),type,props:{...defaults[type]}});
 export const frameSizes: Record<ComponentType, {width:number;height:number}> = {
   ...Object.fromEntries(Object.entries(extendedComponents).map(([type, entry]) => [type, entry.frame])) as Record<ExtendedComponentType, {width:number;height:number}>,
   navbar:{width:1000,height:85},hero:{width:800,height:390},heading:{width:460,height:130},
@@ -110,6 +116,7 @@ export const frameSizes: Record<ComponentType, {width:number;height:number}> = {
   progress:{width:380,height:150},statistic:{width:300,height:200},table:{width:560,height:310},
   timeline:{width:440,height:370},testimonial:{width:400,height:280},pricing:{width:360,height:480},
   breadcrumb:{width:440,height:90},pagination:{width:440,height:150},rating:{width:360,height:180},
+  custom:{width:360,height:240},
 };
 export function defaultFrame(type: ComponentType, canvasWidth: number, x = 32, y = 32): BlockFrame {
   const size=frameSizes[type];const width=Math.min(canvasWidth,size.width);
@@ -133,14 +140,16 @@ export function toFreeDocument(document: PageDocument): PageDocument {
     cursor+=frame.height+16;
     return {...block,frame};
   });
-  return {...document,settings:{...document.settings,layout:'free',canvasHeight:Math.min(canvasLimits.maxHeight,Math.max(document.settings.canvasHeight||1400,contentBottom+margin))},blocks};
+  return {...document,id:document.id??crypto.randomUUID(),settings:{...document.settings,layout:'free',canvasHeight:Math.min(canvasLimits.maxHeight,Math.max(document.settings.canvasHeight||1400,contentBottom+margin))},blocks};
 }
 export function createDocument(blank = false): PageDocument {
-  const types:ComponentType[]=['navbar','hero','card','card','accordion','footer'];
+  const types:BuiltinComponentType[]=['navbar','hero','card','card','accordion','footer'];
   const frames:BlockFrame[]=[{x:0,y:0,width:1920,height:85},{x:480,y:100,width:960,height:390},{x:40,y:520,width:440,height:260},{x:520,y:520,width:440,height:260},{x:1040,y:520,width:800,height:370},{x:0,y:950,width:1920,height:110}];
-  return {version:1,name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:defaultCanvasSize.width,padding:0,layout:'free',canvasHeight:defaultCanvasSize.height},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
+  return {version:1,id:crypto.randomUUID(),name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:defaultCanvasSize.width,padding:0,layout:'free',canvasHeight:defaultCanvasSize.height},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
 }
-export const blockName = (type: ComponentType) => catalog.find(c=>c.type===type)?.name ?? type;
+export const blockName = (type: ComponentType) => type==='custom' ? '自定义组件' : catalog.find(c=>c.type===type)?.name ?? type;
+/** Display name of a placed block; custom instances show their component name. */
+export const blockLabel = (block: Pick<Block,'type'|'props'>) => block.type==='custom' ? block.props.custom?.name || '自定义组件' : blockName(block.type);
 export function safeUrl(value?: string) {
   if (!value) return '#';
   if (/[\s\\\u0000-\u001f\u007f]/u.test(value)) return '#';

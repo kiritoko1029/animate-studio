@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'void/schema-d1';
+import { sqliteTable, text, integer, index } from 'void/schema-d1';
 
 /**
  * Better Auth core tables for Cloudflare D1 (SQLite dialect). Field names use
@@ -73,4 +73,30 @@ export const userPreferences = sqliteTable('user_preference', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
   studioTheme: text('studio_theme').notNull().default('light'),
   updatedAt: text('updated_at').notNull(),
+});
+
+/**
+ * Custom components saved to an account. `definition` is the validated
+ * HTML/CSS/JavaScript contract as JSON; `revision` increases on every save and
+ * guards concurrent edits.
+ */
+export const studioComponents = sqliteTable('studio_component', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  definition: text('definition').notNull(),
+  revision: integer('revision').notNull().default(1),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, table => [index('studio_component_user_updated_idx').on(table.userId, table.updatedAt)]);
+
+/** The published snapshot of a component; removing the row revokes the link. */
+export const studioComponentShare = sqliteTable('studio_component_share', {
+  componentId: text('component_id').primaryKey().references(() => studioComponents.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  snapshot: text('snapshot').notNull(),
+  revision: integer('revision').notNull(),
+  publishedAt: text('published_at').notNull(),
 });

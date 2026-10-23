@@ -57,7 +57,8 @@ function context(doc: PageDocument, block: Block) {
   const existingBottom = Math.max(0, ...entries.map(entry => bottom(entry.frame))) + margin;
   const height = Math.max(320, doc.settings.canvasHeight ?? 1400, existingBottom);
   if (!Number.isFinite(height) || height > MAX_HEIGHT) throw new Error('已有组件超出 6000 px 画布高度，请先调整位置后再添加。');
-  const base = defaultFrame(block.type, innerWidth);
+  // Custom components declare their own default size; built-ins use the catalog size.
+  const base = block.type === 'custom' && block.props.custom?.size ? block.props.custom.size : defaultFrame(block.type, innerWidth);
   const size = { width: Math.min(innerWidth, Math.max(40, base.width)), height: Math.min(3000, Math.max(32, base.height)) };
   return { width, height, entries, size, margin };
 }

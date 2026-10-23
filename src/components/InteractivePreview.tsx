@@ -4,6 +4,7 @@ import { Bug, RotateCcw, Terminal, ChevronDown } from 'lucide-react';
 import type { PageDocument } from '../model';
 import type { JsonValue, RuntimeLog } from '../lib/interactions/types';
 import { createInteractionRuntime } from '../../shared/interactions.mjs';
+import { variableStorageKey } from '../lib/interactions/persistence';
 import { FreePage } from './PageRenderer';
 import { NativeRuntimeContext, type NativeRuntime } from './NativeInteractions';
 import { safeUrl } from '../model';
@@ -16,7 +17,7 @@ function PreviewNotice({ message, onClose }: { message: string; onClose: () => v
 }
 
 export type PreviewHandle = { runScript: (id: string) => void; reset: () => void };
-export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean }>(function InteractivePreview({ document, debug = false }, ref) {
+export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview' }, ref) {
   const container = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<Record<string, JsonValue>>({});
   const [logs, setLogs] = useState<RuntimeLog[]>([]);
@@ -26,6 +27,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
   const activeRuntime = useRef<NativeRuntime | null>(null);
   const runtime = useMemo(() => {
     const next = createInteractionRuntime(document, {
+    storageKey: variableStorageKey(document, persistenceScope),
     onState: setState,
     onLog: entry => queueMicrotask(() => { if (activeRuntime.current === next) setLogs(items => [...items.slice(-99), entry]); }),
     onNotify: setNotice,
@@ -40,7 +42,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
     },
     });
     return next;
-  }, [document]);
+  }, [document, persistenceScope]);
   const reset = () => { runtime.reset(); setRevision(value => value + 1); setNotice(null); };
   useImperativeHandle(ref, () => ({ runScript(id) {
     setExpanded(true);

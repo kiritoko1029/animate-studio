@@ -43,7 +43,7 @@ function allComponents() {
   return document;
 }
 
-async function mount(format, document, copies = 1) {
+async function mount(format, document, copies = 1, savedStorage = {}) {
   const output = generateCode(document, format, resources);
   const errors = [];
   const virtualConsole = new VirtualConsole();
@@ -55,6 +55,7 @@ async function mount(format, document, copies = 1) {
   const dom = new JSDOM(format === 'html' ? output.content : '<!doctype html><div id="mount"></div>', {
     url: 'https://example.test/', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole,
     beforeParse(window) {
+      for (const [key, value] of Object.entries(savedStorage)) window.localStorage.setItem(key, value);
       window.matchMedia = () => ({ matches: false });
       window.HTMLElement.prototype.scrollIntoView = function () { window.lastScrolled = this; };
       window.HTMLElement.prototype.getBoundingClientRect = () => ({ width: 500 });
@@ -109,6 +110,37 @@ async function mount(format, document, copies = 1) {
 }
 
 for (const format of ['html', 'vue', 'react']) {
+  test(`${format}: reopening an exported page restores saved bindings and honors opt-outs`, async t => {
+    const { createInteractionDemo } = await import('../src/lib/interactions/demo.ts');
+    const page = createInteractionDemo();
+    page.variables.find(v => v.name === 'agreed').persistent = false;
+    const first = await mount(format, page);
+    t.after(() => { first.window.unmountExport?.(); first.window.close(); });
+    await first.act(() => {
+      const input = first.root.querySelector('input');
+      Object.getOwnPropertyDescriptor(first.window.HTMLInputElement.prototype, 'value').set.call(input, '恢复的姓名');
+      input.dispatchEvent(new first.window.Event('input', { bubbles: true }));
+      first.root.querySelector('[type=checkbox]').click();
+    });
+    assert.equal(first.root.querySelector('[type=checkbox]').checked, true);
+    const saved = Object.fromEntries(Object.keys(first.window.localStorage).map(key => [key, first.window.localStorage.getItem(key)]));
+    const reopened = await mount(format, JSON.parse(JSON.stringify(page)), 1, saved);
+    t.after(() => { reopened.window.unmountExport?.(); reopened.window.close(); });
+    // React commits the restored state from its mount effect on the following render.
+    await new Promise((resolve, reject) => {
+      const observer = new reopened.window.MutationObserver(check);
+      const timer = setTimeout(() => { observer.disconnect(); reject(new Error(`${format}: saved bindings did not render`)); }, 2000);
+      function check() {
+        if (reopened.root.textContent.includes('你好，恢复的姓名！')) { observer.disconnect(); clearTimeout(timer); resolve(); }
+      }
+      observer.observe(reopened.root, { childList: true, characterData: true, subtree: true }); check();
+    });
+    assert.equal(reopened.root.querySelector('input').value, '恢复的姓名');
+    assert.match(reopened.root.textContent, /你好，恢复的姓名！/);
+    assert.equal(reopened.root.querySelector('[type=checkbox]').checked, false);
+    assert.deepEqual(first.errors, []); assert.deepEqual(reopened.errors, []);
+  });
+
   test(`${format}: overall component scale is retained without adding CSS length units`, async t => {
     const page = createDocument(true);
     page.blocks = [{ ...createBlock('navbar'), id: 'scaled-navbar', props: { ...createBlock('navbar').props, contentScale: 200 }, frame: { x: 40, y: 40, width: 1600, height: 170 } }];

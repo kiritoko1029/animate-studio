@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from 'void/schema-pg';
+import { pgTable, text, timestamp, boolean, integer, index } from 'void/schema-pg';
 
 /**
  * Better Auth core tables for the PostgreSQL adapter. Same field naming as the
@@ -73,4 +73,25 @@ export const userPreferences = pgTable('user_preference', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
   studioTheme: text('studio_theme').notNull().default('light'),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+});
+
+/** Custom components saved to an account (see db/schema.ts). */
+export const studioComponents = pgTable('studio_component', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  definition: text('definition').notNull(),
+  revision: integer('revision').notNull().default(1),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+}, table => [index('studio_component_user_updated_idx').on(table.userId, table.updatedAt)]);
+
+export const studioComponentShare = pgTable('studio_component_share', {
+  componentId: text('component_id').primaryKey().references(() => studioComponents.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  snapshot: text('snapshot').notNull(),
+  revision: integer('revision').notNull(),
+  publishedAt: timestamp('published_at', { withTimezone: false }).notNull().defaultNow(),
 });

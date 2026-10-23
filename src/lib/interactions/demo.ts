@@ -1,5 +1,5 @@
 import { createBlock, createDocument } from '../../model.ts';
-import type { Block, ComponentType } from '../../model.ts';
+import type { Block, BuiltinComponentType } from '../../model.ts';
 
 export function createInteractionDemo() {
   const page = createDocument(true);
@@ -12,7 +12,7 @@ export function createInteractionDemo() {
     { name: 'price', type: 'number', initial: 99 }, { name: 'quantity', type: 'number', initial: 2 }, { name: 'total', type: 'number', initial: 0 },
   ];
   page.scripts = [{ id: 'calculate-total', name: '计算订单金额', code: 'const price = Number(ctx.state.price || 0);\nconst quantity = Number(ctx.state.quantity || 0);\nctx.setState("total", price * quantity);\nctx.log("订单金额已更新：", price * quantity);' }];
-  function block(type: ComponentType, x: number, y: number, width: number, height: number, props: Block['props'], extra: Partial<Block> = {}) {
+  function block(type: BuiltinComponentType, x: number, y: number, width: number, height: number, props: Block['props'], extra: Partial<Block> = {}) {
     return { ...createBlock(type), props: { ...createBlock(type).props, ...props }, frame: { x, y, width, height }, ...extra };
   }
   page.blocks = [

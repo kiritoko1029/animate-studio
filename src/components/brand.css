@@ -1,0 +1,25 @@
+.brand-mark {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  color: inherit;
+}
+
+.brand-keyframe {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-keyframe {
+    transform: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-header .brand-mark {
+    width: 27px;
+    height: 27px;
+  }
+}

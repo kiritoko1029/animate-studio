@@ -31,10 +31,15 @@ test('native previews retain bindings, focus, sizing, notices and reset behavior
       import { createInteractionDemo } from './src/lib/interactions/demo';
       const app = createRoot(document.getElementById('root'));
       window.perform = action => flushSync(action);
+      window.reopenPage = () => {
+        flushSync(() => app.render(null));
+        flushSync(() => app.render(<StrictMode><InteractivePreview document={JSON.parse(JSON.stringify(window.page))} debug /></StrictMode>));
+      };
       window.renderPage = () => {
         const page = createInteractionDemo();
         page.settings = { ...page.settings, maxWidth: 1330, canvasHeight: 1502 };
         page.blocks.find(block=>block.props.label==='提交').events.click[1].expression=JSON.stringify('提交成功！<img src=x>');
+        window.page = page;
         flushSync(() => app.render(<StrictMode><InteractivePreview document={page} debug /></StrictMode>));
       };
       window.unmount = () => flushSync(() => app.unmount());
@@ -81,6 +86,13 @@ test('native previews retain bindings, focus, sizing, notices and reset behavior
   assert.ok(dialog());
   window.perform(()=>dialog().querySelector('button').click());
   assert.equal(dialog(),null);
+  window.reopenPage();
+  assert.equal(doc.querySelector('input[placeholder="试着输入一个名字"]').value, '小林', 'reopening the page restores saved control values');
+  assert.equal(submit().disabled, false, 'restored variables also update dependent bindings');
+  window.perform(() => doc.querySelector('button[title="重置运行数据"]').click());
+  window.reopenPage();
+  assert.equal(doc.querySelector('input[placeholder="试着输入一个名字"]').value, '');
+  assert.equal(submit().disabled, true, 'reset clears the values restored by future mounts');
   window.renderPage();
   assert.equal(doc.querySelector('input[placeholder="试着输入一个名字"]').value,'');
   assert.equal(submit().disabled,true);

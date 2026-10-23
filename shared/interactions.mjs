@@ -7,6 +7,56 @@ export function createInteractionRuntime(config, options = {}) {
   let state = clone(initial), disposed = false, epoch = 0;
   const cancellations = new Set(), reported = new Set();
   const log = (level, message) => { if (!disposed) options.onLog?.({ level, message: String(message).slice(0, 2000), time: Date.now() }); };
+  let restored = false, storageWarning = false;
+  // Storage is opt-in at the runtime boundary: validators and expression helpers stay pure.
+  // Restore after mounting, so React rendering and server rendering never write browser data.
+  function withStorage(callback) {
+    if (!options.storageKey || typeof window === 'undefined') return;
+    try { callback(window.localStorage); }
+    catch {
+      if (!storageWarning) { storageWarning = true; log('warning', '无法保存或读取浏览器变量，当前页面仍可使用，重新打开后可能恢复初始值。'); }
+    }
+  }
+  function savedVariables(storage) {
+    const raw = storage.getItem(options.storageKey);
+    let record;
+    try { record = JSON.parse(raw); } catch { /* Ignore damaged browser data. */ }
+    const saved = {};
+    if (record?.version === 1 && record.variables && typeof record.variables === 'object') {
+      for (const [name, variable] of variables) {
+        if (variable.persistent === false || !Object.hasOwn(record.variables, name)) continue;
+        const entry = record.variables[name];
+        if (entry?.type !== variable.type || JSON.stringify(entry.initial) !== JSON.stringify(variable.initial)) continue;
+        try { saved[name] = { type: variable.type, initial: variable.initial, value: validateValue(name, entry.value) }; }
+        catch { /* An invalid cached value must not discard other valid variables. */ }
+      }
+    }
+    return { raw, saved };
+  }
+  function writeSaved(storage, saved, raw) {
+    if (!Object.keys(saved).length) { if (raw !== null) storage.removeItem(options.storageKey); return; }
+    const json = JSON.stringify({ version: 1, variables: saved });
+    if (json !== raw) storage.setItem(options.storageKey, json);
+  }
+  function persist(name) {
+    withStorage(storage => {
+      const { raw, saved } = savedVariables(storage);
+      const variable = variables.get(name);
+      if (variable.persistent !== false) saved[name] = { type: variable.type, initial: variable.initial, value: state[name] };
+      // Merge only this write, preserving changes made by another preview or browser tab.
+      writeSaved(storage, saved, raw);
+    });
+  }
+  function restore() {
+    if (restored) return;
+    restored = true;
+    withStorage(storage => {
+      const { raw, saved } = savedVariables(storage);
+      state = { ...state, ...Object.fromEntries(Object.entries(saved).map(([name, entry]) => [name, entry.value])) };
+      // Drop deleted/disabled variables and values from an older type or initial value.
+      writeSaved(storage, saved, raw);
+    });
+  }
   function parse(source) {
     if (typeof source !== 'string' || source.length > 1000) throw new Error('表达式最长 1000 字符');
     const tokens = [];
@@ -92,6 +142,7 @@ export function createInteractionRuntime(config, options = {}) {
     if (disposed) return;
     const next = validateValue(name, value);
     state = { ...state, [name]: next };
+    persist(name);
     log('state', `${name} ← ${JSON.stringify(next).slice(0, 300)}`);
     options.onState?.(state);
   }
@@ -204,7 +255,7 @@ export function createInteractionRuntime(config, options = {}) {
     for (const message of (result.logs || []).slice(0, 50)) log('info', `${script.name}：${message}`);
     for (const message of notices) options.onNotify?.(message.slice(0, 2000));
   }
-  function reset() { epoch++; for (const cancel of [...cancellations]) cancel(); state = clone(initial); reported.clear(); options.onState?.(state); log('info', '页面数据已重置'); }
+  function reset() { if (disposed) return; epoch++; for (const cancel of [...cancellations]) cancel(); state = clone(initial); withStorage(storage => storage.removeItem(options.storageKey)); reported.clear(); options.onState?.(state); log('info', '页面数据已重置'); }
   async function actions(list, event, generation = epoch) {
     for (const action of list || []) {
       if (disposed || generation !== epoch) return;
@@ -242,7 +293,7 @@ export function createInteractionRuntime(config, options = {}) {
     } catch (error) { log('error', error.message); }
   }
   return { getState: () => state, evaluate, validateExpression: parse, read, setState, dispatch, reset, runScript,
-    activate() { disposed = false; },
+    activate() { disposed = false; restore(); options.onState?.(state); },
     dispose() { disposed = true; epoch++; for (const cancel of [...cancellations]) cancel(); },
   };
 }

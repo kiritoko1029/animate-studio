@@ -23,9 +23,10 @@ import '../page.css';
 import '../native-catalog.css';
 import { PageBlockTheme, PagePreviewTheme, useSystemScheme, type PageThemeSelection } from './PagePreviewTheme';
 import { BlockRuntimeProvider, NativeRuntimeContext, useBlockValue } from './NativeInteractions';
+import { CustomBlockContent } from './custom/CustomComponentFrame';
 
 type BlockRendererProps = { block: Block; settings: PageDocument['settings']; interactive?: boolean; bounded?: boolean; preview?: boolean };
-type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number };
+type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string };
 
 function parseItems(items = '') {
   return items.split('\n').map(line => line.trim()).filter(Boolean).map((line, index) => {
@@ -63,13 +64,14 @@ function NavbarMark({ props }: { props: BlockProps }) {
   </span>;
 }
 
-function BlockContent({ block, interactive, snapshot }: { block: Block; interactive: boolean; snapshot: boolean }) {
+function BlockContent({ block, settings, interactive, snapshot }: { block: Block; settings: PageDocument['settings']; interactive: boolean; snapshot: boolean }) {
   const domId = useId();
   const p = block.props;
   const [inputValue, setInputValue] = useBlockValue<string>('');
   const [checked, setChecked] = useBlockValue(p.checked ?? false, 'checked');
   const [index, setIndex] = useBlockValue(p.value ?? 0);
   if (isExtendedComponent(block.type)) return <CatalogBlock block={{...block, type: block.type}} snapshot={snapshot}/>;
+  if (block.type === 'custom') return <CustomBlockContent block={block} settings={settings} interactive={interactive}/>;
   switch (block.type) {
     case 'navbar': {
       const links = (p.items || '').split(/[,，\n]/).map(item => item.trim()).filter(item => item.split('|')[0].trim());
@@ -126,7 +128,7 @@ export function BlockRenderer({ block: savedBlock, settings, interactive = true,
   const className = `page-block page-block--${block.type}${bounded ? ' page-block--bounded' : ''}`;
   const baseContent = <BlockRuntimeProvider block={block} runtime={runtime}><div className="page-block-content" inert={!enabled} data-interactive={enabled} aria-disabled={!enabled || undefined} onClick={event => {
     if (enabled && event.currentTarget.contains(event.target as Node)) void runtime?.dispatch(block.id, 'click', runtime.read(block.bindings?.value, p.value));
-  }}><PageBlockTheme.Provider value={blockPortalThemeStyle(block, settings)}><AnimateUIProvider {...motionProps<typeof AnimateUIProvider>(block, 'AnimateUIProvider')}><BlockContent block={block} interactive={enabled} snapshot={preview} /></AnimateUIProvider></PageBlockTheme.Provider></div></BlockRuntimeProvider>;
+  }}><PageBlockTheme.Provider value={blockPortalThemeStyle(block, settings)}><AnimateUIProvider {...motionProps<typeof AnimateUIProvider>(block, 'AnimateUIProvider')}><BlockContent block={block} settings={settings} interactive={enabled} snapshot={preview} /></AnimateUIProvider></PageBlockTheme.Provider></div></BlockRuntimeProvider>;
   const content = preview || !p.effect || p.effect === 'none' ? baseContent : <div className="official-effect-boundary" inert={!enabled}><OfficialEffect key={p.effect==='page-transition'?p.effect:`${p.effect}:${JSON.stringify(p.effectOptions ?? {})}`} block={block}>{baseContent}</OfficialEffect></div>;
   if (preview) return <div className={className} data-theme={p.theme??settings.theme} data-page-scheme={getTheme(p.theme??settings.theme, settings.customThemes).scheme} style={style}>{content}</div>;
   if (effect === 'fade') return <FadeIn className={className} data-theme={p.theme??settings.theme} data-page-scheme={getTheme(p.theme??settings.theme, settings.customThemes).scheme} style={style} initialOpacity={reducedMotion ? 1 : 0} transition={{ duration: reducedMotion ? 0 : .42 }}>{content}</FadeIn>;
@@ -184,7 +186,7 @@ export function FreePage({ document, interactive = true, replayKey = 0 }: PageRe
   </div></PagePreviewTheme.Provider>;
 }
 
-export function PageRenderer({ document, interactive = true, replayKey = 0 }: PageRendererProps) {
-  if (interactive && (document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))) return <InteractivePreview key={replayKey} document={document} />;
+export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope }: PageRendererProps) {
+  if (interactive && (document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))) return <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} />;
   return <FreePage document={document} interactive={interactive} replayKey={replayKey} />;
 }

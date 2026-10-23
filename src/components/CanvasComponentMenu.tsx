@@ -1,7 +1,7 @@
 import { useRef, type ReactElement, type KeyboardEvent } from 'react';
 import { ContextMenu } from '@animate-ui/react/primitives/radix-ui/context-menu';
 import { AlignHorizontalDistributeCenter, AlignHorizontalJustifyEnd, AlignHorizontalJustifyStart, ArrowLeftRight, ArrowDown, ArrowUp, ArrowUpToLine, ArrowDownToLine, Copy, Database, Link2, Settings2, Trash2 } from 'lucide-react';
-import { blockName, type Block, type PageDocument } from '../model';
+import { blockLabel, type Block, type PageDocument } from '../model';
 import { ComponentScaleControls } from './ComponentScaleControls';
 import type { HorizontalAlignment } from '../lib/canvas-bounds';
 import type { LayerAction } from '../lib/layers';
@@ -55,14 +55,14 @@ export function CanvasComponentMenu({ block, selectionCount = 1, settings, onBlo
         event.currentTarget.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: Math.max(8, Math.min(rect.left + 24, window.innerWidth - 8)), clientY: Math.max(8, Math.min(rect.top + 24, window.innerHeight - 8)) }));
       }}>{children}</ContextMenu.Trigger>
     {/* Retire the dismissal layer immediately so an exiting menu cannot intercept the next menu. */}
-    {open && !disabled && <ContextMenu.Portal><ContextMenu.Content className="studio-menu canvas-component-menu" aria-label={selectionCount > 1 ? '所选组件操作' : `${blockName(block.type)}操作`} collisionPadding={8} loop
+    {open && !disabled && <ContextMenu.Portal><ContextMenu.Content className="studio-menu canvas-component-menu" aria-label={selectionCount > 1 ? '所选组件操作' : `${blockLabel(block)}操作`} collisionPadding={8} loop
       onEscapeKeyDown={event => {
         // Let the percentage field discard its draft before the menu dismisses.
         if (event.target instanceof HTMLElement && event.target.closest('.canvas-menu-scale input[type="number"]')) event.preventDefault();
       }}
       onCloseAutoFocus={event => { event.preventDefault(); if (restoreFocus.current) trigger.current?.focus({ preventScroll: true }); }}
       onInteractOutside={() => { restoreFocus.current = false; }}>
-      <ContextMenu.Label className="canvas-menu-label">{selectionCount > 1 ? `已选 ${selectionCount} 个组件` : blockName(block.type)}</ContextMenu.Label>
+      <ContextMenu.Label className="canvas-menu-label">{selectionCount > 1 ? `已选 ${selectionCount} 个组件` : blockLabel(block)}</ContextMenu.Label>
       <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'component'))}><Settings2 size={15} />{selectionCount > 1 ? '批量编辑属性' : '编辑属性'}</ContextMenu.Item>
       {selectionCount <= 1 && <>
       <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'logic'))}><Link2 size={15} />绑定属性</ContextMenu.Item>

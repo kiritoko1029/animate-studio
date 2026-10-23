@@ -1,5 +1,5 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-export type Variable = { name: string; type: 'string' | 'number' | 'boolean' | 'object' | 'array'; initial: JsonValue };
+export type Variable = { name: string; type: 'string' | 'number' | 'boolean' | 'object' | 'array'; initial: JsonValue; persistent?: boolean };
 export type Binding = { kind: 'variable' | 'expression'; value: string };
 export type Bindings = Partial<Record<'title' | 'text' | 'label' | 'value' | 'checked' | 'visible' | 'disabled', Binding>>;
 export type Action = { type: 'set'; variable: string; expression: string } | { type: 'toggle'; variable: string } | { type: 'notify' | 'navigate'; expression: string } | { type: 'reset' } | { type: 'script'; scriptId: string } | { type: 'condition'; expression: string; then: Action[]; else: Action[] };
@@ -7,4 +7,4 @@ export type Script = { id: string; name: string; code: string };
 export type InteractionBlock = { id: string; type: string; name?: string; bindings?: Bindings; events?: { click?: Action[]; change?: Action[] } };
 export type InteractionConfig = { variables?: Variable[]; scripts?: Script[]; blocks: InteractionBlock[] };
 export type RuntimeLog = { level: string; message: string; time: number };
-export type RuntimeOptions = { onState?: (state: Record<string, JsonValue>) => void; onLog?: (entry: RuntimeLog) => void; onNotify?: (message: string) => void; onNavigate?: (url: string) => void; runScript?: (script: Script, event: unknown, state: Record<string, JsonValue>) => Promise<{ writes: [string, JsonValue][]; logs: string[]; notices?: string[] }> };
+export type RuntimeOptions = { storageKey?: string; onState?: (state: Record<string, JsonValue>) => void; onLog?: (entry: RuntimeLog) => void; onNotify?: (message: string) => void; onNavigate?: (url: string) => void; runScript?: (script: Script, event: unknown, state: Record<string, JsonValue>) => Promise<{ writes: [string, JsonValue][]; logs: string[]; notices?: string[] }> };

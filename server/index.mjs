@@ -6,6 +6,7 @@ import { ValidationError, validateSaveRequest } from './validation.mjs';
 import { createNodeDatabase, applyNodeMigrations, newPageId, newShareToken } from './node-database.ts';
 import { createAuthFactory, resolveCapabilities, resolveSessionUser } from './auth-factory.ts';
 import { createPageRepository } from '../db/page-repository.ts';
+import { createComponentRepository } from '../db/component-repository.ts';
 import { handleAccountApi, toResponsePayload } from './account-api.ts';
 import { createResendSender } from './resend-sender.ts';
 
@@ -123,6 +124,7 @@ async function createAccountStack(production, dataDir) {
     const repository = createPageRepository(database.db, database.schema, database.dialect);
     const context = {
       repository,
+      components: createComponentRepository(database.db, database.schema, database.dialect),
       newPageId,
       newShareToken,
       canonicalOrigin: factory.baseURL,

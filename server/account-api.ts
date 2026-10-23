@@ -1,6 +1,8 @@
 import { validateAccountPage } from './auth-factory.ts';
 import { readBoundedJson } from './bounded-body.ts';
 import { isValidId, createPageRepository } from '../db/page-repository.ts';
+import type { createComponentRepository } from '../db/component-repository.ts';
+import { customComponentLimits, validateCustomComponentDefinition, type CustomComponentDefinition } from '../shared/custom-components.mjs';
 import type { PageDocument } from '../src/model';
 
 /**
@@ -17,7 +19,10 @@ import type { PageDocument } from '../src/model';
 export type AccountApiContext = {
   auth: { api: Record<string, (...args: unknown[]) => Promise<unknown>> };
   repository: ReturnType<typeof createPageRepository>;
+  /** Account custom components; component endpoints answer 503 without it. */
+  components?: ReturnType<typeof createComponentRepository>;
   newPageId: () => string;
+  newComponentId?: () => string;
   newShareToken: () => string;
   capabilities: { cloudEnabled: boolean; emailEnabled: boolean; githubEnabled: boolean };
   resolveUser: (request: Request) => Promise<{ id: string; email: string; name: string } | null>;
@@ -57,6 +62,15 @@ export async function handleAccountApi(
   // when no provider is configured.
   if (path === '/api/account/config' && method === 'GET') {
     return json(context.capabilities);
+  }
+
+  // Public component snapshots. Only the published copy is returned, without
+  // the owner or the private component id; closing the share removes it.
+  if (path.startsWith('/api/shared/components/')) {
+    const token = path.slice('/api/shared/components/'.length);
+    if (method !== 'GET' || !/^[A-Za-z0-9_-]{16,64}$/.test(token) || !context.components) return apiError(404, '组件分享不存在或已关闭。');
+    const published = await context.components.findPublished(token);
+    return published ? json(published) : apiError(404, '组件分享不存在或已关闭。');
   }
 
   if (path.startsWith('/api/shared/')) {
@@ -130,6 +144,58 @@ export async function handleAccountApi(
     return apiError(404, '未找到 API。');
   }
 
+  const componentsPrefix = '/api/account/components';
+  if (path === componentsPrefix || path.startsWith(`${componentsPrefix}/`)) {
+    const components = context.components;
+    if (!components) return apiError(503, '服务端未启用账号组件存储。');
+    if (path === componentsPrefix) {
+      if (method === 'GET') return json({ components: await components.list(session.id) });
+      if (method === 'POST') {
+        const body = await readComponentBody(request, false);
+        if (isApiResponse(body)) return body;
+        if (await components.count(session.id) >= customComponentLimits.perAccount) {
+          return apiError(409, `每个账号最多保存 ${customComponentLimits.perAccount} 个组件，请先删除不需要的组件。`);
+        }
+        return json(await components.create(session.id, body.component, (context.newComponentId ?? context.newPageId)()), 201);
+      }
+      return apiError(405, '不支持此请求方法。');
+    }
+    const rest = path.slice(componentsPrefix.length + 1).split('/');
+    const componentId = rest[0];
+    if (!isValidId(componentId)) return apiError(404, '未找到该组件。');
+    if (rest.length === 1) {
+      if (method === 'GET') {
+        const record = await components.findOwned(session.id, componentId);
+        return record ? json(record) : apiError(404, '未找到该组件。');
+      }
+      if (method === 'PUT') {
+        const body = await readComponentBody(request, true);
+        if (isApiResponse(body)) return body;
+        const result = await components.update(session.id, componentId, body.component, body.baseRevision!);
+        if (!result) return apiError(404, '未找到该组件。');
+        if ('conflict' in result) return json({ error: '组件已在其他地方更新，请重新打开后再保存，或另存为新组件。', revision: result.conflict }, 409);
+        return json(result.record);
+      }
+      if (method === 'DELETE') {
+        const removed = await components.remove(session.id, componentId);
+        return removed ? noContent() : apiError(404, '未找到该组件。');
+      }
+      return apiError(405, '不支持此请求方法。');
+    }
+    if (rest.length === 2 && rest[1] === 'share') {
+      if (method === 'POST') {
+        const published = await components.publish(session.id, componentId, context.newShareToken());
+        return published ? json(published) : apiError(404, '未找到该组件。');
+      }
+      if (method === 'DELETE') {
+        const revoked = await components.unpublish(session.id, componentId);
+        return revoked ? noContent() : apiError(404, '未找到该组件分享。');
+      }
+      return apiError(405, '不支持此请求方法。');
+    }
+    return apiError(404, '未找到 API。');
+  }
+
   if (path === '/api/account/preferences') {
     if (method === 'GET') return json(await repository.getPreferences(session.id));
     if (method === 'PATCH' || method === 'PUT') {
@@ -154,6 +220,23 @@ async function readJsonBody(request: Request): Promise<unknown | ApiResponse> {
   const result = await readBoundedJson(request);
   if (!result.ok) return apiError(result.status, result.message);
   return result.value;
+}
+
+/** `{ component }` for create, `{ component, baseRevision }` for update; nothing else is accepted. */
+async function readComponentBody(request: Request, update: boolean): Promise<{ component: CustomComponentDefinition; baseRevision?: number } | ApiResponse> {
+  const body = await readJsonBody(request);
+  if (isApiResponse(body)) return body;
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.getPrototypeOf(body) !== Object.prototype) return apiError(400, '请求格式不正确。');
+  const record = body as Record<string, unknown>;
+  const allowed = update ? ['component', 'baseRevision'] : ['component'];
+  if (Object.keys(record).some(key => !allowed.includes(key)) || !('component' in record)) return apiError(400, '请求格式不正确。');
+  if (update && (typeof record.baseRevision !== 'number' || !Number.isInteger(record.baseRevision) || record.baseRevision < 1)) return apiError(400, 'baseRevision 必须是正整数。');
+  try {
+    const component = validateCustomComponentDefinition(record.component);
+    return update ? { component, baseRevision: record.baseRevision as number } : { component };
+  } catch (error) {
+    return apiError(400, error instanceof Error ? error.message : '组件数据不正确。');
+  }
 }
 
 async function readValidatedPage(request: Request): Promise<PageDocument | ApiResponse> {

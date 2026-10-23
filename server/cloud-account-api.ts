@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { createAuthFactory, resolveCapabilities, resolveSessionUser } from './auth-factory.ts';
 import { createPageRepository } from '../db/page-repository.ts';
+import { createComponentRepository } from '../db/component-repository.ts';
 import { handleAccountApi, toResponsePayload } from './account-api.ts';
 import { createResendSender } from './resend-sender.ts';
 import * as sqliteSchema from '../db/schema.ts';
@@ -71,6 +72,7 @@ export async function handleCloudAccountApi(request: Request, env: Env): Promise
     const result = await handleAccountApi(request, {
       auth: factory.auth as never,
       repository,
+      components: createComponentRepository(database.db as never, database.schema as never, database.provider),
       newPageId: () => randomUUID(),
       newShareToken: () => randomUUID().replaceAll('-', ''),
       canonicalOrigin: origin,

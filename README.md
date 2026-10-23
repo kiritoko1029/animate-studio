@@ -6,6 +6,8 @@
 
 [Live demo](https://animate-studio.vme5.de/) · **English** · [简体中文](README.zh-CN.md) · [User guide (中文)](docs/user-guide.zh-CN.md)
 
+See the [brand guidelines](docs/brand-guidelines.md) for the Keyframe A mark, its design provenance, downloadable assets, and generation workflow.
+
 ![Animate Studio workbench](docs/images/studio.png)
 
 Build a page by placing components on the canvas, editing their properties, and connecting them through shared state and events. Preview interactions as you work, then export HTML, Vue, React, or editable page JSON.
@@ -14,6 +16,7 @@ Build a page by placing components on the canvas, editing their properties, and 
 
 - **Free-form canvas** — drag, resize, align to a configurable grid, pan, and zoom from 5% to 400% around the pointer. Includes layers, undo/redo, and desktop/mobile previews.
 - **85 components** — layouts, forms, cards, navigation, overlays, buttons, animated text, and backgrounds. Search by Chinese or English names.
+- **Custom components** — write HTML, CSS and JavaScript with starter templates, live sandboxed previews and an in-editor guide. Save locally or to an account, share a published snapshot, and add independent copies to pages. [Component designer guide (中文)](docs/custom-components.zh-CN.md).
 - **Themes** — a monochrome light/dark workbench, eight page presets, independent component themes, and a custom theme designer.
 - **Component interactions** — shared variables, property bindings, expressions, conditional actions, and click/change events. Expression suggestions use the variables defined in your page.
 - **JavaScript editor** — syntax highlighting, autocomplete, syntax checks, test runs, and runtime logs. Built-in helpers include `ctx.fetchJSON`, `ctx.setState`, `ctx.notify`, and `ctx.sleep`.
@@ -49,7 +52,7 @@ NODE_ENV=production npm start
 
 1. Add a component from the library, then drag and resize it on the canvas.
 2. Edit its content, appearance, layout, and theme in the inspector.
-3. Open **Page data / 页面数据** to define variables. Use **Component interactions / 组件联动** to connect properties and events.
+3. Open **Data & scripts / 数据与脚本** above the canvas to define variables. Use **Component interactions / 组件联动** to connect properties and events.
 4. Test the result in the preview, then use **Export / 导出** to download code or page JSON.
 
 The workbench currently uses a Chinese interface. The [detailed user guide](docs/user-guide.zh-CN.md) covers expressions, event actions, scripts, themes, and export integration.

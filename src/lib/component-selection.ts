@@ -2,6 +2,7 @@ import { defaultFrame, type Block, type BlockFrame, type BlockProps, type PageDo
 import { canvasBounds, clampFrame } from './canvas-bounds.ts';
 import { resetThemeOverrides, type ThemeId } from './themes.ts';
 import type { AnimationValue } from '../../shared/animation-settings.mjs';
+import { customBlockPropKeys, customFieldKeys } from '../../shared/custom-components.mjs';
 
 export function selectComponentIds(current: string[], id: string | null, additive = false) {
   if (!id) return [];
@@ -35,10 +36,18 @@ export function translateSelection(frames: Record<string, BlockFrame>, settings:
   return Object.fromEntries(Object.entries(frames).map(([id, frame]) => [id, { ...frame, x: frame.x + x, y: frame.y + y }]));
 }
 
+/** Custom instances only store their declared fields and wrapper appearance. */
+function applicablePatch(block: Block, patch: Partial<BlockProps>): Partial<BlockProps> {
+  if (block.type !== 'custom') return patch;
+  const declared = block.props.custom?.fields ?? {};
+  return Object.fromEntries(Object.entries(patch).filter(([key]) => key !== 'custom' && customBlockPropKeys.includes(key)
+    && (!(customFieldKeys as readonly string[]).includes(key) || Object.hasOwn(declared, key))));
+}
+
 /** Batch edits touch only the explicit fields; unrelated props and bindings stay intact. */
 export function patchSelection(page: PageDocument, ids: string[], patch: Partial<BlockProps>): PageDocument {
   const selected = new Set(ids);
-  return { ...page, blocks: page.blocks.map(block => selected.has(block.id) ? { ...block, props: { ...block.props, ...patch } } : block) };
+  return { ...page, blocks: page.blocks.map(block => selected.has(block.id) ? { ...block, props: { ...block.props, ...applicablePatch(block, patch) } } : block) };
 }
 
 export function themeSelection(page: PageDocument, ids: string[], theme?: ThemeId): PageDocument {

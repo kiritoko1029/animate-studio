@@ -10,7 +10,8 @@ function DialogHeading({ title, close }: { title: string; close: () => void }) {
 }
 const errorText = (error: unknown) => error instanceof Error ? error.message : '操作失败，请重试。';
 
-function LoginDialog({ onClose }: { onClose: () => void }) {
+/** Shared by the header and by features that need the real sign-in entry. */
+export function LoginDialog({ onClose }: { onClose: () => void }) {
   const { capabilities, refresh, announceChange } = useAccount();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');

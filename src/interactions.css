@@ -28,6 +28,8 @@
 .variable-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .variable-card code { font-size: 12px; font-weight: 600; color: var(--studio-600); overflow: hidden; text-overflow: ellipsis; }
 .variable-identity > span { font-size: 10px; background: var(--studio-50); color: var(--studio-500); padding: 2px 5px; border-radius: 4px; }
+.variable-persistence { display: flex; flex-basis: 100%; align-items: center; gap: 5px; color: var(--studio-600); font-size: 10px; cursor: pointer; }
+.variable-persistence input[type="checkbox"] { width: 13px; height: 13px; margin: 0; padding: 0; accent-color: var(--studio-600); }
 .variable-delete { display: flex; align-items: center; justify-content: center; padding: 4px; background: transparent; border: 0; color: var(--studio-500); cursor: pointer; }
 .variable-value { min-width: 0; }
 .variable-value .logic-field { margin: 0; gap: 0; }

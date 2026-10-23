@@ -5,6 +5,9 @@ import { createInteractionRuntime } from '../../../shared/interactions.mjs';
 import { defaultFrame, safeUrl, isExtendedComponent, type BlockProps, type PageDocument } from '../../model.ts';
 import { blockThemeStyle, pageThemeStyle } from '../themes.ts';
 import { bind, h, js, type Element, type Style } from './nodes.ts';
+import { customComponentSandbox } from '../../../shared/custom-components.mjs';
+import { buildComponentDocument, randomToken } from '../custom-components/document.ts';
+import { customComponentTheme, instanceProps } from '../custom-components/instances.ts';
 
 type Assets = Record<string, string>;
 const rows = (items = '') => items.split('\n').map(line => line.trim()).filter(Boolean).map(line => line.split('|').map(cell => cell.trim()));
@@ -207,6 +210,13 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
             ...[1, 2, 3, 4, 5].map(star => h('label', { class: bind(`'page-rating-star' + (${value.expression} >= ${star} ? ' is-filled' : '')`, `page-rating-star${Number(value.initial) >= star ? ' is-filled' : ''}`) }, [h('input', { type: 'radio', name: id(), value: star, checked: bind(`${value.expression} === ${star}`, value.initial === star), 'aria-label': `${star} 星` }, [], { change: value.set(String(star)) }), icon('star', 28)])),
             h('output', { 'aria-live': 'polite' }, [bind(value.expression, value.initial), ' / 5']),
           ]), p.text ? h('p', { id: id('-hint'), class: 'page-detail' }, [p.text]) : undefined]);
+        }
+        case 'custom': {
+          // Same sandboxed document as the native renderer; fields are fixed at export time.
+          const snapshot = p.custom;
+          if (!snapshot) return h('div', { class: 'custom-component-fallback', role: 'alert' }, ['组件定义缺失']);
+          const { html } = buildComponentDocument(snapshot, { channel: `export-${block.id}`, nonce: randomToken(), props: instanceProps(block), theme: customComponentTheme(block, document.settings) });
+          return h('div', { class: 'custom-component-frame', style: { width: '100%', height: '100%' } }, [h('iframe', { title: snapshot.name, sandbox: customComponentSandbox, srcdoc: html, referrerpolicy: 'no-referrer', style: { display: 'block', width: '100%', height: '100%', border: 0 } })]);
         }
         default: { const exhaustive: never = block.type; throw new Error(`不支持导出组件：${exhaustive}`); }
       }

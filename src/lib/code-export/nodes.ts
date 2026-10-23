@@ -18,7 +18,7 @@ export const h = (tag: string, attrs: Attributes = {}, children: Child[] = [], e
 const isBinding = (value: unknown): value is Binding => !!value && typeof value === 'object' && 'expression' in value;
 const booleans = new Set(['checked', 'disabled', 'hidden', 'selected', 'multiple', 'open', 'inert']);
 const voidTags = new Set(['input', 'img', 'hr', 'br', 'meta', 'link']);
-const reactNames: Record<string, string> = { inputmode: 'inputMode', autocomplete: 'autoComplete', maxlength: 'maxLength', popover: 'popover', class: 'className', for: 'htmlFor', tabindex: 'tabIndex', 'stroke-width': 'strokeWidth', 'stroke-linecap': 'strokeLinecap', 'stroke-linejoin': 'strokeLinejoin', viewbox: 'viewBox' };
+const reactNames: Record<string, string> = { inputmode: 'inputMode', autocomplete: 'autoComplete', maxlength: 'maxLength', popover: 'popover', class: 'className', for: 'htmlFor', tabindex: 'tabIndex', 'stroke-width': 'strokeWidth', 'stroke-linecap': 'strokeLinecap', 'stroke-linejoin': 'strokeLinejoin', viewbox: 'viewBox', srcdoc: 'srcDoc', referrerpolicy: 'referrerPolicy' };
 
 function styleObject(style: Style) {
   return Object.fromEntries(Object.entries(style).filter(([, value]) => value !== undefined).map(([key, value]) => [key,

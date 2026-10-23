@@ -22,7 +22,8 @@ export function validateInteractions(page) {
   if (!Array.isArray(variables) || variables.length > 50 || !Array.isArray(scripts) || scripts.length > 30) fail('最多 50 个变量、30 个脚本');
   const names = new Set(), ids = new Set();
   for (const v of variables) {
-    keys(v, ['name', 'type', 'initial']);
+    keys(v, ['name', 'type', 'initial', 'persistent'], ['name', 'type', 'initial']);
+    if (Object.hasOwn(v, 'persistent') && typeof v.persistent !== 'boolean') fail('变量持久化设置必须为布尔值');
     if (typeof v.name !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,39}$/.test(v.name) || ['constructor', 'prototype', '__proto__'].includes(v.name) || names.has(v.name)) fail('变量名须为唯一的英文名称，以字母开头');
     names.add(v.name);
     if (!['string', 'number', 'boolean', 'object', 'array'].includes(v.type)) fail('变量类型无效');

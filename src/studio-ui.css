@@ -16,6 +16,7 @@
 .studio-tabs [data-slot="tabs-trigger"][data-state="active"] { color: var(--studio-950); background: var(--studio-0); box-shadow: 0 0 0 1px var(--studio-200), 0 1px 2px rgb(0 0 0 / .04); }
 .studio-tabs [data-slot="tabs-trigger"]:focus-visible { outline: 2px solid var(--studio-950); outline-offset: -2px; }
 .studio-tabs [data-slot="tabs-trigger"] span, .studio-tabs small { color: var(--studio-500); font-size: 10px; font-variant-numeric: tabular-nums; }
+.studio-tabs.sidebar-tabs { margin-top: 12px; }
 .studio-tabs.inspector-tabs { margin: 12px 10px 0; width: calc(100% - 20px); }
 .studio-tabs.inspector-tabs [data-slot="tabs-trigger"] { padding-inline: 5px; font-size: 11px; }
 .studio-tabs.logic-studio-tabs { margin: 12px 14px 0; width: calc(100% - 28px); }

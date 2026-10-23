@@ -8,6 +8,6 @@ import './export-runtime.css';
 
 export function mount(element: HTMLElement, document: PageDocument, assets: Record<string,string> = {}) {
   const root = createRoot(element);
-  root.render(<MotionConfig reducedMotion="user"><AnimateUIProvider reducedMotion="user"><PageAssets.Provider value={assets}><InteractivePreview document={document}/></PageAssets.Provider></AnimateUIProvider></MotionConfig>);
+  root.render(<MotionConfig reducedMotion="user"><AnimateUIProvider reducedMotion="user"><PageAssets.Provider value={assets}><InteractivePreview document={document} persistenceScope="published"/></PageAssets.Provider></AnimateUIProvider></MotionConfig>);
   return () => root.unmount();
 }

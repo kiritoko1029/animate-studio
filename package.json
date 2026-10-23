@@ -15,7 +15,8 @@
     "deploy:cloudflare": "void prepare && npm run typecheck && void deploy --platform cloudflare",
     "cloudflare:login": "void cloudflare login",
     "cloudflare:status": "void cloudflare status",
-    "db:migrate:node": "node --env-file-if-exists=.env scripts/migrate-accounts.mjs"
+    "db:migrate:node": "node --env-file-if-exists=.env scripts/migrate-accounts.mjs",
+    "brand:generate": "node scripts/generate-brand-assets.mjs"
   },
   "dependencies": {
     "@animate-ui/react": "2.0.0",
@@ -30,6 +31,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@floating-ui/react": "0.27.20",
     "@lezer/highlight": "^1.2.5",
+    "@lezer/javascript": "1.5.6",
     "@shadcn/react": "0.3.1",
     "better-auth": "^1.7.11",
     "better-sqlite3": "^12.11.1",
@@ -58,6 +60,7 @@
     "@vitejs/plugin-react": "6.1.2",
     "esbuild": "0.28.2",
     "jsdom": "^26.1.0",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "typescript": "~5.9.3",
     "vite": "8.3.4",
