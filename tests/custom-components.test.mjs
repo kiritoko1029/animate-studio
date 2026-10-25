@@ -94,7 +94,7 @@ test('instances are independent copies; updates and resets are explicit and keep
 });
 
 test('the component document is sandbox-ready: nonce CSP, no network, escaped code and mapped lines', () => {
-  const hostile = definition({ html: '<p>a</p></script><script>alert(1)</script><textarea>', css: 'p{color:red}</style><script>alert(2)</script>', js: 'const a = "</script><script>alert(3)</script>";\n<!-- legacy\nthrow new Error("line 3");' });
+  const hostile = definition({ html: '<p>a</p></script><script>alert(1)</script><textarea>', css: 'html,body{overflow:auto}p{color:red}</style><script>alert(2)</script>', js: 'const a = "</script><script>alert(3)</script>";\n<!-- legacy\nthrow new Error("line 3");' });
   const { html, jsLine } = buildComponentDocument(hostile, { channel: 'ch', nonce: 'abc123', props: { title: 'T' }, theme: fallbackComponentTheme });
   const policy = componentContentSecurityPolicy('abc123');
   assert.ok(html.includes(`content="${policy}"`));
@@ -105,9 +105,11 @@ test('the component document is sandbox-ready: nonce CSP, no network, escaped co
   const parsed = new JSDOM(html).window.document;
   assert.equal(parsed.querySelectorAll('script').length, 3, 'probe, bootstrap and JavaScript panel only');
   assert.equal(parsed.querySelectorAll('style').length, 2);
+  assert.match(parsed.querySelectorAll('style')[0].textContent, /html,body\{margin:0;height:100%;overflow:hidden\}/, 'the component root does not show an unintended scrollbar');
+  assert.match(parsed.querySelectorAll('style')[1].textContent, /^html,body\{overflow:auto\}/, 'author styles load last and can explicitly restore root scrolling');
   assert.equal(parsed.querySelector('body').children.length, 3, 'author markup is data until the bootstrap inserts it');
   assert.equal(parsed.querySelectorAll('script')[2].textContent, `\n${escapeScriptText(hostile.js)}\n`);
-  assert.ok(parsed.querySelectorAll('style')[1].textContent.startsWith('p{color:red}<\\/style>'));
+  assert.ok(parsed.querySelectorAll('style')[1].textContent.includes('p{color:red}<\\/style>'));
   assert.equal(html.split('\n')[jsLine - 1], escapeScriptText('const a = "</script><script>alert(3)</script>";'));
   assert.equal(escapeScriptText('x</SCRIPT>'), 'x\\x3C/SCRIPT>');
   const theme = sanitizeComponentTheme({ ...fallbackComponentTheme, accent: 'red;}</style><script>', font: 'x</style>', radius: '9999999px', scheme: 'evil' });

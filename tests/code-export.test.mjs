@@ -26,6 +26,8 @@ test('only embedded previews delegate document scrolling to the editor', t => {
     const dom = new JSDOM(output.content, { virtualConsole: new VirtualConsole() });
     t.after(() => dom.window.close());
     const { window } = dom;
+    assert.match(output.content, /\.as-page-block--bounded, \.as-page-free-frame > \.as-page-block \{[^}]*overflow: hidden;/, 'fixed canvas blocks do not become nested scrollers');
+    assert.match(output.content, /\.as-page-block--bounded > \.as-page-block-content, \.as-page-free-frame > \.as-page-block > \.as-page-block-content \{ flex: 1; width: 100%; min-height: 0; \}/, 'content fills the padded frame without adding another 100% height');
     for (const element of [window.document.documentElement, window.document.body]) {
       assert.equal(window.getComputedStyle(element).overflow === 'hidden', preview,
         'standalone HTML must retain page scrolling while the iframe has a single outer scroller');

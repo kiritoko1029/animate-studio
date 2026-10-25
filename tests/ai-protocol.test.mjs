@@ -301,4 +301,11 @@ test('the system prompt explains each component, its natural size and how stylin
   const example = JSON.parse(aiSystemPrompt.split('\n').find(line => line.includes('"op":"page"')));
   assert.equal(example.settings.maxWidth, undefined, 'the example does not teach resizing the canvas'); assert.equal(example.settings.canvasHeight, undefined);
   assert.match(aiSystemPrompt, /button 240x100: .*fill=accent/); assert.doesNotMatch(aiSystemPrompt, /官方属性/, 'editor-only hints stay out of the prompt');
+  assert.match(aiSystemPrompt, /make definition\.size exactly match its planned frame width and height/);
+  assert.match(aiSystemPrompt, /Do not use 100vh as a component-height shortcut/);
+  assert.match(aiSystemPrompt, /Do not put overflow:auto on html, body or the outermost wrapper/);
+  assert.match(aiSystemPrompt, /confine intentional scrolling to local regions such as lists and code blocks/);
+  assert.match(aiSystemPrompt, /frame\.height includes vertical padding and all rendered content/);
+  assert.match(aiSystemPrompt, /Text paragraphs use line-height 1\.95 and headings use 1\.5/);
+  assert.match(aiSystemPrompt, /never rely on scrolling inside a block/);
 });

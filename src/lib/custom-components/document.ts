@@ -80,7 +80,7 @@ export const escapeStyleText = (css: string) => css.replace(/<\/(style)/gi, '<\\
 
 const baseCss = (theme: ComponentTheme) => `:root{--as-accent:${theme.accent};--as-on-accent:${theme.onAccent};--as-text:${theme.text};--as-muted:${theme.muted};--as-surface:${theme.surface};--as-panel:${theme.panel};--as-canvas:${theme.canvas};--as-border:${theme.border};--as-radius:${theme.radius};--as-font:${theme.font};color-scheme:normal}
 *,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;height:100%}
+html,body{margin:0;height:100%;overflow:hidden}
 body{font-family:var(--as-font);color:var(--as-text);background:transparent;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-wrap:anywhere}`;
 
 /**
