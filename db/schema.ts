@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'void/schema-d1';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'void/schema-d1';
 
 /**
  * Better Auth core tables for Cloudflare D1 (SQLite dialect). Field names use
@@ -76,13 +76,23 @@ export const userPreferences = sqliteTable('user_preference', {
 });
 
 /**
- * Custom components saved to an account. `definition` is the validated
- * HTML/CSS/JavaScript contract as JSON; `revision` increases on every save and
- * guards concurrent edits.
+ * Owner-scoped library organization, kept separate from reusable component definitions.
+ * The concurrent 50-folder limit is enforced by a trigger in the folder migration;
+ * Drizzle's schema generator cannot express that trigger.
  */
+export const studioComponentFolders = sqliteTable('studio_component_folder', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, table => [uniqueIndex('studio_component_folder_user_name_idx').on(table.userId, table.name)]);
+
+/** Validated component definitions; revision tracks source edits, independently of folders. */
 export const studioComponents = sqliteTable('studio_component', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  folderId: text('folder_id').references(() => studioComponentFolders.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   definition: text('definition').notNull(),

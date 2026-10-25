@@ -5,6 +5,7 @@ import { createRateLimiter, readFrameMessage, updateMessage, type FrameMessage }
 import { openComponentLink } from '../../lib/custom-components/links';
 import { customComponentTheme, instanceProps } from '../../lib/custom-components/instances';
 import { NativeRuntimeContext } from '../NativeInteractions';
+import { guardLoops } from '../../lib/custom-components/loop-guard';
 import type { Block, PageDocument } from '../../model';
 import '../../custom-components.css';
 
@@ -97,5 +98,6 @@ export function CustomBlockContent({ block, settings, interactive }: { block: Bl
   if (!snapshot) return <div className="custom-component-fallback" role="alert"><strong>组件定义缺失</strong><span>请删除此组件后重新从“我的组件”添加。</span></div>;
   const clickActions = Boolean(block.events?.click?.length);
   return <CustomComponentFrame code={snapshot} props={instanceProps(block)} theme={customComponentTheme(block, settings)} title={snapshot.name} interactive={interactive}
+    transformScript={guardLoops}
     suppressLinks={clickActions} onClick={runtime && clickActions ? () => { void runtime.dispatch(block.id, 'click'); } : undefined}/>;
 }

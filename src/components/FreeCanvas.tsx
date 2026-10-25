@@ -1,3 +1,4 @@
+import type { AiChange } from '../lib/ai/types';
 import { blockLabel } from '../i18n/catalog';
 import { t } from '../i18n';
 import { useCanvasViewport } from './useCanvasViewport';
@@ -25,6 +26,8 @@ import { frameUnion, isSelectionInput, selectionFrames, translateSelection } fro
 export type CanvasFrame = { x: number; y: number; width: number; height: number };
 export type FreeCanvasProps = {
   document: PageDocument;
+  aiBusy?: boolean;
+  aiChanges?: AiChange[];
   revealKey?: number;
   selected: string | null;
   selectedIds?: string[];
@@ -113,7 +116,7 @@ function nextGestureFrame(gesture: Gesture, clientX: number, clientY: number, bo
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelectAll, onFramesChange, onFrameChange, onBlockChange, onCanvasSizeChange, onPageMarginChange, onPageSettings, onDelete, onDuplicate, onInspect, onCreateVariable, onAlign, onFillWidth, onLayerChange, onInsertAfter, isDragging, device, revealKey = 0 }: FreeCanvasProps) {
+export function FreeCanvas({ document, aiBusy = false, aiChanges = [], selected, selectedIds, onSelect, onSelectAll, onFramesChange, onFrameChange, onBlockChange, onCanvasSizeChange, onPageMarginChange, onPageSettings, onDelete, onDuplicate, onInspect, onCreateVariable, onAlign, onFillWidth, onLayerChange, onInsertAfter, isDragging, device, revealKey = 0 }: FreeCanvasProps) {
   const designWidth = Math.max(40, document.settings.maxWidth);
   const designHeight = Math.max(32, document.settings.canvasHeight ?? 1400);
   const bounds = canvasBounds(document.settings);
@@ -134,15 +137,22 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas' });
   const [stageElement, setStageElement] = useState<HTMLDivElement | null>(null);
   const stageRef = useCallback((node: HTMLDivElement | null) => { setNodeRef(node); setStageElement(node); }, [setNodeRef]);
-  const camera = useCanvasViewport({ width: designWidth, height: designHeight }, device === 'mobile', isDragging || !!live);
+  const camera = useCanvasViewport({ width: designWidth, height: designHeight }, device === 'mobile', isDragging || aiBusy || !!live);
   const { scale } = camera.view;
   useEffect(() => {
     const index = document.blocks.findIndex(block => block.id === selected);
-    if (index >= 0 && !multiple) camera.reveal(defaultFrame(document.blocks[index], index, document.settings));
-  }, [selected, revealKey]);
+    if (index >= 0 && !multiple) camera.reveal(defaultFrame(document.blocks[index], index, document.settings), aiBusy);
+  }, [selected, revealKey, aiBusy]);
   useEffect(() => {
-    if (interactingId && (multiple || selected !== interactingId || isDragging || !document.blocks.some(block => block.id === interactingId))) setInteractingId(null);
-  }, [selected, multiple, isDragging, interactingId, document.blocks]);
+    if (interactingId && (aiBusy || multiple || selected !== interactingId || isDragging || !document.blocks.some(block => block.id === interactingId))) setInteractingId(null);
+  }, [selected, multiple, isDragging, aiBusy, interactingId, document.blocks]);
+  useEffect(() => {
+    if (!aiBusy) return;
+    const gesture = gestureRef.current;
+    gestureRef.current = null;
+    if (gesture?.capture.hasPointerCapture(gesture.pointerId)) gesture.capture.releasePointerCapture(gesture.pointerId);
+    setLive(null); setMenuId(null); setInteractingId(null);
+  }, [aiBusy]);
   // Keep the drawn grid legible without changing the actual snapping interval.
   const gridDisplayMultiple = 2 ** Math.max(0, Math.ceil(Math.log2(8 / (grid.gridSize * scale))));
   const displayGridSize = grid.gridSize * gridDisplayMultiple;
@@ -301,6 +311,7 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
                 onOpenChange={open => { setMenuId(open ? block.id : null); if (open && !active) onSelect(block.id); }}
                 onInspect={onInspect} onCreateVariable={onCreateVariable} onAlign={onAlign} onFillWidth={onFillWidth} onDuplicate={onDuplicate} onDelete={onDelete}><div
                 data-block-id={block.id}
+                data-anchor={block.id}
                 data-selected={active || undefined}
                 data-canvas-interactive={interacting || undefined}
                 className={`free-canvas-frame ${active ? 'free-canvas-frame--selected' : ''} ${interacting ? 'free-canvas-frame--interactive' : ''} ${live?.id === block.id ? 'free-canvas-frame--active' : ''}`}
@@ -323,7 +334,7 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
                 onKeyDown={event => keydown(event, block, frame)}
               >
                 <div className="free-canvas-block-content"><BlockRenderer key={replays[block.id] || 0} block={block} settings={document.settings} interactive={interacting} bounded /></div>
-                {active && !multiple && stageElement && createPortal(<div className="free-canvas-selection-overlay" data-selection-for={block.id} style={{ left: frame.x, top: frame.y, width: frame.width, height: frame.height, zIndex: document.blocks.length + 1 }}>
+                {active && !aiBusy && !multiple && stageElement && createPortal(<div className="free-canvas-selection-overlay" data-selection-for={block.id} style={{ left: frame.x, top: frame.y, width: frame.width, height: frame.height, zIndex: document.blocks.length + 1 }}>
                   <div className={`free-canvas-selection-bar ${frame.x + 280 / scale > designWidth ? 'free-canvas-selection-bar--right' : ''}`} onPointerDown={event => begin(event, block, frame, 'move')}>
                     <span className="free-canvas-selection-label"><Move size={12} /><strong>{name}</strong></span>
                     <span className="free-canvas-selection-actions">
@@ -347,7 +358,7 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
                 </div>, stageElement)}
               </div></CanvasComponentMenu>;
             })}
-            {groupFrame && <div className="free-canvas-selection-overlay" data-selection-count={selectedBlocks.length} style={{ left: groupFrame.x, top: groupFrame.y, width: groupFrame.width, height: groupFrame.height, zIndex: document.blocks.length + 1 }}
+            {groupFrame && !aiBusy && <div className="free-canvas-selection-overlay" data-selection-count={selectedBlocks.length} style={{ left: groupFrame.x, top: groupFrame.y, width: groupFrame.width, height: groupFrame.height, zIndex: document.blocks.length + 1 }}
               onPointerMove={move} onPointerUp={event => finish(event)} onPointerCancel={event => finish(event, true)} onLostPointerCapture={event => finish(event, true)}>
               <div className="free-canvas-selection-bar" onPointerDown={event => begin(event, selectedBlocks[0], groupFrame, 'move')}>
                 <span className="free-canvas-selection-label"><Move size={12}/><strong>{t("已选 {0} 个组件", { 0: selectedBlocks.length })}</strong></span>
@@ -359,6 +370,9 @@ export function FreeCanvas({ document, selected, selectedIds, onSelect, onSelect
               </div>
               <div className="free-canvas-measure"><strong>{Math.round(groupFrame.width)} × {Math.round(groupFrame.height)}</strong><span>{selectedScales.size === 1 ? t("缩放 {0}%", { 0: componentScale(selectedBlocks[0]) }) : t("多种缩放")}</span></div>
             </div>}
+            {aiChanges.filter(change => change.frame).map(change => <div key={change.key} className={`ai-component-change ai-component-change--${change.kind}`} data-ai-change={change.kind} style={{ left: change.frame!.x, top: change.frame!.y, width: change.frame!.width, height: change.frame!.height, zIndex: document.blocks.length + 3 }}>
+              <span className="ai-change-bubble"><span className="ai-change-spark">✦</span>{change.summary}</span>
+            </div>)}
             {live && <div className="free-canvas-guides" aria-hidden="true"><i className="free-canvas-guide-v" style={{ left: live.frame.x }} /><i className="free-canvas-guide-v" style={{ left: live.frame.x + live.frame.width }} /><i className="free-canvas-guide-h" style={{ top: live.frame.y }} /><i className="free-canvas-guide-h" style={{ top: live.frame.y + live.frame.height }} /></div>}
 
           </div>

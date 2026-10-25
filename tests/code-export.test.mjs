@@ -110,6 +110,36 @@ async function mount(format, document, copies = 1, savedStorage = {}) {
 }
 
 for (const format of ['html', 'vue', 'react']) {
+  test(`${format}: stable block anchors take precedence, retain aliases and isolate copied pages`, async t => {
+    const page = createDocument(true);
+    const block = (type, id, y, props = {}) => ({ ...createBlock(type), id, props: { ...createBlock(type).props, ...props }, frame: { x: 32, y, width: 500, height: 160 } });
+    page.blocks = [
+      block('navbar', 'navigation', 32, { items: '价格|#pricing,功能|#features,联系|#contact' }),
+      block('card', 'old-feature-alias', 220),
+      block('pricing', 'pricing', 400),
+      block('text', 'features', 580, { text: 'Stable ID target' }),
+      block('footer', 'page-footer', 760),
+      { ...block('text', 'jump', 940, { text: 'Jump to pricing' }), events: { click: [{ type: 'navigate', expression: '"#pricing"' }] } },
+    ];
+    const fixture = await mount(format, page, 2);
+    t.after(() => { fixture.window.unmountExport?.(); fixture.window.close(); });
+    const roots = [...fixture.window.document.querySelectorAll('.as-export')];
+    assert.equal(roots.length, format === 'html' ? 1 : 2);
+    for (const root of roots) {
+      const pricing = root.querySelector('[data-block-id="pricing"]');
+      assert.equal(pricing.dataset.anchor, 'pricing');
+      await fixture.act(() => root.querySelector('a[href="#pricing"]').click());
+      assert.equal(fixture.window.lastScrolled, pricing);
+      await fixture.act(() => root.querySelector('a[href="#features"]').click());
+      assert.equal(fixture.window.lastScrolled, root.querySelector('[data-block-id="features"]'));
+      await fixture.act(() => root.querySelector('a[href="#contact"]').click());
+      assert.equal(fixture.window.lastScrolled, root.querySelector('.as-page-footer'));
+      await fixture.act(() => root.querySelector('[data-block-id="jump"] p').click());
+      assert.equal(fixture.window.lastScrolled, pricing, 'navigate actions use the same containing page and ID priority');
+    }
+    assert.deepEqual(fixture.errors, []);
+  });
+
   test(`${format}: reopening an exported page restores saved bindings and honors opt-outs`, async t => {
     const { createInteractionDemo } = await import('../src/lib/interactions/demo.ts');
     const page = createInteractionDemo();

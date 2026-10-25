@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
-import { fitCanvasView, zoomCanvasAt, wheelPixels, type CanvasView, type ViewportSize } from '../lib/canvas-view';
+import { fitCanvasView, minCanvasScale, zoomCanvasAt, wheelPixels, type CanvasView, type ViewportSize } from '../lib/canvas-view';
 import { hasCanvasModifier } from '../lib/canvas-shortcuts';
 
 type PanGesture = { pointerId: number; startX: number; startY: number; initial: CanvasView; capture: HTMLElement };
@@ -32,6 +32,8 @@ export function useCanvasViewport(design: ViewportSize, mobile: boolean, busy: b
     }
     setPanning(false);
   };
+
+  useEffect(() => { if (busy) { space.current = false; setSpaceHeld(false); cancelPan(true); } }, [busy]);
 
   useLayoutEffect(() => {
     const element = viewportRef.current;
@@ -127,11 +129,13 @@ export function useCanvasViewport(design: ViewportSize, mobile: boolean, busy: b
     if (pan.current?.pointerId !== event.pointerId) return;
     event.stopPropagation(); cancelPan(cancelled);
   };
-  const reveal = (frame: { x: number; y: number; width: number; height: number }) => {
-    if (settings.current.busy || pan.current) return;
-    const current = viewRef.current;
+  const reveal = (frame: { x: number; y: number; width: number; height: number }, programmatic = false) => {
+    if ((settings.current.busy && !programmatic) || pan.current) return;
+    const previous = viewRef.current;
+    const scale = programmatic && size.current.width > 64 && size.current.height > 64 ? Math.max(minCanvasScale, Math.min(previous.scale, (size.current.width - 64) / frame.width, (size.current.height - 64) / frame.height)) : previous.scale;
+    const current = { ...previous, scale };
     const left = current.x + frame.x * current.scale, top = current.y + frame.y * current.scale;
-    if (left >= 32 && left + frame.width * current.scale <= size.current.width - 32 && top >= 32 && top + frame.height * current.scale <= size.current.height - 32) return;
+    if (scale === previous.scale && left >= 32 && left + frame.width * current.scale <= size.current.width - 32 && top >= 32 && top + frame.height * current.scale <= size.current.height - 32) return;
     apply({ ...current, mode: 'manual', x: size.current.width / 2 - (frame.x + frame.width / 2) * current.scale, y: size.current.height / 2 - (frame.y + frame.height / 2) * current.scale });
   };
 

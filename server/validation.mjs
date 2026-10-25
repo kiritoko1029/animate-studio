@@ -9,42 +9,48 @@ import { customComponentLimits, validateCustomBlockProps } from '../shared/custo
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'custom', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300 };
-const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100], contentScale: [componentScaleLimits.min, componentScaleLimits.max] };
+export const numberLimits = { duration: [100, 30000], fontSize: [10, 96], padding: [0, 120], radius: [0, 80], value: [0, 100], max: [1, 100], contentScale: [componentScaleLimits.min, componentScaleLimits.max] };
 const enumValues = { brandIcon: [...Object.keys(navbarIcons), 'none'], effect: ['none','auto-height','blur','click','effect','fade','highlight','magnetic','particles','scroll-fade','shine','slide','theme-toggler','tilt','zoom','spring','page-transition','cursor'], align: ['left', 'center', 'right'], animation: ['none', 'fade', 'slide', 'scale'] };
 const colorPattern = /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i;
 const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
-export class ValidationError extends Error {}
+export class ValidationError extends Error {
+  constructor(message, path) {
+    super(message);
+    if (path !== undefined) this.path = path;
+  }
+}
 
-function fail(message) { throw new ValidationError(message); }
+function fail(message, path) { throw new ValidationError(message, path); }
 
 function record(value, allowedKeys, path) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
-    fail(`${path} 必须是普通对象`);
+    fail(`${path} 必须是普通对象`, path);
   }
   for (const key of Object.keys(value)) {
-    if (forbiddenKeys.has(key) || !allowedKeys.includes(key)) fail(`${path} 包含不支持的属性`);
+    if (forbiddenKeys.has(key) || !allowedKeys.includes(key)) fail(`${path} 包含不支持的属性`, `${path}.${key}`);
   }
 }
 
 function required(value, keys, path) {
-  for (const key of keys) if (!Object.hasOwn(value, key)) fail(`${path}.${key} 不能为空`);
+  for (const key of keys) if (!Object.hasOwn(value, key)) fail(`${path}.${key} 不能为空`, `${path}.${key}`);
 }
 
 function string(value, max, path, allowEmpty = true) {
-  if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim())) fail(`${path} 必须是长度不超过 ${max} 的${allowEmpty ? '' : '非空'}文本`);
+  if (typeof value !== 'string' || value.length > max || (!allowEmpty && !value.trim())) fail(`${path} 必须是长度不超过 ${max} 的${allowEmpty ? '' : '非空'}文本`, path);
 }
 
 function number(value, min, max, path) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) fail(`${path} 必须在 ${min}–${max} 之间`);
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) fail(`${path} 必须在 ${min}–${max} 之间`, path);
 }
 
 function color(value, path) {
-  if (typeof value !== 'string' || !colorPattern.test(value)) fail(`${path} 必须为十六进制颜色`);
+  if (typeof value !== 'string' || !colorPattern.test(value)) fail(`${path} 必须为十六进制颜色`, path);
 }
 
 function validateCustomThemes(value) {
-  if (!Array.isArray(value) || value.length > 30) fail('最多保存 30 套自定义主题');
+  if (!Array.isArray(value)) fail('page.settings.customThemes 必须是数组');
+  if (value.length > 30) fail('最多保存 30 套自定义主题');
   const ids = new Set(themeIds);
   const names = new Set();
   const keys = ['id', ...Object.keys(themes.nature)];
@@ -127,24 +133,24 @@ export function validatePage(page) {
       if (Object.hasOwn(stringLimits, key)) string(value, stringLimits[key], `block.props.${key}`);
       else if (Object.hasOwn(numberLimits, key)) number(value, ...((key === 'value' && ['countingNumber','scrollingNumber','slidingNumber','githubStars','githubStarsButton'].includes(block.type)) ? [0, 1000000000] : numberLimits[key]), `block.props.${key}`);
       else if (key === 'motion' || key === 'effectOptions') {
-        try { validateAnimationSettings(key === 'motion' ? block.type : `effect:${block.props.effect}`, value); } catch (error) { fail(error.message); }
+        try { validateAnimationSettings(key === 'motion' ? block.type : `effect:${block.props.effect}`, value); } catch (error) { fail(error.message, `block.props.${key}`); }
       } else if (key === 'theme') {
-        if (!validThemes.has(value)) fail('block.props.theme 的主题无效');
+        if (!validThemes.has(value)) fail('block.props.theme 的主题无效', 'block.props.theme');
       } else if (Object.hasOwn(enumValues, key)) {
-        if (!enumValues[key].includes(value)) fail(`block.props.${key} 的选项无效`);
+        if (!enumValues[key].includes(value)) fail(`block.props.${key} 的选项无效`, `block.props.${key}`);
       } else if (key === 'checked') {
-        if (typeof value !== 'boolean') fail('block.props.checked 必须为布尔值');
+        if (typeof value !== 'boolean') fail('block.props.checked 必须为布尔值', 'block.props.checked');
       } else color(value, `block.props.${key}`);
-      if ((key === 'url' || key === 'imageUrl') && !safeUrl(value, key === 'imageUrl')) fail(`block.props.${key} 必须是安全的链接`);
+      if ((key === 'url' || key === 'imageUrl') && !safeUrl(value, key === 'imageUrl')) fail(`block.props.${key} 必须是安全的链接`, `block.props.${key}`);
     }
     const { value, max } = block.props;
-    if (block.props.contentScale !== undefined && !Number.isInteger(block.props.contentScale)) fail('组件整体缩放必须为整数百分比');
+    if (block.props.contentScale !== undefined && !Number.isInteger(block.props.contentScale)) fail('组件整体缩放必须为整数百分比', 'block.props.contentScale');
     if (['slider', 'progress', 'pagination'].includes(block.type) && value !== undefined && value > (max ?? (block.type === 'pagination' ? 5 : 100))) fail('组件当前值不能大于最大值');
-    if (block.type === 'inputOtp' && max !== undefined && (!Number.isInteger(max) || max > 12)) fail('验证码位数必须是 1–12 的整数');
-    if (block.type === 'rating' && value !== undefined && (!Number.isInteger(value) || value > 5)) fail('评分必须是 0–5 的整数');
+    if (block.type === 'inputOtp' && max !== undefined && (!Number.isInteger(max) || max > 12)) fail('验证码位数必须是 1–12 的整数', 'block.props.max');
+    if (block.type === 'rating' && value !== undefined && (!Number.isInteger(value) || value > 5)) fail('评分必须是 0–5 的整数', 'block.props.value');
     if (block.type === 'pagination') {
-      if (value !== undefined && (!Number.isInteger(value) || value < 1)) fail('初始页码必须是正整数');
-      if (max !== undefined && !Number.isInteger(max)) fail('总页数必须是正整数');
+      if (value !== undefined && (!Number.isInteger(value) || value < 1)) fail('初始页码必须是正整数', 'block.props.value');
+      if (max !== undefined && !Number.isInteger(max)) fail('总页数必须是正整数', 'block.props.max');
     }
   }
   try { validateInteractions(page); } catch (error) { fail(error.message); }

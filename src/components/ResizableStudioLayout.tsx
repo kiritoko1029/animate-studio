@@ -4,7 +4,7 @@ import { fitPanelWidths, panelMinimums, panelStorageKey, panelWidthLimit, readPa
 
 type ResizeGesture = { side: PanelSide; pointerId: number; startX: number; initial: PanelWidths; previous: Partial<PanelWidths>; capture: HTMLElement };
 
-export function ResizableStudioLayout({ inspectorOpen, disabled = false, children }: { inspectorOpen: boolean; disabled?: boolean; children: ReactNode }) {
+export function ResizableStudioLayout({ inspectorOpen, disabled = false, inert = false, children }: { inspectorOpen: boolean; disabled?: boolean; inert?: boolean; children: ReactNode }) {
   const element = useRef<HTMLDivElement>(null), gesture = useRef<ResizeGesture | null>(null);
   const [width, setWidth] = useState(window.innerWidth);
   const [preferences, setPreferences] = useState<Partial<PanelWidths>>(() => {
@@ -55,7 +55,7 @@ export function ResizableStudioLayout({ inspectorOpen, disabled = false, childre
     gesture.current = { side, pointerId: event.pointerId, startX: event.clientX, initial: widths, previous: preferences, capture: event.currentTarget };
     setResizing(side);
   };
-  return <div ref={element} className={`studio-body ${inspectorOpen ? 'with-inspector' : ''} ${resizing ? 'studio-body--resizing' : ''}`} style={{ '--studio-left-width': `${widths.left}px`, '--studio-right-width': `${widths.right}px` } as CSSProperties}>
+  return <div ref={element} inert={inert} className={`studio-body ${inspectorOpen ? 'with-inspector' : ''} ${resizing ? 'studio-body--resizing' : ''}`} style={{ '--studio-left-width': `${widths.left}px`, '--studio-right-width': `${widths.right}px` } as CSSProperties}>
     {children}
     {(['left', 'right'] as const).filter(side => side === 'left' ? width > 600 : inspectorOpen && width > 800).map(side => <div key={side}
       className={`studio-panel-resizer studio-panel-resizer--${side}${resizing === side ? ' is-resizing' : ''}`}

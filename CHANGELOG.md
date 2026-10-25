@@ -1,5 +1,39 @@
 # 更新日志 / Changelog
 
+## v2026.10.25 — 2026-10-25
+
+### 中文
+
+本次版本加入 AI 页面与组件创作，让自定义组件从生成、编辑、分组到云端复用形成完整流程，并完善双语工作台。
+
+- 新增 AI 创作助手，支持 OpenAI Responses、Anthropic Messages 和兼容接口，可读取模型列表、配置思考强度，流式显示思考内容并点击展开。
+- AI 可逐组件生成和修改页面，创建变量、脚本、属性绑定与事件；支持自动续写、暂停接手、检查点恢复、版本快照和整次生成撤销。
+- 新增独立组件创作模式，可开发 HTML/CSS/JavaScript 自定义组件并自动保存到“我的组件”，不会替换当前页面；页面生成也可开发或引用本机与账号组件。
+- 自定义组件设计器提供模板、代码编辑、沙箱交互预览、实例字段、账号保存和快照分享。生成结果可上传云端，后续 AI 修改可更新同一云端组件。
+- 本机与账号组件支持一级文件夹：创建、重命名、筛选、移动和删除。删除文件夹保留组件，移动不改变源码版本；并发创建受数据库数量约束保护。
+- 增加生成后辅助检查与组件定位，检查越界、重叠、失效锚点、内容溢出和可测量的文字对比度；稳定组件 ID 可作为页内导航目标。
+- 完善中英文切换与顶栏分组；修复检查点覆盖、无效记录阻断历史、主题颜色不同步、关联属性误删、拒绝响应重复请求、提前显示完成以及云端列表竞态。
+
+**升级说明**：页面 JSON 版本仍为 `1`，旧草稿和本机组件库兼容。新增自定义组件与文件夹的 SQLite、PostgreSQL 和 D1 迁移；Node 启动时应用迁移，Cloudflare 部署由 Void 应用 D1 迁移。AI 密钥保存在浏览器，请求直连用户配置的接口，需要服务商支持浏览器 CORS。
+
+**验证**：394 项自动化测试通过，覆盖 SQLite API、D1 迁移、并发与恢复场景；Node 和 Cloudflare 构建通过。浏览器通过本机模拟接口验证组件生成、交互、分组、上传与刷新恢复，未产生真实 AI 调用费用。PostgreSQL 迁移已提供，本次未连接 PostgreSQL 测试数据库。
+
+### English
+
+This release adds AI page and component creation, completing the workflow from generating and editing custom components to organizing and reusing them in the cloud, alongside a bilingual workbench.
+
+- Added an AI assistant for OpenAI Responses, Anthropic Messages, and compatible endpoints, with model discovery, reasoning controls, streaming thinking previews, and expandable text.
+- AI can build and edit pages component by component, including variables, scripts, bindings, and events. Tasks support automatic continuation, pause and manual editing, checkpoint recovery, version snapshots, and one-step undo.
+- Added a separate component creation mode for reusable HTML/CSS/JavaScript components. Generated components are saved to My Components without replacing the current page; page generation can also develop or reuse local and account components.
+- Added a component designer with templates, code editing, sandboxed interactive previews, instance fields, account storage, and snapshot sharing. Generated components can be uploaded and later AI revisions can update the same cloud record.
+- Added local and account component folders with creation, renaming, filtering, moving, and deletion. Deleting a folder preserves its components, moving does not change source revisions, and database constraints enforce folder limits during concurrent creation.
+- Added advisory post-generation checks and component location for bounds, overlap, missing anchors, overflow, and measurable text contrast. Stable component IDs now work as in-page navigation targets.
+- Added Chinese/English workbench switching and grouped header controls. Fixed checkpoint overwrites, unreadable history caused by invalid records, theme color mismatches, incorrect field repair, repeated refusal requests, premature completion, and cloud library races.
+
+**Upgrade notes**: Page JSON remains version `1`; existing drafts and local libraries remain compatible. SQLite, PostgreSQL, and D1 migrations cover custom components and folders. Node applies migrations at startup, and Void applies D1 migrations during Cloudflare deployment. AI credentials stay in the browser; requests go directly to the configured endpoint, which must support browser CORS.
+
+**Validation**: All 394 automated tests passed, covering SQLite APIs, D1 migrations, concurrency, and recovery. Node and Cloudflare builds passed. Browser checks used a local mock API to verify generation, interactions, folders, upload, and reload recovery without paid AI calls. PostgreSQL migrations are included but were not integration-tested against a PostgreSQL database for this release.
+
 ## v2026.10.23 — 2026-10-23
 
 ### 中文

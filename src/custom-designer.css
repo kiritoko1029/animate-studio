@@ -1,6 +1,20 @@
 /* Custom component designer, library panel, instance inspector and share page.
    Workbench colors come only from the --studio-* tokens. */
 
+.custom-library-create { display: grid; gap: 6px; }
+.custom-library-create > .studio-control { width: 100%; }
+.custom-folder-bar { display: flex; align-items: center; gap: 6px; margin: 10px 0; color: var(--studio-600); }
+.custom-folder-bar > svg { flex-shrink: 0; }
+.custom-folder-bar select { flex: 1; min-width: 0; width: 0; padding: 6px; border: 1px solid var(--studio-200); border-radius: 6px; background: var(--studio-0); color: var(--studio-950); font: inherit; font-size: 11px; }
+.custom-folder-bar .icon-button { flex-shrink: 0; }
+.studio-dialog.custom-folder-dialog { width: min(400px, calc(100vw - 32px)); padding: 22px; }
+.custom-folder-dialog h2 { margin: 0 0 16px; font-size: 17px; }
+.custom-folder-dialog p { margin: 0 0 14px; font-size: 13px; line-height: 1.7; color: var(--studio-600); overflow-wrap: anywhere; }
+.custom-folder-dialog label { display: grid; gap: 7px; font-size: 12px; }
+.custom-folder-dialog input, .custom-folder-dialog select { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--studio-200); border-radius: 7px; background: var(--studio-50); color: var(--studio-950); font: inherit; }
+.custom-folder-dialog :is(input, select):focus-visible, .custom-folder-bar select:focus-visible { outline: 2px solid var(--studio-400); outline-offset: 2px; }
+.custom-folder-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
 /* ---------- Designer dialog ---------- */
 .studio-dialog.component-designer { width: min(1480px, calc(100vw - 32px)); height: min(960px, calc(100dvh - 32px)); max-width: none; max-height: none; box-shadow: 0 28px 100px rgb(0 0 0 / 22%); }
 .ccd-root { display: flex; flex-direction: column; height: 100%; min-height: 0; font-size: 12px; }

@@ -1,3 +1,4 @@
+import type { AiChange } from './lib/ai/types';
 import { blockName, blockLabel } from './i18n/catalog';
 import { t, translateMessage, getLocale } from './i18n';
 import { useLocale } from './i18n/react';
@@ -58,6 +59,7 @@ import { CustomComponentLibrary } from './components/custom/CustomComponentLibra
 import { CustomBlockInspector } from './components/custom/CustomBlockInspector';
 import { CustomLibraryContext, useCustomLibrary } from './components/custom/useCustomLibrary';
 import type { DesignerRequest } from './components/custom/ComponentDesigner';
+const AiAssistant = lazy(() => import('./components/ai/AiStudio').then(module => ({ default: module.AiStudio })));
 const InteractionStudio = lazy(() => import('./components/InteractionStudio'));
 const ComponentDesigner = lazy(() => import('./components/custom/ComponentDesigner'));
 const customGroup = '我的组件';
@@ -210,6 +212,14 @@ function Inspector({request,document,studioTheme,selected,onUpdate,onFrame,onSet
 
 export default function App() {
   const locale = useLocale();
+  const [aiBusy, setAiBusy] = useState(false), [aiChanges, setAiChanges] = useState<AiChange[]>([]);
+  // aiUndoBases holds the documents an AI run started from, so undoing a whole run can say how to get it back.
+  const aiBusyRef = useRef(false), aiHistoryRun = useRef(''), aiUndoBases = useRef(new WeakSet<PageDocument>());
+  useEffect(() => {
+    if (!aiChanges.length) return;
+    const timer = setTimeout(() => setAiChanges(values => values.filter(value => Date.now() - value.time < 3000)), 3100);
+    return () => clearTimeout(timer);
+  }, [aiChanges]);
   useEffect(() => {
     window.document.title = t('Animate Studio · 页面编辑器');
     window.document.querySelector('meta[name="description"]')?.setAttribute('content', t('Animate Studio — 通过拖拽组件，构建有生命力的页面。'));
@@ -217,6 +227,7 @@ export default function App() {
   const { user } = useAccount();
   const userRef = useRef(user); userRef.current = user;
   const customLibrary = useCustomLibrary(user);
+  const [aiComponentRequest, setAiComponentRequest] = useState<{ sequence: number; owner: string; kind: 'local' | 'cloud'; folderId: string | null } | null>(null);
   const [designer,setDesigner]=useState<(DesignerRequest&{sequence:number})|null>(null);
   const [loginOpen,setLoginOpen]=useState(false);
   // The narrow-screen component drawer would otherwise stay above the designer.
@@ -387,6 +398,7 @@ export default function App() {
     }
   }
   async function startNewDocument(next:PageDocument){
+    if(aiBusyRef.current)return false;
     try{
       await flushCurrent();
       if(cloudTargetRef.current){activateDocument(next,{page:null,savedAt:null},null);notify(t("已开始新页面，原有云端页面已保留"));}
@@ -394,9 +406,9 @@ export default function App() {
         requestedCloudPage.current=null;const url=new URL(window.location.href);url.searchParams.delete('page');window.history.replaceState(window.history.state,'',url);
         update(next);setSelected(null);setInsertAfterId(null);notify(t("已开始新页面，可撤销恢复浏览器草稿"));
       }
-      setPageMenuOpen(false);
+      setPageMenuOpen(false);return true;
     }
-    catch(error){notify(error instanceof Error?error.message:t("暂时无法新建页面"));}
+    catch(error){notify(error instanceof Error?error.message:t("暂时无法新建页面"));return false;}
   }
 
   const save=useCallback((page:PageDocument)=>{
@@ -413,11 +425,11 @@ export default function App() {
   },[]);
 
   const update=useCallback((next:PageDocument)=>{
-    const previous=current.current;if(!previous||JSON.stringify(previous)===JSON.stringify(next))return;
+    const previous=current.current;if(aiBusyRef.current||!previous||JSON.stringify(previous)===JSON.stringify(next))return;
     setPast(history=>[...history.slice(-79),previous]);setFuture([]);setDocument(next);current.current=next;
   },[]);
-  const undo=useCallback(()=>{if(!past.length||!current.current)return;const previous=past[past.length-1];const outgoing=current.current;setFuture(items=>[outgoing,...items]);setPast(items=>items.slice(0,-1));setDocument(previous);current.current=previous;},[past]);
-  const redo=useCallback(()=>{if(!future.length||!current.current)return;const next=future[0];const outgoing=current.current;setPast(items=>[...items,outgoing]);setFuture(items=>items.slice(1));setDocument(next);current.current=next;},[future]);
+  const undo=useCallback(()=>{if(aiBusyRef.current||!past.length||!current.current)return;const previous=past[past.length-1];const outgoing=current.current;setFuture(items=>[outgoing,...items]);setPast(items=>items.slice(0,-1));setDocument(previous);current.current=previous;if(aiUndoBases.current.has(previous))notify(t("已撤销整次 AI 生成。可按 ⌘⇧Z 重做，或在 AI 对话中恢复保存的版本。"));},[past,notify]);
+  const redo=useCallback(()=>{if(aiBusyRef.current||!future.length||!current.current)return;const next=future[0];const outgoing=current.current;setPast(items=>[...items,outgoing]);setFuture(items=>items.slice(1));setDocument(next);current.current=next;},[future]);
   const remove=useCallback((id:string)=>{const doc=current.current;if(!doc)return;const ids=selectedIds.includes(id)?selectedIds:[id];update({...doc,blocks:doc.blocks.filter(block=>!ids.includes(block.id))});setSelected(null);notify(t("已删除 {0} 个组件，可通过撤销恢复", { 0: ids.length }));},[update,notify,selectedIds,setSelected]);
   const duplicate=useCallback((id:string)=>{const doc=current.current;if(!doc)return;try{const result=duplicateSelection(doc,selectedIds.includes(id)?selectedIds:[id]);update(result.page);setSelection(result.ids);notify(t("已复制 {0} 个组件", { 0: result.ids.length }));}catch(error){notify(error instanceof Error?error.message:t("暂时无法复制组件"));}},[update,notify,selectedIds]);
   const finishAdding=useCallback((result:PlacementResult)=>{
@@ -470,7 +482,7 @@ export default function App() {
 
   useEffect(()=>{
     const keydown=(e:KeyboardEvent)=>{
-      if(e.defaultPrevented||dragging)return;
+      if(e.defaultPrevented||dragging||aiBusyRef.current)return;
       if(window.document.querySelector('dialog[open], [data-slot=dialog-content], [role=menu]'))return;
       if(e.key==='Escape'){setFullPreview(false);setShowHelp(false);setPageMenuOpen(false);setShowSidebar(false);return;}
       const target=e.target as HTMLElement;const typing=['INPUT','TEXTAREA','SELECT'].includes(target.tagName)||target.isContentEditable;
@@ -578,7 +590,7 @@ export default function App() {
     if(fileRef.current)fileRef.current.value='';
   }
 
-  function loadInteractionDemo() { const next=createInteractionDemo(); next.settings.customThemes=document?.settings.customThemes; void startNewDocument(next); }
+  function loadInteractionDemo() { const next=createInteractionDemo(); next.settings.customThemes=document?.settings.customThemes??[]; void startNewDocument(next); }
 
   function openThemeDesigner(scope:'component'|'page', id?:ThemeId) {
     const doc=current.current;if(!doc)return;
@@ -604,7 +616,7 @@ export default function App() {
   const filtered=catalog.filter(c=>(group==='全部'||c.group===group)&&`${c.name} ${c.english} ${c.description} ${t(c.group)} ${t(c.description)}`.toLowerCase().includes(query.toLowerCase()));
   const saveText=saveState==='saved'?(cloudTarget?t("已保存到云端"):t("已保存到浏览器")):saveState==='saving'?t("保存中"):saveState==='error'?t("保存失败"):t("待保存");
   return <CustomLibraryContext.Provider value={customLibrary}><div className="studio-app">
-    <header className="app-header">
+    <header className="app-header" inert={aiBusy}>
       <div className="header-brand"><IconButton label={t("打开组件与页面工具")} className="mobile-menu" onClick={()=>setShowSidebar(!showSidebar)}><Menu size={18}/></IconButton><Brand phase="ready"/><a className="version-label" href={`https://github.com/kiritoko1029/animate-studio/releases/tag/v${appVersion}`} target="_blank" rel="noreferrer" aria-label={t("当前版本 v{0}，查看更新日志", { 0: appVersion })} title={t("v{0} · 查看更新日志", { 0: appVersion })}>v{appVersion}</a></div>
       <div className="document-heading"><span className="header-slash">/</span><input aria-label={t("页面名称")} value={document.name} onChange={e=>update({...document,name:e.target.value})} maxLength={100}/><span className={`save-status ${saveState}`} title={saveState==='error'?translateMessage(saveError):savedAt?t("保存于 {0}", { 0: new Date(savedAt).toLocaleTimeString(getLocale()) }):cloudTarget?t("自动保存到云端"):t("自动保存到当前浏览器")}>{saveState==='saved'?<CheckCircle2 size={13}/>:saveState==='saving'?<LoaderCircle size={13} className="spin"/>:saveState==='error'?<AlertCircle size={13}/>:<span className="pending-dot"/>}{saveText}</span>{saveState==='error'&&<StudioButton className="retry-save" onClick={()=>void save(document)}>{t("重试")}</StudioButton>}</div>
       <div className="header-actions">
@@ -613,8 +625,8 @@ export default function App() {
           <DropdownMenuTrigger asChild><StudioButton className="secondary-button page-actions-button" aria-label={t("页面操作")}><FilePlus2 size={15}/><span>{t("页面")}</span><ChevronDown size={12}/></StudioButton></DropdownMenuTrigger>
           <DropdownMenuContent className="studio-menu page-actions-menu" align="end" sideOffset={8}>
             <DropdownMenuLabel>{t("新建页面")}</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes;void startNewDocument(next);}}><FilePlus2 size={15}/>{t("空白页面")}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes;void startNewDocument(next);}}><LayoutTemplate size={15}/>{t("从灵感模板开始")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={()=>{const next=createDocument(true);next.settings.customThemes=document.settings.customThemes??[];void startNewDocument(next);}}><FilePlus2 size={15}/>{t("空白页面")}</DropdownMenuItem>
+            <DropdownMenuItem onSelect={()=>{const next=createDocument();next.settings.customThemes=document.settings.customThemes??[];void startNewDocument(next);}}><LayoutTemplate size={15}/>{t("从灵感模板开始")}</DropdownMenuItem>
             <DropdownMenuItem onSelect={loadInteractionDemo}><Code2 size={15}/>{t("组件联动示例")}</DropdownMenuItem>
             <DropdownMenuSeparator/>
             <DropdownMenuLabel>{t("导出")}</DropdownMenuLabel>
@@ -630,7 +642,7 @@ export default function App() {
       </div>
     </header>
     <DndContext sensors={sensors} collisionDetection={collision} autoScroll={false} onDragStart={onDragStart} onDragMove={onDragMove} onDragOver={onDragMove} onDragEnd={onDragEnd} onDragCancel={clearDrag}>
-      <ResizableStudioLayout inspectorOpen={inspector} disabled={!!dragging}>
+      <ResizableStudioLayout inspectorOpen={inspector} disabled={!!dragging || aiBusy} inert={aiBusy}>
         {showSidebar&&<div className="sidebar-backdrop" onClick={()=>setShowSidebar(false)}/>}
         <aside id="component-sidebar-panel" className={`component-sidebar ${showSidebar?'shown':''}`}>
           <Tabs value={sidebarTab} onValueChange={value=>setSidebarTab(value as typeof sidebarTab)} className="studio-tab-root"><TabsList className="studio-tabs sidebar-tabs" aria-label={t("组件与图层")}><TabsTrigger value="components" id="sidebar-tab-components" aria-controls="sidebar-panel"><LayoutDashboard size={15}/>{t("组件")}</TabsTrigger><TabsTrigger value="layers" id="sidebar-tab-layers" aria-controls="sidebar-panel"><Layers size={15}/>{t("图层")}<span>{document.blocks.length}</span></TabsTrigger></TabsList></Tabs>
@@ -638,7 +650,7 @@ export default function App() {
             <div className="library-intro"><div><h2>{t("组件库")}</h2><span>{catalog.length}</span></div></div>
             <div className="search-box"><Search size={14}/><input aria-label={t("搜索组件")} placeholder={t("搜索组件…")} value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<StudioButton onClick={()=>setQuery('')} aria-label={t("清除搜索")}><X size={12}/></StudioButton>}</div>
             <div className="category-filter">{['全部',...new Set(catalog.map(item=>item.group)),customGroup].map(g=><StudioButton key={g} className={group===g?'active':''} onClick={()=>setGroup(g)}>{t(g)}</StudioButton>)}</div>
-            <div className="library-scroll">{insertAfterId&&<div className="insert-notice"><span>{t("选择组件，插入选中项之后")}</span><StudioButton aria-label={t("取消插入")} onClick={()=>setInsertAfterId(null)}><X size={13}/></StudioButton></div>}{group===customGroup?<CustomComponentLibrary page={document} query={query} onAdd={addCustom} onOpenDesigner={openDesigner} onRequestLogin={()=>setLoginOpen(true)} notify={notify}/>:<>{group==='全部'&&!query&&<StudioButton className="custom-entry" onClick={()=>setGroup(customGroup)}><span className="custom-entry-icon"><Puzzle size={16}/></span><span><strong>{t("我的组件")}</strong><small>{t("用 HTML、CSS、JavaScript 编写自己的组件 ·")}{customLibrary.local.components.length} {t("个本机组件")}</small></span><ChevronRight size={14}/></StudioButton>}<div className="library-section-heading"><span>{group==='全部'?t("所有组件"):t("{0}组件", { 0: t(group) })}</span><span>{filtered.length}</span></div><div className="component-grid">{filtered.map(c=><PaletteItem key={c.type} type={c.type} onAdd={()=>add(c.type)}/>)}</div>{!filtered.length&&<div className="search-empty"><Search size={23}/><p>{t("没有找到相关组件")}</p><StudioButton className="text-button" onClick={()=>{setQuery('');setGroup('全部');}}>{t("查看所有组件")}</StudioButton></div>}</>}</div>
+            <div className="library-scroll">{insertAfterId&&<div className="insert-notice"><span>{t("选择组件，插入选中项之后")}</span><StudioButton aria-label={t("取消插入")} onClick={()=>setInsertAfterId(null)}><X size={13}/></StudioButton></div>}{group===customGroup?<CustomComponentLibrary onCreateWithAi={target => { setShowSidebar(false); setAiComponentRequest(previous => ({ ...target, owner: userRef.current ? `account:${userRef.current.id}` : 'guest', sequence: (previous?.sequence ?? 0) + 1 })); }} page={document} query={query} onAdd={addCustom} onOpenDesigner={openDesigner} onRequestLogin={()=>setLoginOpen(true)} notify={notify}/>:<>{group==='全部'&&!query&&<StudioButton className="custom-entry" onClick={()=>setGroup(customGroup)}><span className="custom-entry-icon"><Puzzle size={16}/></span><span><strong>{t("我的组件")}</strong><small>{t("用 HTML、CSS、JavaScript 编写自己的组件 ·")}{customLibrary.local.components.length} {t("个本机组件")}</small></span><ChevronRight size={14}/></StudioButton>}<div className="library-section-heading"><span>{group==='全部'?t("所有组件"):t("{0}组件", { 0: t(group) })}</span><span>{filtered.length}</span></div><div className="component-grid">{filtered.map(c=><PaletteItem key={c.type} type={c.type} onAdd={()=>add(c.type)}/>)}</div>{!filtered.length&&<div className="search-empty"><Search size={23}/><p>{t("没有找到相关组件")}</p><StudioButton className="text-button" onClick={()=>{setQuery('');setGroup('全部');}}>{t("查看所有组件")}</StudioButton></div>}</>}</div>
           </>:<div className="layer-list"><div className="layer-heading"><span><LayoutTemplate size={14}/> {t("首页")}</span><small>{t("顶部 → 底部")}</small></div>{[...document.blocks].reverse().map((block,index)=>{const I=icons[block.type];return <div key={block.id} className={`layer-item ${selectedIds.includes(block.id)?'selected':''}`}><StudioButton aria-pressed={selectedIds.includes(block.id)} onClick={event=>{selectComponent(block.id,event.shiftKey||event.metaKey||event.ctrlKey);setCanvasReveal(n=>n+1);setInspector(true);setView(v=>v==='preview'?'split':v);}}><I size={15}/><span>{block.props.title||block.props.label||blockLabel(block)}</span></StudioButton><span className="layer-order">{document.blocks.length-index}</span><div className="layer-actions"><IconButton label={t("将{0}置于上一层", { 0: blockName(block.type) })} disabled={index===0} onClick={()=>changeLayer(block.id,'raise')}><ArrowUp size={12}/></IconButton><IconButton label={t("将{0}置于下一层", { 0: blockName(block.type) })} disabled={index===document.blocks.length-1} onClick={()=>changeLayer(block.id,'lower')}><ArrowDown size={12}/></IconButton></div></div>;})}{!document.blocks.length&&<p className="muted-note">{t("添加组件后，图层会出现在这里。")}</p>}</div>}
           </div><div className="sidebar-bottom"><a className="animate-credit" title="Animate UI v2.1.2 · @animate-ui/react 2.0.0" href="https://animate-ui.com/docs" target="_blank" rel="noreferrer"><span className="animate-mark">a.</span><span>{t("由 Animate UI v2 驱动")}</span><ExternalLink size={11}/></a></div>
         </aside>
@@ -646,7 +658,7 @@ export default function App() {
           <div className="workspace-toolbar"><div className="workspace-breadcrumb"><LayoutTemplate size={14}/><span>{t("首页")}</span><ChevronRight size={12}/><strong>{t("页面编辑器")}</strong></div><div className="toolbar-end"><StudioTooltip label={t("管理页面数据与脚本")}><StudioButton className="secondary-button page-logic-button" aria-label={t("数据与脚本")} aria-haspopup="dialog" onClick={()=>setLogicTarget({tab:'data'})}><Braces size={15}/><span>{t("数据与脚本")}</span></StudioButton></StudioTooltip><Tabs value={view} onValueChange={value=>setView(value as View)} className="studio-tab-root"><TabsList className="studio-tabs view-switch" aria-label={t("画布视图")}>{([{id:'edit',name:t("编辑"),icon:MousePointer2},{id:'split',name:t("并排"),icon:Columns2},{id:'preview',name:t("预览"),icon:Eye}] as const).map(v=><TabsTrigger key={v.id} value={v.id} id={`view-tab-${v.id}`} aria-controls="workspace-canvas-panel" aria-label={t("{0}模式", { 0: v.name })}><v.icon size={13}/>{v.name}</TabsTrigger>)}</TabsList></Tabs><span className="toolbar-separator"/><div className="device-toggle"><IconButton label={t("桌面视图")} active={device==='desktop'} onClick={()=>setDevice('desktop')}><Monitor size={16}/></IconButton><IconButton label={t("手机视图")} active={device==='mobile'} onClick={()=>setDevice('mobile')}><Smartphone size={16}/></IconButton></div><span className="toolbar-separator"/><IconButton label={t("切换属性面板")} active={inspector} onClick={()=>setInspector(!inspector)}><Settings2 size={16}/></IconButton></div></div>
           {saveState==='error'&&<div className="save-error-banner" role="alert"><AlertCircle size={14}/><span>{translateMessage(saveError)}{t("，修改仍保留在画布中。")}</span><StudioButton onClick={()=>void save(document)}>{t("重新保存")}</StudioButton></div>}
           <div className={`canvas-workspace view-${view}`} role="tabpanel" id="workspace-canvas-panel" aria-labelledby={`view-tab-${view}`}>
-            {view!=='preview'&&<section className="canvas-pane edit-pane"><div className="pane-heading"><span><MousePointer2 size={13}/><strong>{t("编辑画布")}</strong><span className="pane-tag">{t("可编辑")}</span></span><span className="pane-hint">{t("自由摆放 · 网格吸附")}</span></div><FreeCanvas revealKey={canvasReveal} document={document} selected={selected} selectedIds={selectedIds} onSelect={selectComponent} onSelectAll={()=>{setSelection(document.blocks.map(block=>block.id));setInspector(true);}} onFramesChange={frames=>update({...document,blocks:document.blocks.map(block=>frames[block.id]?{...block,frame:frames[block.id]}:block)})} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
+            {view!=='preview'&&<section className={`canvas-pane edit-pane ${aiBusy ? 'ai-operating' : ''}`} aria-busy={aiBusy}><div className="pane-heading"><span><MousePointer2 size={13}/><strong>{t("编辑画布")}</strong><span className="pane-tag">{aiBusy ? t("AI 编辑中") : t("可编辑")}</span></span><span className="pane-hint">{aiBusy ? t("暂停后可手动编辑") : t("自由摆放 · 网格吸附")}</span></div><FreeCanvas aiBusy={aiBusy} aiChanges={aiChanges} revealKey={canvasReveal} document={document} selected={selected} selectedIds={selectedIds} onSelect={selectComponent} onSelectAll={()=>{setSelection(document.blocks.map(block=>block.id));setInspector(true);}} onFramesChange={frames=>update({...document,blocks:document.blocks.map(block=>frames[block.id]?{...block,frame:frames[block.id]}:block)})} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?block:b)})} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
             {view!=='edit'&&<section className="canvas-pane preview-pane"><div className="pane-heading"><span><Eye size={14}/><strong>{t("实时预览")}</strong><span className="live-indicator"/> </span><IconButton label={t("重播动画")} onClick={()=>setReplay(n=>n+1)}><Play size={12}/></IconButton></div><div className={`preview-scroll ${device==='mobile'?'mobile':''}`}><div className="preview-browser" style={{maxWidth:device==='mobile'?375:document.settings.maxWidth}}><div className="browser-bar"><div className="browser-dots"><i/><i/><i/></div><span><span className="lock-icon">⌑</span> {document.name||t("未命名页面")}</span><RotateCcw size={10}/></div><PageRenderer document={document} replayKey={replay}/></div><div className="preview-footnote"><span className="live-indicator"/>{t("与编辑画布实时同步")}</div></div></section>}
           </div>
           <footer className="workspace-status"><span><span className="connection-dot"/>{t("创作空间")}<span className="status-separator">/</span>{document.blocks.length} {t("个组件")}</span><span><kbd>⌘ Z</kbd> {t("撤销")}<StudioButton onClick={()=>setShowHelp(true)}><CircleHelp size={13}/>{t("快捷键与帮助")}</StudioButton></span></footer>
@@ -660,6 +672,25 @@ export default function App() {
       </ResizableStudioLayout>
       <PaletteDragPreview block={dragging} settings={document.settings} canvasScale={dragCanvasScale}/>
     </DndContext>
+    <Suspense fallback={null}><AiAssistant key={user?.id ?? 'guest'} page={document} owner={user ? `account:${user.id}` : 'guest'} signedIn={!!user} cloudPageId={cloudTarget?.id ?? null}
+      componentRequest={aiComponentRequest} onAddComponent={addCustom} onOpenDesigner={openDesigner} onRequestLogin={() => setLoginOpen(true)}
+      selectedBlockIds={selectedIds}
+      getSurface={() => window.document.querySelector<HTMLElement>('.free-canvas-stage') ?? window.document.querySelector<HTMLElement>('.preview-pane .page-surface')}
+      onRevealBlock={id => { if (!aiBusyRef.current) { setView('edit'); setSelected(id); setCanvasReveal(value => value + 1); } }}
+      getPage={() => current.current!}
+      onRunningChange={running => { aiBusyRef.current = running; setAiBusy(running); if (running) { setView('edit'); setPageMenuOpen(false); setShowSidebar(false); } }}
+      onCommit={(next, change, runId) => {
+        const previous = current.current;
+        if (!aiBusyRef.current || !previous || next.id !== previous.id) throw new Error(t('页面已切换，AI 已暂停。'));
+        if (aiHistoryRun.current !== runId) { aiHistoryRun.current = runId; aiUndoBases.current.add(previous); setPast(history => [...history.slice(-79), previous]); setFuture([]); }
+        current.current = next; setDocument(next); setAiChanges(values => [...values.filter(value => value.blockId !== change.blockId && Date.now() - value.time < 3000), change].slice(-5));
+        if (change.blockId && change.kind !== 'remove') { setSelected(change.blockId); setCanvasReveal(value => value + 1); }
+      }}
+      onRestorePage={page => { if (page.id === current.current?.id && !aiBusyRef.current) { update(page); notify(t('已恢复所选页面版本，可撤销')); } }}
+      onOpenLocal={async page => { const expected = current.current; const owner = userRef.current?.id; await flushCurrent(); if (owner !== userRef.current?.id || expected !== current.current) throw new Error(t('当前页面又有新修改，请保存后重试。')); activateDocument(toFreeDocument(page), { page: null, savedAt: null }, null); }}
+      onOpenCloud={openCloud}
+      onCreatePage={() => { const next = createDocument(true); next.settings.customThemes = current.current?.settings.customThemes ?? []; return startNewDocument(next); }}
+    /></Suspense>
     {designer&&<Suspense fallback={null}><ComponentDesigner key={designer.sequence} request={designer} page={document} onClose={()=>setDesigner(null)} onAddToPage={addCustom} onRequestLogin={()=>setLoginOpen(true)} notify={notify}/></Suspense>}
     {loginOpen&&<LoginDialog onClose={()=>setLoginOpen(false)}/>}
     {logicTarget&&<Suspense fallback={null}><InteractionStudio initialTarget={logicTarget} page={document} onChange={update} onClose={()=>setLogicTarget(null)} onDemo={loadInteractionDemo}/></Suspense>}

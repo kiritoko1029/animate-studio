@@ -30,7 +30,7 @@ async function until(predicate, description, timeout = 5000) {
 }
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-function fixture(t, { user = null, storage = {}, components = [] } = {}) {
+function fixture(t, { user = null, storage = {}, components = [], folders = [] } = {}) {
   const errors = [], console = new VirtualConsole();
   console.on('error', (...args) => errors.push(args.map(String).join(' ')));
   console.on('jsdomError', error => errors.push(error.detail?.stack ?? error.message));
@@ -52,7 +52,7 @@ function fixture(t, { user = null, storage = {}, components = [] } = {}) {
   const guest = createDocument(true); guest.name = '组件测试页面';
   win.localStorage.setItem('animate-studio:guest-draft:v1', JSON.stringify({ page: guest, savedAt: '2026-10-23T00:00:00Z' }));
   for (const [key, value] of Object.entries(storage)) win.localStorage.setItem(key, value);
-  const state = { user, components: new Map(components.map(item => [item.id, item])), requests: [], shares: new Map() };
+  const state = { user, components: new Map(components.map(item => [item.id, item])), folders: new Map(folders.map(item => [item.id, item])), requests: [], shares: new Map() };
   const summary = ({ component: _c, ...item }) => item;
   win.fetch = async (url, options = {}) => {
     const path = String(url), method = options.method ?? 'GET', body = options.body ? JSON.parse(options.body) : null;
@@ -61,14 +61,34 @@ function fixture(t, { user = null, storage = {}, components = [] } = {}) {
     if (path === '/api/account/config') return Response.json({ cloudEnabled: true, emailEnabled: true, githubEnabled: false });
     if (path === '/api/account/preferences') return Response.json({ version: 1, studioTheme: 'light' });
     if (!state.user && path.startsWith('/api/account/')) return Response.json({ error: '请先登录' }, { status: 401 });
+    if (path === '/api/account/component-folders') {
+      if (method === 'POST') {
+        const now = new Date().toISOString(), folder = { id: crypto.randomUUID(), name: body.name.trim(), createdAt: now, updatedAt: now };
+        state.folders.set(folder.id, folder); return Response.json(folder, { status: 201 });
+      }
+      return Response.json({ folders: [...state.folders.values()] });
+    }
+    const folderMatch = path.match(/^\/api\/account\/component-folders\/([^/]+)$/);
+    if (folderMatch) {
+      const folder = state.folders.get(folderMatch[1]);
+      if (!folder) return Response.json({ error: '未找到该文件夹。' }, { status: 404 });
+      if (method === 'DELETE') { state.folders.delete(folder.id); for (const item of state.components.values()) if (item.folderId === folder.id) item.folderId = null; return new Response(null, { status: 204 }); }
+      Object.assign(folder, { name: body.name.trim(), updatedAt: new Date().toISOString() }); return Response.json(folder);
+    }
     if (path === '/api/account/components') {
       if (method === 'POST') {
         const now = new Date().toISOString();
-        const record = { id: crypto.randomUUID(), name: body.component.name, description: body.component.description ?? '', revision: 1, createdAt: now, updatedAt: now, shareToken: null, publishedAt: null, sharedRevision: null, component: body.component };
+        const record = { id: crypto.randomUUID(), name: body.component.name, description: body.component.description ?? '', revision: 1, createdAt: now, updatedAt: now, folderId: body.folderId ?? null, shareToken: null, publishedAt: null, sharedRevision: null, component: body.component };
         state.components.set(record.id, record);
         return Response.json(record, { status: 201 });
       }
       return Response.json({ components: [...state.components.values()].map(summary) });
+    }
+    const moveMatch = path.match(/^\/api\/account\/components\/([^/]+)\/folder$/);
+    if (moveMatch) {
+      const record = state.components.get(moveMatch[1]);
+      if (!record || body.folderId && !state.folders.has(body.folderId)) return Response.json({ error: '未找到该组件或文件夹。' }, { status: 404 });
+      record.folderId = body.folderId; return Response.json(record);
     }
     const share = path.match(/^\/api\/account\/components\/([^/]+)\/share$/);
     if (share) {
@@ -102,6 +122,7 @@ function fixture(t, { user = null, storage = {}, components = [] } = {}) {
     Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, value);
     element.dispatchEvent(new win.Event('input', { bubbles: true }));
   });
+  const choose = (element, value) => win.perform(() => { element.value = value; element.dispatchEvent(new win.Event('change', { bubbles: true })); });
   const press = (element, key, options = {}) => win.perform(() => element.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options })));
   const openMenu = trigger => { assert.ok(trigger, 'menu trigger'); trigger.focus(); press(trigger, 'Enter'); };
   const text = () => doc.body.textContent;
@@ -109,7 +130,7 @@ function fixture(t, { user = null, storage = {}, components = [] } = {}) {
   const library = () => JSON.parse(win.localStorage.getItem('animate-studio:custom-components:v1') ?? '{"components":[]}').components;
   const editorFor = panel => win.CodeMirrorView.findFromDOM(doc.querySelector(`[data-panel="${panel}"] .cm-editor`));
   const ready = () => doc.querySelector('input[aria-label="页面名称"]');
-  return { win, doc, state, errors, click, button, buttonLike, labelled, type, press, openMenu, text, guestPage, library, editorFor, ready };
+  return { win, doc, state, errors, click, button, buttonLike, labelled, type, choose, press, openMenu, text, guestPage, library, editorFor, ready };
 }
 
 async function openMyComponents(f) {
@@ -361,4 +382,153 @@ test('failed draft persistence is reported before the close dialog promises reco
   assert.match(f.doc.querySelector('[role="alertdialog"]').textContent, /浏览器未能暂存草稿/);
   assert.doesNotMatch(f.doc.querySelector('[role="alertdialog"]').textContent, /修改已暂存/);
   assert.equal(f.labelled('组件名称').value, '不能暂存的修改');
+});
+
+test('component folders persist, filter and move library items without changing their source version', async t => {
+  const component = { ...componentTemplates[0].definition, name: '文件夹组件', id: 'local-folder-item', revision: 1, createdAt: '2026-10-25T00:00:00Z', updatedAt: '2026-10-25T00:00:00Z' };
+  const f = fixture(t, { storage: { 'animate-studio:custom-components:v1': JSON.stringify({ version: 1, components: [component] }) } });
+  await openMyComponents(f);
+  f.click(f.labelled('新建文件夹'));
+  await until(() => f.labelled('文件夹名称'), 'folder dialog opens');
+  f.type(f.labelled('文件夹名称'), '营销模块'); f.click(f.button('保存', f.doc.querySelector('.custom-folder-dialog')));
+  await until(() => !f.doc.querySelector('.custom-folder-dialog') && /这个分组还没有组件/.test(f.text()), 'new folder selected');
+  const folder = JSON.parse(f.win.localStorage.getItem('animate-studio:custom-components:v1')).folders[0];
+  assert.equal(folder.name, '营销模块');
+  f.choose(f.labelled('组件文件夹'), 'all');
+  f.openMenu(f.labelled('「文件夹组件」的更多操作'));
+  await until(() => [...f.doc.querySelectorAll('[role="menuitem"]')].some(item => item.textContent.includes('移动到文件夹')), 'component menu');
+  f.click([...f.doc.querySelectorAll('[role="menuitem"]')].find(item => item.textContent.includes('移动到文件夹')));
+  await until(() => f.labelled('目标文件夹'), 'move dialog');
+  f.choose(f.labelled('目标文件夹'), folder.id); f.click(f.button('移动', f.doc.querySelector('.custom-folder-dialog')));
+  await until(() => !f.doc.querySelector('.custom-folder-dialog') && f.library()[0].folderId === folder.id, 'component moved');
+  assert.equal(f.library()[0].revision, 1);
+  f.choose(f.labelled('组件文件夹'), folder.id);
+  assert.equal(f.doc.querySelectorAll('.custom-item').length, 1);
+  f.openMenu(f.labelled('文件夹操作'));
+  await until(() => [...f.doc.querySelectorAll('[role="menuitem"]')].some(item => item.textContent.includes('重命名文件夹')), 'folder menu');
+  f.click([...f.doc.querySelectorAll('[role="menuitem"]')].find(item => item.textContent.includes('重命名文件夹')));
+  await until(() => f.labelled('文件夹名称'), 'rename dialog');
+  f.type(f.labelled('文件夹名称'), '交互模块'); f.click(f.button('保存', f.doc.querySelector('.custom-folder-dialog')));
+  await until(() => !f.doc.querySelector('.custom-folder-dialog') && f.labelled('组件文件夹').selectedOptions[0].textContent.includes('交互模块'), 'folder renamed');
+  const g = fixture(t, { storage: { 'animate-studio:custom-components:v1': f.win.localStorage.getItem('animate-studio:custom-components:v1') } });
+  await openMyComponents(g); g.choose(g.labelled('组件文件夹'), folder.id);
+  assert.equal(g.doc.querySelectorAll('.custom-item').length, 1, 'folder membership survives a reload');
+  g.openMenu(g.labelled('文件夹操作'));
+  await until(() => [...g.doc.querySelectorAll('[role="menuitem"]')].some(item => item.textContent.includes('删除文件夹')), 'folder deletion menu');
+  g.click([...g.doc.querySelectorAll('[role="menuitem"]')].find(item => item.textContent.includes('删除文件夹')));
+  await until(() => g.doc.querySelector('.custom-folder-dialog'), 'folder delete confirmation');
+  assert.match(g.doc.querySelector('.custom-folder-dialog').textContent, /不会删除组件/);
+  g.click(g.button('删除文件夹', g.doc.querySelector('.custom-folder-dialog')));
+  await until(() => !g.doc.querySelector('.custom-folder-dialog') && g.library()[0].folderId === null, 'components moved to ungrouped');
+  assert.equal(g.library().length, 1); assert.equal(g.library()[0].revision, 1);
+  assert.equal(g.labelled('组件文件夹').value, 'none');
+});
+
+test('a new component can be uploaded directly into the selected account folder and read back', async t => {
+  const user = { id: 'owner', name: '作者', email: 'owner@test.local' };
+  const f = fixture(t, { user }); await openMyComponents(f);
+  f.click(f.buttonLike('账号', f.doc.querySelector('.custom-source-switch')));
+  await until(() => f.labelled('新建文件夹'), 'account folders loaded');
+  f.click(f.labelled('新建文件夹')); await until(() => f.labelled('文件夹名称'), 'new account folder dialog');
+  f.type(f.labelled('文件夹名称'), '云端常用'); f.click(f.button('保存', f.doc.querySelector('.custom-folder-dialog')));
+  await until(() => !f.doc.querySelector('.custom-folder-dialog') && f.state.folders.size === 1, 'account folder persisted');
+  const folder = [...f.state.folders.values()][0];
+  f.click(f.button('新建组件')); await until(() => f.labelled('组件名称'), 'designer opens');
+  f.type(f.labelled('组件名称'), '云端分组组件'); f.click(f.labelled('保存到账号'));
+  await until(() => f.state.components.size === 1 && f.doc.querySelector('.ccd-location')?.textContent.includes('账号'), 'uploaded to account');
+  const record = [...f.state.components.values()][0]; assert.equal(record.folderId, folder.id);
+  f.click(f.labelled('关闭设计器')); await until(() => !f.doc.querySelector('.component-designer'), 'designer closes');
+  await until(() => f.doc.querySelectorAll('.custom-item').length === 1, 'uploaded component appears in its folder');
+  f.click(f.labelled('添加「云端分组组件」到页面'));
+  await until(() => f.doc.querySelector('.free-canvas-block-content iframe'), 'cloud component read and inserted');
+  assert.ok(f.state.requests.some(request => request.path === `/api/account/components/${record.id}` && request.method === 'GET'));
+  assert.equal(record.revision, 1);
+});
+
+const libraryHookBundle = await build({
+  stdin: { contents: `import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {useCustomLibrary} from './src/components/custom/useCustomLibrary';const root=createRoot(document.getElementById('root'));function Probe(){const library=useCustomLibrary({id:'owner',email:'owner@test.local',name:'Owner'});window.libraryHook=library;return <output>{JSON.stringify(library.cloud)}</output>}window.unmount=()=>flushSync(()=>root.unmount());flushSync(()=>root.render(<Probe/>));`, loader: 'jsx', resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
+  bundle: true, write: false, format: 'iife', jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' }, logLevel: 'silent',
+});
+function deferredResponse() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
+function hookFixture(t, fetcher) {
+  const errors = [], console = new VirtualConsole();
+  console.on('error', (...args) => errors.push(args.map(String).join(' ')));
+  console.on('jsdomError', error => errors.push(error.message));
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://library.test', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: console });
+  const win = dom.window;
+  Object.assign(win, { Headers, Response, structuredClone });
+  win.fetch = (url, options = {}) => fetcher(String(url), options.method ?? 'GET', options.body ? JSON.parse(options.body) : null);
+  win.eval(libraryHookBundle.outputFiles[0].text);
+  t.after(() => { win.unmount(); win.close(); assert.deepEqual(errors, []); });
+  return { api: () => win.libraryHook, state: () => JSON.parse(win.document.querySelector('output').textContent) };
+}
+const hookRecord = (id, overrides = {}) => ({ id, name: id, description: '', revision: 4, createdAt: '2026-10-25T00:00:00Z', updatedAt: '2026-10-25T00:00:00Z', folderId: null, shareToken: null, publishedAt: null, sharedRevision: null, component: { ...componentTemplates[0].definition, name: id }, ...overrides });
+const hookSummary = ({ component: _component, ...record }) => record;
+
+test('a pending cloud list cannot erase an upload and the fresh list retains other account components', async t => {
+  const stale = deferredResponse(), store = new Map(); let lists = 0;
+  t.after(() => stale.resolve());
+  const f = hookFixture(t, async (path, method, body) => {
+    if (path === '/api/account/component-folders') return Response.json({ folders: [] });
+    if (method === 'POST') { const record = hookRecord('uploaded', { name: body.component.name, component: body.component }); store.set(record.id, record); return Response.json(record); }
+    const captured = [...store.values()].map(hookSummary);
+    if (++lists === 1) await stale.promise;
+    return Response.json({ components: captured });
+  });
+  const initial = f.api().refreshCloud();
+  await until(() => lists === 1 && f.state().status === 'loading', 'old empty list is pending');
+  store.set('other-device', hookRecord('other-device'));
+  await f.api().createCloud({ ...componentTemplates[0].definition, name: 'Uploaded result' });
+  await until(() => lists >= 2 && f.state().status === 'ready' && f.state().items.length === 2, 'mutation reconciles a fresh full list');
+  stale.resolve(); await initial;
+  assert.deepEqual(f.state().items.map(item => item.id).sort(), ['other-device', 'uploaded']);
+  assert.equal(f.state().status, 'ready');
+});
+
+test('late lists and detail loads cannot restore a moved folder when source revision is unchanged', async t => {
+  const staleList = deferredResponse(), staleDetail = deferredResponse();
+  t.after(() => { staleList.resolve(); staleDetail.resolve(); });
+  const folder = { id: 'folder-new', name: 'New folder', createdAt: '2026-10-25T00:00:00Z', updatedAt: '2026-10-25T00:00:00Z' };
+  let record = hookRecord('item'), lists = 0, details = 0;
+  const f = hookFixture(t, async (path, method, body) => {
+    if (path === '/api/account/component-folders') return Response.json({ folders: [folder] });
+    if (path.endsWith('/folder')) { record = { ...record, folderId: body.folderId }; return Response.json(record); }
+    if (path === '/api/account/components') {
+      const captured = hookSummary(record); if (++lists === 2) await staleList.promise;
+      return Response.json({ components: [captured] });
+    }
+    const captured = structuredClone(record); if (++details === 1) await staleDetail.promise;
+    return Response.json(captured);
+  });
+  await f.api().refreshCloud(); await until(() => f.state().status === 'ready', 'initial component visible');
+  const oldList = f.api().refreshCloud(), oldDetail = f.api().loadCloud('item');
+  await until(() => lists === 2 && details === 1, 'both old snapshots are captured');
+  await f.api().moveCloud('item', folder.id);
+  await until(() => lists >= 3 && f.state().status === 'ready' && f.state().items[0].folderId === folder.id, 'move is visible without a revision increment');
+  staleList.resolve(); staleDetail.resolve();
+  const [, loaded] = await Promise.all([oldList, oldDetail]);
+  assert.equal(details, 2, 'a detail response crossing a mutation is reread');
+  assert.equal(loaded.folderId, folder.id); assert.equal(loaded.revision, 4);
+  assert.equal(f.state().items[0].folderId, folder.id); assert.equal(f.state().items[0].revision, 4);
+});
+
+test('a failed reconciliation leaves a recoverable error instead of permanent cloud loading', async t => {
+  const stale = deferredResponse(); t.after(() => stale.resolve());
+  let lists = 0, failRefresh = true, record;
+  const f = hookFixture(t, async (path, method, body) => {
+    if (path === '/api/account/component-folders') return Response.json({ folders: [] });
+    if (method === 'POST') { record = hookRecord('uploaded', { component: body.component }); return Response.json(record); }
+    if (++lists === 1) { await stale.promise; return Response.json({ components: [] }); }
+    if (failRefresh) return Response.json({ error: '模拟列表读取失败' }, { status: 500 });
+    return Response.json({ components: [hookSummary(record)] });
+  });
+  const old = f.api().refreshCloud(); await until(() => lists === 1, 'initial list is pending');
+  await f.api().createCloud(componentTemplates[0].definition);
+  await until(() => f.state().status === 'error', 'failed background refresh is actionable');
+  assert.equal(f.state().items[0].id, 'uploaded', 'the successful upload remains cached');
+  stale.resolve(); await old;
+  assert.equal(f.state().status, 'error', 'an obsolete successful response cannot hide the refresh failure');
+  failRefresh = false; await f.api().refreshCloud();
+  await until(() => f.state().status === 'ready', 'explicit retry completes');
+  assert.equal(f.state().items[0].id, 'uploaded');
 });

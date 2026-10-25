@@ -13,6 +13,7 @@ import { createComponentRepository } from '../db/component-repository.ts';
 import { handleCloudAccountApi } from '../server/cloud-account-api.ts';
 import * as sqliteSchema from '../db/schema.ts';
 import { customComponentLimits } from '../shared/custom-components.mjs';
+import { componentFolderLimits } from '../shared/component-folders.mjs';
 import { componentTemplates } from '../src/lib/custom-components/templates.ts';
 
 /**
@@ -72,7 +73,7 @@ async function createFixture(t) {
     const user = (await response.json()).user;
     return { cookie: response.headers.getSetCookie().map(value => value.split(';')[0]).join('; '), user };
   }
-  return { call, signIn };
+  return { call, signIn, componentRepository: accounts.context.components };
 }
 
 test('account components require sign-in and support explicit create, read, update and delete', async t => {
@@ -201,6 +202,99 @@ test('each account has a component limit', async t => {
   assert.match(over.body.error, /最多保存 100 个组件/);
 });
 
+test('component folders persist grouping without changing code revisions or published snapshots', async t => {
+  const { call, signIn } = await createFixture(t), { cookie } = await signIn(email('folders'));
+  assert.deepEqual((await call('/api/account/component-folders', { cookie })).body, { folders: [] });
+  const createdFolder = await call('/api/account/component-folders', { method: 'POST', cookie, body: { name: '  数据展示  ' } });
+  assert.equal(createdFolder.status, 201);
+  const folder = createdFolder.body;
+  assert.equal(folder.name, '数据展示');
+  assert.equal((await call('/api/account/component-folders', { cookie })).body.folders[0].id, folder.id);
+  const created = await call('/api/account/components', { method: 'POST', cookie, body: { component: component(), folderId: folder.id } });
+  assert.equal(created.status, 201); assert.equal(created.body.folderId, folder.id);
+  const id = created.body.id;
+  const shared = await call(`/api/account/components/${id}/share`, { method: 'POST', cookie, body: {} });
+  assert.equal(shared.status, 200);
+  const renamed = await call(`/api/account/component-folders/${folder.id}`, { method: 'PATCH', cookie, body: { name: '图表' } });
+  assert.equal(renamed.body.name, '图表'); assert.equal(renamed.body.createdAt, folder.createdAt);
+  const moved = await call(`/api/account/components/${id}/folder`, { method: 'PATCH', cookie, body: { folderId: null } });
+  assert.equal(moved.body.folderId, null); assert.equal(moved.body.revision, 1);
+  assert.equal(moved.body.sharedRevision, 1); assert.equal(moved.body.shareToken, shared.body.token);
+  const regrouped = await call(`/api/account/components/${id}/folder`, { method: 'PATCH', cookie, body: { folderId: folder.id } });
+  assert.equal(regrouped.body.folderId, folder.id); assert.equal(regrouped.body.revision, 1);
+  const edited = await call(`/api/account/components/${id}`, { method: 'PUT', cookie, body: { component: component({ name: '新名称' }), baseRevision: 1 } });
+  assert.equal(edited.body.folderId, folder.id); assert.equal(edited.body.revision, 2);
+  assert.equal((await call(`/api/account/component-folders/${folder.id}`, { method: 'DELETE', cookie })).status, 204);
+  const kept = await call(`/api/account/components/${id}`, { cookie });
+  assert.equal(kept.body.folderId, null); assert.equal(kept.body.revision, 2); assert.equal(kept.body.component.name, '新名称');
+  assert.equal((await call(`/api/shared/components/${shared.body.token}`)).body.component.name, component().name);
+  assert.deepEqual((await call('/api/account/component-folders', { cookie })).body, { folders: [] });
+});
+
+test('component folders enforce account ownership, valid names and a bounded unique list', async t => {
+  const { call, signIn } = await createFixture(t);
+  assert.equal((await call('/api/account/component-folders')).status, 401);
+  const alice = await signIn(email('folder-alice')), bob = await signIn(email('folder-bob'));
+  const cookie = alice.cookie;
+  const post = body => call('/api/account/component-folders', { method: 'POST', cookie, body });
+  for (const body of [{ name: '' }, { name: '  ' }, { name: 'x'.repeat(61) }, { name: 1 }, { name: 'x', userId: 'foreign' }, [], {}]) assert.equal((await post(body)).status, 400);
+  const folder = (await post({ name: '私有文件夹' })).body;
+  assert.equal((await post({ name: ' 私有文件夹 ' })).status, 409);
+  assert.deepEqual((await call('/api/account/component-folders', { cookie: bob.cookie })).body, { folders: [] });
+  for (const method of ['PATCH', 'DELETE']) assert.equal((await call(`/api/account/component-folders/${folder.id}`, { method, cookie: bob.cookie, ...(method === 'PATCH' ? { body: { name: '篡改' } } : {}) })).status, 404);
+  const bobComponent = (await call('/api/account/components', { method: 'POST', cookie: bob.cookie, body: { component: component() } })).body;
+  assert.equal(bobComponent.folderId, null);
+  assert.equal((await call(`/api/account/components/${bobComponent.id}/folder`, { method: 'PATCH', cookie: bob.cookie, body: { folderId: folder.id } })).status, 404);
+  assert.equal((await call(`/api/account/components/${bobComponent.id}/folder`, { method: 'PATCH', cookie, body: { folderId: folder.id } })).status, 404);
+  assert.equal((await call('/api/account/components', { method: 'POST', cookie: bob.cookie, body: { component: component(), folderId: folder.id } })).status, 404);
+  for (const folderId of [true, 1, {}, 'not-a-uuid']) assert.equal((await call(`/api/account/components/${bobComponent.id}/folder`, { method: 'PATCH', cookie: bob.cookie, body: { folderId } })).status, 400);
+  assert.equal((await call(`/api/account/components/${bobComponent.id}/folder`, { method: 'PATCH', cookie: bob.cookie, body: { folderId: null, extra: true } })).status, 400);
+  assert.equal((await call('/api/account/component-folders', { method: 'POST', cookie, body: { name: '跨站' }, origin: 'https://evil.test' })).status, 403);
+  assert.equal((await call('/api/account/component-folders', { method: 'POST', cookie: bob.cookie, body: { name: '私有文件夹' } })).status, 201, 'names are unique per account');
+  const other = (await post({ name: '另一分组' })).body;
+  assert.equal((await call(`/api/account/component-folders/${other.id}`, { method: 'PATCH', cookie, body: { name: '私有文件夹' } })).status, 409);
+  for (let i = 2; i < componentFolderLimits.perLibrary; i++) assert.equal((await post({ name: `分组 ${i}` })).status, 201);
+  assert.equal((await post({ name: '超额分组' })).status, 409);
+  assert.equal((await call('/api/account/component-folders', { cookie })).body.folders.length, 50);
+});
+
+test('the Node folder migration preserves existing ungrouped components and applies SET NULL on deletion', async t => {
+  const sqlite = new Database(':memory:'); t.after(() => sqlite.close()); sqlite.pragma('foreign_keys = ON');
+  for (const file of ['sqlite-0001-accounts.sql', 'sqlite-0002-components.sql']) sqlite.exec(await readFile(`db/migrations-node/${file}`, 'utf8'));
+  sqlite.prepare('INSERT INTO user (id,name,email,created_at,updated_at) VALUES (?,?,?,?,?)').run('owner', 'Owner', 'migration@example.test', 'now', 'now');
+  sqlite.prepare('INSERT INTO studio_component (id,user_id,name,definition,created_at,updated_at) VALUES (?,?,?,?,?,?)').run('legacy', 'owner', '旧组件', JSON.stringify(component()), 'now', 'now');
+  sqlite.exec(await readFile('db/migrations-node/sqlite-0003-component-folders.sql', 'utf8'));
+  assert.equal(sqlite.prepare('SELECT folder_id FROM studio_component WHERE id=?').get('legacy').folder_id, null);
+  sqlite.prepare('INSERT INTO studio_component_folder (id,user_id,name,created_at,updated_at) VALUES (?,?,?,?,?)').run('folder', 'owner', 'Folder', 'now', 'now');
+  sqlite.prepare('UPDATE studio_component SET folder_id=? WHERE id=?').run('folder', 'legacy');
+  sqlite.prepare('DELETE FROM studio_component_folder WHERE id=?').run('folder');
+  assert.equal(sqlite.prepare('SELECT folder_id FROM studio_component WHERE id=?').get('legacy').folder_id, null);
+  // The new constraint is a separate migration so a development database that
+  // already applied 0003 receives it too, without rewriting any saved rows.
+  const insert = sqlite.prepare('INSERT INTO studio_component_folder (id,user_id,name,created_at,updated_at) VALUES (?,?,?,?,?)');
+  for (let index = 0; index < 49; index++) insert.run(`f${index}`, 'owner', `分组 ${index}`, 'now', 'now');
+  sqlite.exec(await readFile('db/migrations-node/sqlite-0004-component-folder-limit.sql', 'utf8'));
+  insert.run('f49', 'owner', '最后一个', 'now', 'now');
+  assert.throws(() => insert.run('f50', 'owner', '超出限制', 'now', 'now'), /studio_component_folder_limit/);
+  assert.equal(sqlite.prepare('SELECT count(*) AS total FROM studio_component_folder').get().total, 50);
+  assert.equal(sqlite.prepare('SELECT name FROM studio_component WHERE id=?').get('legacy').name, '旧组件');
+});
+
+test('concurrent folder creates cannot exceed the account limit', async t => {
+  const { call, signIn, componentRepository } = await createFixture(t);
+  const { cookie, user } = await signIn(email('folder-race'));
+  for (let index = 0; index < 49; index++) await componentRepository.createFolder(user.id, `已有分组 ${index}`, crypto.randomUUID());
+  // Both calls can observe 49 at the application precheck; the database must
+  // reject one of their writes instead of allowing the library to reach 51.
+  const results = await Promise.all([
+    componentRepository.createFolder(user.id, '并发分组 A', crypto.randomUUID()),
+    componentRepository.createFolder(user.id, '并发分组 B', crypto.randomUUID()),
+  ]);
+  assert.equal(results.filter(result => 'folder' in result).length, 1);
+  assert.deepEqual(results.filter(result => 'error' in result), [{ error: 'limit' }]);
+  assert.equal((await call('/api/account/component-folders', { cookie })).body.folders.length, 50);
+});
+
 /** A D1 binding backed by better-sqlite3: the same surface drizzle-orm/d1 uses. */
 function d1(sqlite) {
   const statement = (sql, params = []) => ({
@@ -250,6 +344,13 @@ test('Cloudflare worker serves the component API on the generated D1 migrations'
   assert.equal((await worker('/api/account/components')).status, 401);
   const created = await worker('/api/account/components', { method: 'POST', cookie: alice, body: { component: component({ name: 'D1 组件' }) } });
   assert.equal(created.status, 201);
+  assert.equal(created.body.folderId, null);
+  const folder = await worker('/api/account/component-folders', { method: 'POST', cookie: alice, body: { name: 'D1 分组' } });
+  assert.equal(folder.status, 201);
+  assert.equal((await worker(`/api/account/components/${created.body.id}/folder`, { method: 'PATCH', cookie: alice, body: { folderId: folder.body.id } })).body.revision, 1);
+  assert.equal((await worker(`/api/account/component-folders/${folder.body.id}`, { method: 'DELETE', cookie: bob })).status, 404);
+  assert.equal((await worker(`/api/account/component-folders/${folder.body.id}`, { method: 'DELETE', cookie: alice })).status, 204);
+  assert.equal((await worker(`/api/account/components/${created.body.id}`, { cookie: alice })).body.folderId, null, 'generated D1 SQL must retain the SET NULL deletion action');
   assert.equal((await worker(`/api/account/components/${created.body.id}`, { cookie: bob })).status, 404);
   assert.equal((await worker(`/api/account/components/${created.body.id}`, { method: 'PUT', cookie: alice, body: { component: component({ name: 'D1 组件 v2' }), baseRevision: 1 } })).body.revision, 2);
   const share = await worker(`/api/account/components/${created.body.id}/share`, { method: 'POST', cookie: alice, body: {} });
@@ -258,4 +359,8 @@ test('Cloudflare worker serves the component API on the generated D1 migrations'
   assert.equal((await worker(`/api/account/components/${created.body.id}`, { method: 'DELETE', cookie: alice })).status, 204);
   assert.equal((await worker(`/api/shared/components/${share.body.token}`)).status, 404, 'D1 cascades the share with the component');
   assert.deepEqual((await worker('/api/account/components', { cookie: alice })).body, { components: [] });
+  for (let index = 0; index < 49; index++) assert.equal((await worker('/api/account/component-folders', { method: 'POST', cookie: alice, body: { name: `已有分组 ${index}` } })).status, 201);
+  const raced = await Promise.all(['并发 A', '并发 B'].map(name => worker('/api/account/component-folders', { method: 'POST', cookie: alice, body: { name } })));
+  assert.deepEqual(raced.map(result => result.status).sort(), [201, 409], 'the generated D1 trigger enforces the same concurrent limit');
+  assert.equal((await worker('/api/account/component-folders', { cookie: alice })).body.folders.length, 50);
 });

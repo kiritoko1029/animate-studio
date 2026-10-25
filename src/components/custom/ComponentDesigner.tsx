@@ -29,6 +29,8 @@ export type DesignerRequest = {
   definition: CustomComponentDefinition;
   revision: number | null;
   origin?: LocalComponent['origin'];
+  /** Initial library folder; kept outside the portable component definition. */
+  folder?: { kind: 'local' | 'cloud'; id: string | null };
   /** Apply this target's stored draft without asking (the user chose “继续编辑”). */
   restoreDraft?: boolean;
 };
@@ -232,7 +234,7 @@ export default function ComponentDesigner({ request, page, onClose, onAddToPage,
         } else {
           // An explicit overwrite is based on whatever is stored now.
           const base = force && target ? getLocalComponent(target.id)?.revision ?? null : revision;
-          const component = target ? library.saveLocal(definition, { id: target.id, baseRevision: base }) : library.saveLocal(definition, { origin: request.origin });
+          const component = target ? library.saveLocal(definition, { id: target.id, baseRevision: base }) : library.saveLocal(definition, { origin: request.origin, folderId: request.folder?.kind === 'local' ? request.folder.id : undefined });
           location = saved({ kind: 'local', id: component.id }, component.revision, definition, t("已保存到本机（版本 {0}）", { 0: component.revision }));
         }
       } catch (failure) {
@@ -249,7 +251,7 @@ export default function ComponentDesigner({ request, page, onClose, onAddToPage,
     let location: SavedLocation | null = null;
     await guard(async () => {
       const definition = validated();
-      const record = await library.createCloud(definition);
+      const record = await library.createCloud(definition, request.folder?.kind === 'cloud' ? request.folder.id : undefined);
       const fromLocal = target?.kind === 'local';
       location = saved({ kind: 'cloud', id: record.id }, record.revision, definition, fromLocal ? t("已复制到账号，本机副本仍保留") : t("已保存到账号"));
     });
@@ -258,7 +260,7 @@ export default function ComponentDesigner({ request, page, onClose, onAddToPage,
   async function saveAsNew() {
     await guard(async () => {
       const definition = validated();
-      const component = library.saveLocal({ ...definition, name: definition.name.length > 54 ? definition.name : t("{0} 副本", { 0: definition.name }) }, { origin: request.origin });
+      const component = library.saveLocal({ ...definition, name: definition.name.length > 54 ? definition.name : t("{0} 副本", { 0: definition.name }) }, { origin: request.origin, folderId: target?.kind === 'local' ? library.findLocal(target.id)?.folderId : request.folder?.kind === 'local' ? request.folder.id : undefined });
       saved({ kind: 'local', id: component.id }, component.revision, { ...definition, name: component.name }, t("已另存为新的本机组件"));
       setDraft(current => ({ ...current, name: component.name }));
     });

@@ -1,7 +1,7 @@
 import { t, getLocale, translateMessage } from '../../i18n';
 import { useEffect, useState } from 'react';
-import { AlertCircle, Cloud, Download, HardDrive, LoaderCircle, MoreHorizontal, Pencil, Plus, Puzzle, RefreshCw, Share2, Trash2, UserRound } from 'lucide-react';
-import { StudioButton } from '../StudioUI';
+import { AlertCircle, Cloud, Download, Folder, FolderPlus, HardDrive, LoaderCircle, MoreHorizontal, Pencil, Plus, Puzzle, RefreshCw, Share2, Sparkles, Trash2, UserRound } from 'lucide-react';
+import { StudioButton, StudioDialog } from '../StudioUI';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../animate-ui/components/radix/dropdown-menu';
 import { useAccount } from '../AccountProvider';
 import type { CustomComponentDefinition, CustomComponentSource } from '../../../shared/custom-components.mjs';
@@ -21,16 +21,17 @@ type Props = {
   onAdd: (definition: CustomComponentDefinition, source: CustomComponentSource) => void;
   onOpenDesigner: (request: DesignerRequest) => void;
   onRequestLogin: () => void;
+  onCreateWithAi?: (target: { kind: 'local' | 'cloud'; folderId: string | null }) => void;
   notify: (message: string) => void;
 };
-type Item = { kind: 'local' | 'cloud'; id: string; name: string; description: string; revision: number; updatedAt: string; shared: boolean };
+type Item = { kind: 'local' | 'cloud'; id: string; name: string; description: string; revision: number; updatedAt: string; shared: boolean; folderId: string | null };
 const time = (value: string) => new Date(value).toLocaleString(getLocale(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const emptyDefinition: CustomComponentDefinition = { name: '', html: '', css: '', js: '' };
-const fromLocal = (item: LocalComponent): Item => ({ kind: 'local', id: item.id, name: item.name, description: item.description ?? '', revision: item.revision, updatedAt: item.updatedAt, shared: false });
-const fromCloud = (item: CloudComponentSummary): Item => ({ kind: 'cloud', id: item.id, name: item.name, description: item.description, revision: item.revision, updatedAt: item.updatedAt, shared: Boolean(item.shareToken) });
+const fromLocal = (item: LocalComponent): Item => ({ kind: 'local', id: item.id, name: item.name, description: item.description ?? '', revision: item.revision, updatedAt: item.updatedAt, shared: false, folderId: item.folderId ?? null });
+const fromCloud = (item: CloudComponentSummary): Item => ({ kind: 'cloud', id: item.id, name: item.name, description: item.description, revision: item.revision, updatedAt: item.updatedAt, shared: Boolean(item.shareToken), folderId: item.folderId ?? null });
 
 /** The “我的组件” section of the component library. */
-export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onRequestLogin, notify }: Props) {
+export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onRequestLogin, onCreateWithAi, notify }: Props) {
   const library = useLibrary();
   const { user, capabilities } = useAccount();
   const [source, setSource] = useState<'local' | 'cloud'>('local');
@@ -38,15 +39,41 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [share, setShare] = useState<{ target: DesignerTarget; name: string } | null>(null);
+  const [folderId, setFolderId] = useState('all');
+  const [folderDialog, setFolderDialog] = useState<{ action: 'create' | 'rename' | 'delete'; id?: string; name: string } | null>(null);
+  const [moving, setMoving] = useState<Item | null>(null), [moveFolder, setMoveFolder] = useState('');
+  const folders = source === 'local' ? library.local.folders : library.cloud.folders;
+  const selectedFolder = folders.find(folder => folder.id === folderId);
+  const folderReady = source === 'local' ? !library.local.damaged : Boolean(user) && library.cloud.status === 'ready';
   useEffect(() => { if (source === 'cloud') library.ensureCloud(); }, [source, user?.id, library.cloud.status]);
   useEffect(() => { if (!user) setSource('local'); }, [user?.id]);
+  useEffect(() => { setFolderId('all'); setFolderDialog(null); setMoving(null); setError(''); }, [source, user?.id]);
+  useEffect(() => { if (!['all', 'none'].includes(folderId) && !folders.some(folder => folder.id === folderId)) setFolderId('all'); }, [folders, folderId]);
 
   async function run(key: string, action: () => Promise<void>) {
     if (busy) return;
     setBusy(key); setError('');
     try { await action(); } catch (failure) { setError(failure instanceof Error ? failure.message : t("操作失败，请重试。")); } finally { setBusy(null); }
   }
-  const startNew = (template: ComponentTemplate) => onOpenDesigner({ target: null, definition: cloneTemplate(template), revision: null, origin: 'template' });
+  const startNew = (template: ComponentTemplate) => onOpenDesigner({ target: null, definition: cloneTemplate(template), revision: null, origin: 'template', folder: { kind: source, id: selectedFolder?.id ?? null } });
+  const changeFolder = () => run('folder', async () => {
+    if (!folderDialog) return;
+    if (folderDialog.action === 'create') {
+      const folder = source === 'local' ? library.createLocalFolder(folderDialog.name) : await library.createCloudFolder(folderDialog.name);
+      setFolderId(folder.id);
+    } else if (folderDialog.action === 'rename') {
+      if (source === 'local') library.renameLocalFolder(folderDialog.id!, folderDialog.name); else await library.renameCloudFolder(folderDialog.id!, folderDialog.name);
+    } else {
+      if (source === 'local') library.deleteLocalFolder(folderDialog.id!); else await library.deleteCloudFolder(folderDialog.id!);
+      setFolderId('none'); notify(t('文件夹已删除，组件已移到未分组'));
+    }
+    setFolderDialog(null);
+  });
+  const move = () => run('move', async () => {
+    if (!moving) return;
+    if (moving.kind === 'local') library.moveLocal(moving.id, moveFolder || null); else await library.moveCloud(moving.id, moveFolder || null);
+    setMoving(null); notify(t('组件分组已更新'));
+  });
   async function definitionOf(item: Item): Promise<{ definition: CustomComponentDefinition; revision: number }> {
     if (item.kind === 'local') {
       const component = library.findLocal(item.id);
@@ -108,14 +135,15 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
 
   const needle = query.trim().toLowerCase();
   const matches = (item: Item) => !needle || `${item.name} ${item.description}`.toLowerCase().includes(needle);
-  const items = (source === 'local' ? library.local.components.map(fromLocal) : library.cloud.items.map(fromCloud)).filter(matches);
+  const allItems = source === 'local' ? library.local.components.map(fromLocal) : library.cloud.items.map(fromCloud);
+  const items = allItems.filter(matches).filter(item => folderId === 'all' || (folderId === 'none' ? !item.folderId : item.folderId === folderId));
   const cloudCount = library.cloud.status === 'ready' ? String(library.cloud.items.length) : '·';
   const draftName = (draft: DesignerDraft) => draft.definition.name || t("未命名组件");
 
   return <section className="custom-library" aria-label={t("我的组件")}>
     <div className="custom-library-head">
       <div><h3><Puzzle size={14}/>{t("我的组件")}</h3><p>{t("用 HTML、CSS 和 JavaScript 编写组件，保存后点击即可添加到页面。")}</p></div>
-      <StudioButton className="primary-button" onClick={() => startNew(componentTemplates[0])}><Plus size={13}/>{t("新建组件")}</StudioButton>
+      <div className="custom-library-create"><StudioButton className="primary-button" onClick={() => startNew(componentTemplates[0])}><Plus size={13}/>{t("新建组件")}</StudioButton>{onCreateWithAi && <StudioButton className="secondary-button" onClick={() => onCreateWithAi({ kind: source, folderId: selectedFolder?.id ?? null })}><Sparkles size={13}/>{t('AI 创建组件')}</StudioButton>}</div>
     </div>
     {library.drafts.length > 0 && <div className="custom-drafts" role="status">
       <strong>{t("未保存的修改")}</strong>
@@ -125,6 +153,17 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
       <button type="button" role="tab" aria-selected={source === 'local'} className={source === 'local' ? 'active' : ''} onClick={() => setSource('local')}><HardDrive size={12}/>{t("本机")}<span>{library.local.components.length}</span></button>
       <button type="button" role="tab" aria-selected={source === 'cloud'} className={source === 'cloud' ? 'active' : ''} onClick={() => setSource('cloud')}><Cloud size={12}/>{t("账号")}<span>{user ? cloudCount : '—'}</span></button>
     </div>
+    {folderReady && <div className="custom-folder-bar">
+      <Folder size={13}/><select aria-label={t('组件文件夹')} value={folderId} onChange={event => setFolderId(event.target.value)} disabled={Boolean(busy)}>
+        <option value="all">{t('全部组件')} ({allItems.length})</option><option value="none">{t('未分组')} ({allItems.filter(item => !item.folderId).length})</option>
+        {folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name} ({allItems.filter(item => item.folderId === folder.id).length})</option>)}
+      </select>
+      <StudioButton className="icon-button" aria-label={t('新建文件夹')} title={t('新建文件夹')} disabled={Boolean(busy)} onClick={() => { setError(''); setFolderDialog({ action: 'create', name: '' }); }}><FolderPlus size={14}/></StudioButton>
+      {selectedFolder && <DropdownMenu><DropdownMenuTrigger asChild><StudioButton className="icon-button" aria-label={t('文件夹操作')} disabled={Boolean(busy)}><MoreHorizontal size={14}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu" align="end">
+        <DropdownMenuItem onSelect={() => { setError(''); setFolderDialog({ action: 'rename', id: selectedFolder.id, name: selectedFolder.name }); }}><Pencil size={14}/>{t('重命名文件夹')}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { setError(''); setFolderDialog({ action: 'delete', id: selectedFolder.id, name: selectedFolder.name }); }}><Trash2 size={14}/>{t('删除文件夹')}</DropdownMenuItem>
+      </DropdownMenuContent></DropdownMenu>}
+    </div>}
     {error && <p className="custom-library-error" role="alert"><AlertCircle size={13}/>{translateMessage(error)}</p>}
     {source === 'local' && library.local.damaged && <div className="custom-library-error" role="alert"><AlertCircle size={13}/><span>{t("本机组件库数据无法读取，原数据尚未覆盖。可以先下载备份，再重置后继续使用。")}</span><StudioButton className="text-button" onClick={backupAndReset}><Download size={12}/>{t("备份并重置")}</StudioButton></div>}
     {source === 'local' && library.local.hidden > 0 && <p className="custom-library-note">{t("有")}{library.local.hidden} {t("个本机组件无法读取，已隐藏并原样保留。")}</p>}
@@ -135,7 +174,7 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
       {capabilities.cloudEnabled ? <StudioButton className="secondary-button" onClick={onRequestLogin}><UserRound size={13}/>{t("登录")}</StudioButton> : <small>{t("当前站点未开启账号登录，组件可以保存在本机。")}</small>}
     </div> : source === 'cloud' && library.cloud.status === 'loading' && !library.cloud.items.length ? <p className="custom-library-note"><LoaderCircle size={13} className="spin"/> {t("正在读取账号组件…")}</p>
       : source === 'cloud' && library.cloud.status === 'error' ? <div className="custom-library-error" role="alert"><AlertCircle size={13}/><span>{translateMessage(library.cloud.error)}</span><StudioButton className="text-button" onClick={() => void library.refreshCloud()}><RefreshCw size={12}/>{t("重试")}</StudioButton></div>
-      : !items.length ? (needle ? <p className="custom-library-note">{t("没有名称或说明包含“")}{query.trim()}{t("”的组件。")}</p> : source === 'local' ? <div className="custom-empty">
+      : !items.length ? (needle ? <p className="custom-library-note">{t("没有名称或说明包含“")}{query.trim()}{t("”的组件。")}</p> : folderId !== 'all' ? <div className="custom-empty"><Folder size={24}/><strong>{t('这个分组还没有组件')}</strong><p>{t('可以新建组件，或从组件菜单移入此文件夹。')}</p></div> : source === 'local' ? <div className="custom-empty">
         <Puzzle size={24}/><strong>{t("还没有自己的组件")}</strong>
         <p>{t("从一个模板开始：修改代码、运行预览、保存，就能像内置组件一样添加到页面。")}</p>
         <div className="custom-template-grid">{componentTemplates.map(template => <button key={template.id} type="button" onClick={() => startNew(template)}><strong>{t(template.name)}</strong><span>{t(template.summary)}</span></button>)}</div>
@@ -152,6 +191,7 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
             <DropdownMenu><DropdownMenuTrigger asChild><StudioButton className="icon-button" aria-label={t("「{0}」的更多操作", { 0: item.name })}><MoreHorizontal size={14}/></StudioButton></DropdownMenuTrigger><DropdownMenuContent className="studio-menu" align="end" sideOffset={6}>
               <DropdownMenuItem onSelect={() => void add(item)}><Plus size={14}/>{t("添加到页面")}</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void edit(item)}><Pencil size={14}/>{t("编辑")}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => { setError(''); setMoving(item); setMoveFolder(item.folderId ?? ''); }}><Folder size={14}/>{t('移动到文件夹')}</DropdownMenuItem>
               {item.kind === 'cloud' ? <>
                 <DropdownMenuItem onSelect={() => setShare({ target: { kind: 'cloud', id: item.id }, name: item.name })}><Share2 size={14}/>{t("分享…")}</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void copyToLocal(item)}><HardDrive size={14}/>{t("复制到本机")}</DropdownMenuItem>
@@ -165,5 +205,16 @@ export function CustomComponentLibrary({ page, query, onAdd, onOpenDesigner, onR
       })}</div>}
     {source === 'cloud' && user && library.cloud.status === 'ready' && <StudioButton className="text-button custom-refresh" onClick={() => void library.refreshCloud()}><RefreshCw size={12}/>{t("刷新账号组件")}</StudioButton>}
     {share && <ShareComponentDialog target={share.target} revision={null} dirty={false} name={share.name} onSaveToAccount={async () => false} onClose={() => setShare(null)} notify={notify}/>}
+    {folderDialog && <StudioDialog className="custom-folder-dialog" title={t(folderDialog.action === 'create' ? '新建文件夹' : folderDialog.action === 'rename' ? '重命名文件夹' : '删除文件夹')} onClose={() => { if (!busy) setFolderDialog(null); }}>
+      <h2>{t(folderDialog.action === 'create' ? '新建文件夹' : folderDialog.action === 'rename' ? '重命名文件夹' : '删除文件夹')}</h2>
+      {folderDialog.action === 'delete' ? <p>{t('删除“{0}”后，其中的组件会移到未分组，不会删除组件。', { 0: folderDialog.name })}</p> : <label>{t('文件夹名称')}<input aria-label={t('文件夹名称')} autoFocus maxLength={60} value={folderDialog.name} onChange={event => setFolderDialog({ ...folderDialog, name: event.target.value })} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing && folderDialog.name.trim()) { event.preventDefault(); void changeFolder(); } }}/></label>}
+      {error && <p className="custom-library-error" role="alert">{translateMessage(error)}</p>}
+      <div className="custom-folder-actions"><StudioButton className="secondary-button" disabled={Boolean(busy)} onClick={() => setFolderDialog(null)}>{t('取消')}</StudioButton><StudioButton className="primary-button" disabled={Boolean(busy) || folderDialog.action !== 'delete' && !folderDialog.name.trim()} onClick={() => void changeFolder()}>{folderDialog.action === 'delete' ? t('删除文件夹') : t('保存')}</StudioButton></div>
+    </StudioDialog>}
+    {moving && <StudioDialog className="custom-folder-dialog" title={t('移动到文件夹')} onClose={() => { if (!busy) setMoving(null); }}>
+      <h2>{t('移动到文件夹')}</h2><p>{moving.name}</p><label>{t('目标文件夹')}<select aria-label={t('目标文件夹')} value={moveFolder} onChange={event => setMoveFolder(event.target.value)}><option value="">{t('未分组')}</option>{folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+      {error && <p className="custom-library-error" role="alert">{translateMessage(error)}</p>}
+      <div className="custom-folder-actions"><StudioButton className="secondary-button" disabled={Boolean(busy)} onClick={() => setMoving(null)}>{t('取消')}</StudioButton><StudioButton className="primary-button" disabled={Boolean(busy)} onClick={() => void move()}>{t('移动')}</StudioButton></div>
+    </StudioDialog>}
   </section>;
 }

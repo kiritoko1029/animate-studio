@@ -33,7 +33,8 @@ function mountPage(root, width, height) {
     if (!link || !root.contains(link)) return;
     const href = link.getAttribute('href');
     if (!href.startsWith('#')) return;
-    const target = href === '#' ? root : Array.from(root.querySelectorAll('[data-anchor], [id]')).find(node => '#' + (node.getAttribute('data-anchor') || node.id) === href);
+    const targets = Array.from(root.querySelectorAll('[data-anchor], [id]'));
+    const target = href === '#' ? root : targets.find(node => node.getAttribute('data-block-id') === href.slice(1)) || targets.find(node => '#' + (node.getAttribute('data-anchor') || node.id) === href);
     if (!target) return;
     event.preventDefault();
     target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });

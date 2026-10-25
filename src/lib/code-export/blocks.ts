@@ -258,7 +258,7 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
     }
     const body = connect(content());
     const frameEvents: Record<string, string> = block.events?.click?.length ? { click: `event.preventDefault(); void logic.dispatch(${js(block.id)}, 'click');` } : {};
-    return h('div', { class: 'page-free-frame', style: { left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height), zIndex: index + 1 }, 'data-block-type': block.type, 'data-block-id': block.id, ...(block.bindings?.visible ? { hidden: bind(`!${dynamic('visible', true).expression}`, !logic.read(block.bindings.visible, true)) } : {}), ...(block.bindings?.disabled ? { 'aria-disabled': dynamic('disabled', false) } : {}) }, [
+    return h('div', { class: 'page-free-frame', style: { left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height), zIndex: index + 1 }, 'data-block-type': block.type, 'data-block-id': block.id, 'data-anchor': block.id, ...(block.bindings?.visible ? { hidden: bind(`!${dynamic('visible', true).expression}`, !logic.read(block.bindings.visible, true)) } : {}), ...(block.bindings?.disabled ? { 'aria-disabled': dynamic('disabled', false) } : {}) }, [
       h('div', { class: `page-block page-block--${block.type} page-block--bounded`, style, 'data-theme': p.theme ?? document.settings.theme, 'data-animation': p.animation || 'none', 'data-catalog-effect': p.effect || 'none' }, [h('div', { class: 'page-block-content' }, [body])]),
     ], frameEvents);
   });

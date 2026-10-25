@@ -1,7 +1,7 @@
 import { parser } from '@lezer/javascript';
 
 /**
- * Designer-only instrumentation: insert a `__asGuard()` call at the start of
+ * Component instrumentation: insert a `__asGuard()` call at the start of
  * every loop body so a runaway loop in a preview throws instead of freezing
  * the tab. The bootstrap defines `__asGuard` only for guarded runs.
  *

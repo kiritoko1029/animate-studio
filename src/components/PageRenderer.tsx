@@ -176,7 +176,7 @@ export function FreePage({ document, interactive = true, replayKey = 0 }: PageRe
       <div className="page-free-scaled-shell" style={{ width: designWidth * scale, height: designHeight * scale }}>
         <div className="page-free-canvas" style={{ width: designWidth, height: designHeight, transform: `scale(${scale})` }} key={replayKey}>
           {positionedBlocks.map(({ block, frame }, index) => {
-            return <div className="page-free-frame" key={block.id} data-block-id={block.id} style={{ left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height), zIndex: index + 1 }}>
+            return <div className="page-free-frame" key={block.id} data-block-id={block.id} data-anchor={block.id} style={{ left: frame.x, top: frame.y, width: Math.max(1, frame.width), height: Math.max(1, frame.height), zIndex: index + 1 }}>
               <BlockRenderer block={block} settings={settings} interactive={interactive} bounded />
             </div>;
           })}

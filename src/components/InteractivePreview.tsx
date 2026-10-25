@@ -8,6 +8,7 @@ import { variableStorageKey } from '../lib/interactions/persistence';
 import { FreePage } from './PageRenderer';
 import { NativeRuntimeContext, type NativeRuntime } from './NativeInteractions';
 import { safeUrl } from '../model';
+import { findPageAnchor } from '../lib/page-anchors';
 import '../interactions.css';
 
 function PreviewNotice({ message, onClose, translate }: { message: string; onClose: () => void; translate: (message: string) => string }) {
@@ -37,7 +38,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
       const url = safeUrl(raw);
       if (url.startsWith('#')) {
         const surface = container.current?.querySelector('.page-surface');
-        const target = url === '#' ? surface : [...surface?.querySelectorAll('[data-anchor]') ?? []].find(element => '#' + element.getAttribute('data-anchor') === url);
+        const target = findPageAnchor(surface, url);
         target?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
       } else if (/^(mailto:|tel:)/i.test(url)) window.location.assign(url);
       else window.open(url, '_blank', 'noopener,noreferrer');

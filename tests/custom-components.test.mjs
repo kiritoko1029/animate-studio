@@ -10,7 +10,7 @@ import { buildComponentDocument, componentContentSecurityPolicy, escapeScriptTex
 import { createRateLimiter, readFrameMessage } from '../src/lib/custom-components/protocol.ts';
 import { guardLoops } from '../src/lib/custom-components/loop-guard.ts';
 import { createCustomBlock, customComponentTheme, definitionFromInstance, instanceProps, resetCustomInstance, updateInstanceDefinition } from '../src/lib/custom-components/instances.ts';
-import { LibraryStorageError, RevisionConflictError, deleteLocalComponent, localLibraryKey, readLocalLibrary, saveLocalComponent } from '../src/lib/custom-components/library.ts';
+import { LibraryStorageError, RevisionConflictError, createLocalFolder, renameLocalFolder, deleteLocalFolder, moveLocalComponent, deleteLocalComponent, localLibraryKey, readLocalLibrary, saveLocalComponent, saveAiComponent, pickDefinition } from '../src/lib/custom-components/library.ts';
 import { clearDesignerDraft, designerDraftKey, listDesignerDrafts, readDesignerDraft, writeDesignerDraft } from '../src/lib/custom-components/drafts.ts';
 import { componentTemplates } from '../src/lib/custom-components/templates.ts';
 import { codeHints } from '../src/lib/custom-components/hints.ts';
@@ -223,6 +223,55 @@ test('local library persists, detects concurrent edits and never overwrites dama
   const full = memoryStorage();
   full.setItem = () => { throw new Error('QuotaExceededError'); };
   assert.throws(() => saveLocalComponent(definition(), {}, full), /浏览器空间不足/);
+});
+
+test('local folders preserve legacy components, code revisions, and unreadable records', () => {
+  const storage = memoryStorage();
+  const original = saveLocalComponent(definition(), {}, storage);
+  const old = JSON.parse(storage.getItem(localLibraryKey)); delete old.folders; delete old.components[0].folderId;
+  old.components.push({ id: 'unreadable', future: true }); storage.setItem(localLibraryKey, JSON.stringify(old));
+  assert.deepEqual(readLocalLibrary(storage).folders, []);
+  assert.equal(readLocalLibrary(storage).components[0].folderId, null);
+  const a = createLocalFolder('  展示组件  ', storage), b = createLocalFolder('表单组件', storage);
+  assert.equal(a.name, '展示组件');
+  assert.throws(() => createLocalFolder('展示组件', storage), /名称已存在/);
+  assert.throws(() => renameLocalFolder(b.id, '展示组件', storage), /名称已存在/);
+  assert.throws(() => createLocalFolder(' ', storage), /文件夹名称/);
+  moveLocalComponent(original.id, a.id, storage);
+  assert.equal(readLocalLibrary(storage).components[0].revision, 1);
+  const edited = saveLocalComponent(definition({ name: '已编辑' }), { id: original.id, baseRevision: 1 }, storage);
+  assert.equal(edited.folderId, a.id, 'saving source keeps its current folder');
+  renameLocalFolder(a.id, '营销组件', storage);
+  assert.equal(readLocalLibrary(storage).folders.find(folder => folder.id === a.id).name, '营销组件');
+  assert.throws(() => moveLocalComponent(original.id, 'missing', storage), /未找到/);
+  const second = saveLocalComponent(definition({ name: '来自另一标签页' }), { folderId: b.id }, storage);
+  deleteLocalFolder(a.id, storage);
+  const library = readLocalLibrary(storage);
+  assert.equal(library.components.find(item => item.id === original.id).folderId, null);
+  assert.equal(library.components.find(item => item.id === original.id).revision, 2, 'deleting a folder never changes source revision');
+  assert.equal(library.components.find(item => item.id === second.id).folderId, b.id);
+  assert.equal(library.hidden, 1); assert.ok(JSON.parse(storage.getItem(localLibraryKey)).components.some(item => item.id === 'unreadable'));
+  assert.equal('folderId' in pickDefinition(edited), false);
+});
+
+test('AI component saves are idempotent and preserve manual changes and grouping', () => {
+  const storage = memoryStorage(), folder = createLocalFolder('AI 组件', storage);
+  const first = saveAiComponent(definition(), 'page:block', undefined, folder.id, storage);
+  assert.equal(first.origin, 'ai'); assert.equal(first.folderId, folder.id);
+  const retry = saveAiComponent(definition(), 'page:block', undefined, folder.id, storage);
+  assert.equal(retry.id, first.id); assert.equal(retry.revision, 1);
+  assert.equal(readLocalLibrary(storage).components.length, 1);
+  const source = { kind: 'local', id: first.id, revision: 1 };
+  const revised = saveAiComponent(definition({ css: 'p{color:blue}' }), 'page:block', source, undefined, storage);
+  assert.equal(revised.id, first.id); assert.equal(revised.revision, 2); assert.equal(revised.folderId, folder.id);
+  assert.equal(saveAiComponent(definition({ css: 'p{color:blue}' }), 'page:block', source, undefined, storage).revision, 2, 'a checkpoint retry does not create another revision');
+  saveLocalComponent(definition({ name: '手动修改' }), { id: first.id, baseRevision: 2 }, storage);
+  assert.throws(() => saveAiComponent(definition({ css: 'p{color:green}' }), 'page:block', source, undefined, storage), RevisionConflictError);
+  const copy = saveAiComponent(definition({ css: 'p{color:green}' }), 'page:block', undefined, folder.id, storage);
+  assert.notEqual(copy.id, first.id, 'a source-less retry cannot overwrite a manually edited component');
+  assert.equal(saveAiComponent(definition({ css: 'p{color:green}' }), 'page:block', undefined, folder.id, storage).id, copy.id);
+  assert.equal(readLocalLibrary(storage).components.find(item => item.id === first.id).name, '手动修改');
+  assert.equal('generationKey' in pickDefinition(copy), false);
 });
 
 test('designer drafts are kept per target and survive unrelated corruption', () => {

@@ -1,4 +1,5 @@
 import { safeUrl } from '../../model.ts';
+import { findPageAnchor } from '../page-anchors.ts';
 
 /**
  * Open a link requested by a component frame with the same rules as page
@@ -11,7 +12,7 @@ export function openComponentLink(raw: string, from: Element | null): boolean {
   if (url === '#' || url.startsWith('#')) {
     if (!raw.startsWith('#') || raw.length < 2) return false;
     const surface = from?.closest('.page-surface');
-    const target = Array.from(surface?.querySelectorAll('[data-anchor]') ?? []).find(node => `#${node.getAttribute('data-anchor')}` === url);
+    const target = findPageAnchor(surface, url);
     target?.scrollIntoView({ behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
     return Boolean(target);
   }

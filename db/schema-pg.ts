@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, integer, index } from 'void/schema-pg';
+import { pgTable, text, timestamp, boolean, integer, index, uniqueIndex } from 'void/schema-pg';
 
 /**
  * Better Auth core tables for the PostgreSQL adapter. Same field naming as the
@@ -75,10 +75,20 @@ export const userPreferences = pgTable('user_preference', {
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 });
 
+/** Owner-scoped library organization; the folder migration adds the owner-locking limit trigger. */
+export const studioComponentFolders = pgTable('studio_component_folder', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+}, table => [uniqueIndex('studio_component_folder_user_name_idx').on(table.userId, table.name)]);
+
 /** Custom components saved to an account (see db/schema.ts). */
 export const studioComponents = pgTable('studio_component', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  folderId: text('folder_id').references(() => studioComponentFolders.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   definition: text('definition').notNull(),

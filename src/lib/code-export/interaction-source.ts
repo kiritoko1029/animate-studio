@@ -27,7 +27,8 @@ function showNotice(root, message) {
 }
 function followLink(root, url) {
   if (url.startsWith('#')) {
-    const target = url === '#' ? root : Array.from(root.querySelectorAll('[data-anchor], [id]')).find(node => '#' + (node.dataset.anchor || node.id) === url);
+    const targets = Array.from(root.querySelectorAll('[data-anchor], [id]'));
+    const target = url === '#' ? root : targets.find(node => node.getAttribute('data-block-id') === url.slice(1)) || targets.find(node => '#' + (node.dataset.anchor || node.id) === url);
     target?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
   } else window.open(url, '_blank', 'noopener,noreferrer');
 }`,

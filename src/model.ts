@@ -106,9 +106,10 @@ const defaults: Record<BuiltinComponentType, BlockProps> = {
 export const createBlock = (type: BuiltinComponentType): Block => ({id:crypto.randomUUID(),type,props:{...defaults[type]}});
 export const frameSizes: Record<ComponentType, {width:number;height:number}> = {
   ...Object.fromEntries(Object.entries(extendedComponents).map(([type, entry]) => [type, entry.frame])) as Record<ExtendedComponentType, {width:number;height:number}>,
-  navbar:{width:1000,height:85},hero:{width:800,height:390},heading:{width:460,height:130},
+  // hero fits its default copy even when the headline reaches its 58px cap (wide or scaled frames); image fits its caption.
+  navbar:{width:1000,height:85},hero:{width:800,height:460},heading:{width:460,height:130},
   text:{width:380,height:160},button:{width:240,height:100},badge:{width:220,height:80},
-  card:{width:400,height:260},image:{width:440,height:320},input:{width:330,height:130},
+  card:{width:400,height:260},image:{width:440,height:340},input:{width:330,height:130},
   accordion:{width:500,height:370},tabs:{width:420,height:300},switch:{width:340,height:120},
   alert:{width:400,height:170},separator:{width:360,height:48},footer:{width:1000,height:110},
   textarea:{width:400,height:230},select:{width:340,height:130},checkbox:{width:380,height:120},
@@ -144,7 +145,7 @@ export function toFreeDocument(document: PageDocument): PageDocument {
 }
 export function createDocument(blank = false): PageDocument {
   const types:BuiltinComponentType[]=['navbar','hero','card','card','accordion','footer'];
-  const frames:BlockFrame[]=[{x:0,y:0,width:1920,height:85},{x:480,y:100,width:960,height:390},{x:40,y:520,width:440,height:260},{x:520,y:520,width:440,height:260},{x:1040,y:520,width:800,height:370},{x:0,y:950,width:1920,height:110}];
+  const frames:BlockFrame[]=[{x:0,y:0,width:1920,height:85},{x:480,y:100,width:960,height:460},{x:40,y:580,width:440,height:260},{x:520,y:580,width:440,height:260},{x:1040,y:580,width:800,height:370},{x:0,y:970,width:1920,height:110}];
   return {version:1,id:crypto.randomUUID(),name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:defaultCanvasSize.width,padding:0,layout:'free',canvasHeight:defaultCanvasSize.height},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
 }
 export const blockName = (type: ComponentType) => type==='custom' ? '自定义组件' : catalog.find(c=>c.type===type)?.name ?? type;

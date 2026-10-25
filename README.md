@@ -1,6 +1,6 @@
 # Animate Studio
 
-**Current release: [v2026.10.23](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.23)** · [Changelog (中文 / English)](CHANGELOG.md)
+**Current release: [v2026.10.25](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.25)** · [Changelog (中文 / English)](CHANGELOG.md)
 
 **A visual page builder with a free-form canvas, interactive scripts, and portable code exports.**
 
@@ -17,6 +17,7 @@ Build a page by placing components on the canvas, editing their properties, and 
 - **Free-form canvas** — drag, resize, align to a configurable grid, pan, and zoom from 5% to 400% around the pointer. Includes layers, undo/redo, and desktop/mobile previews.
 - **85 components** — layouts, forms, cards, navigation, overlays, buttons, animated text, and backgrounds. Search by Chinese or English names.
 - **Custom components** — write HTML, CSS and JavaScript with starter templates, live sandboxed previews and an in-editor guide. Save locally or to an account, share a published snapshot, and add independent copies to pages. [Component designer guide (中文)](docs/custom-components.zh-CN.md).
+- **AI pages and custom components** — a floating chat builds and edits pages component by component, can develop reusable HTML/CSS/JavaScript components, and offers a separate component creation mode. Organize local and account components into folders and upload generated components for cloud reuse. Page generation continues with live highlights, change bubbles, a rainbow canvas indicator, pause/resume and recoverable browser checkpoints. Supports OpenAI Responses and Anthropic Messages, model discovery and configurable reasoning. Configure credentials in the chat settings; settings and keys stay in your browser, and requests go directly to the selected API (browser CORS support required). [Protocol and recovery design (中文)](docs/ai-generation.md).
 - **Themes** — a monochrome light/dark workbench, eight page presets, independent component themes, and a custom theme designer.
 - **Component interactions** — shared variables, property bindings, expressions, conditional actions, and click/change events. Expression suggestions use the variables defined in your page.
 - **JavaScript editor** — syntax highlighting, autocomplete, syntax checks, test runs, and runtime logs. Built-in helpers include `ctx.fetchJSON`, `ctx.setState`, `ctx.notify`, and `ctx.sleep`.
