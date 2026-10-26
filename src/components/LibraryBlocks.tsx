@@ -5,7 +5,7 @@ import { motionProps } from '../lib/official-motion';
 import { useContext, useId, useState } from 'react';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Minus, Quote, Star, TrendingUp } from 'lucide-react';
 import { safeUrl, type Block, type BlockProps } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { AnimatedButton } from './animate-ui';
 import '../library-blocks.css';
 import { Root as Pagination } from '@animate-ui/react/primitives/pagination';
@@ -96,6 +96,7 @@ function RatingBlock({ props: p, interactive }: { props: BlockProps; interactive
 
 /** Additional library components share the page theme and editor's inert preview. */
 export function LibraryBlock({ block, interactive }: { block: Block; interactive: boolean }) {
+  const { navigate, safeUrl } = usePageLinks();
   const generatedId = useId();
   const id = motionProps<typeof RadioGroup.Item>(block,'RadioGroupItem').id ?? generatedId;
   const p = block.props;

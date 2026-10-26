@@ -4,7 +4,10 @@ import { isValidId, createPageRepository } from '../db/page-repository.ts';
 import type { createComponentRepository } from '../db/component-repository.ts';
 import { customComponentLimits, validateCustomComponentDefinition, type CustomComponentDefinition } from '../shared/custom-components.mjs';
 import { componentFolderLimits, validateComponentFolderName } from '../shared/component-folders.mjs';
-import type { PageDocument } from '../src/model';
+import type { PageDocument, SiteDocument } from '../src/model';
+import { validateSite } from './validation.mjs';
+import { siteLimits } from '../shared/site-document.mjs';
+import { validateInspectorDisclosures } from '../src/lib/workbench-preferences.ts';
 
 /**
  * Account API endpoints shared by the Express server and the Cloudflare
@@ -97,6 +100,33 @@ export async function handleAccountApi(
 
   const session = await context.resolveUser(request);
   if (!session) return apiError(401, '请先登录后再使用云端页面。');
+
+  const sitesPrefix = '/api/account/sites';
+  if (path === sitesPrefix) {
+    if (method === 'POST') {
+      const site = await readValidatedSite(request);
+      if (isApiResponse(site)) return site;
+      return json(await repository.create(session.id, site, context.newPageId()), 201);
+    }
+    return apiError(405, '不支持此请求方法。');
+  }
+  if (path.startsWith(`${sitesPrefix}/`)) {
+    const rest = path.slice(sitesPrefix.length + 1).split('/');
+    if (rest.length !== 1 || !isValidId(rest[0])) return apiError(404, '未找到该站点。');
+    const record = await repository.findOwned(session.id, rest[0]);
+    if (!record) return apiError(404, '未找到该站点。');
+    if (method === 'GET') return json(record);
+    if (method === 'PUT') {
+      const body = await readValidatedSiteRequest(request);
+      if (isApiResponse(body)) return body;
+      const result = await repository.saveSite(session.id, rest[0], body.site, body.expectedRevision);
+      if (result.status === 'missing') return apiError(404, '未找到该站点。');
+      if (result.status === 'conflict') return apiError(409, '站点已在其他标签页或设备更新。当前修改仍保留，请导出备份后重新打开，或另存为新站点。');
+      if (result.status === 'saved') return json(result.record);
+      return apiError(409, '站点修订已变化，请保留备份后重试。');
+    }
+    return apiError(405, '不支持此请求方法。');
+  }
 
   const prefix = '/api/account/pages';
   if (path === prefix) {
@@ -241,14 +271,22 @@ export async function handleAccountApi(
     if (method === 'PATCH' || method === 'PUT') {
       const body = await readJsonBody(request);
       if (isApiResponse(body)) return body;
-      const preferences = body as { version?: unknown; studioTheme?: unknown } | null;
-      if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences) || preferences.version !== 1) {
+      const preferences = body as { version?: unknown; studioTheme?: unknown; inspectorDisclosures?: unknown } | null;
+      if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences) || preferences.version !== 1
+        || Object.keys(preferences).some(key => !['version', 'studioTheme', 'inspectorDisclosures'].includes(key))
+        || (!Object.hasOwn(preferences, 'studioTheme') && !Object.hasOwn(preferences, 'inspectorDisclosures'))) {
         return apiError(400, '偏好设置格式不正确。');
       }
-      if (preferences.studioTheme !== 'light' && preferences.studioTheme !== 'dark') {
+      if (Object.hasOwn(preferences, 'studioTheme') && preferences.studioTheme !== 'light' && preferences.studioTheme !== 'dark') {
         return apiError(400, 'studioTheme 必须是 light 或 dark。');
       }
-      return json(await repository.setPreferences(session.id, preferences.studioTheme));
+      const studioTheme = preferences.studioTheme === 'dark' ? 'dark' : preferences.studioTheme === 'light' ? 'light' : undefined;
+      const inspectorDisclosures = Object.hasOwn(preferences, 'inspectorDisclosures') ? validateInspectorDisclosures(preferences.inspectorDisclosures) : undefined;
+      if (inspectorDisclosures === null) return apiError(400, '属性面板展开偏好格式不正确。');
+      return json(await repository.setPreferences(session.id, {
+        ...(studioTheme ? { studioTheme } : {}),
+        ...(inspectorDisclosures !== undefined ? { inspectorDisclosures } : {}),
+      }));
     }
     return apiError(405, '不支持此请求方法。');
   }
@@ -286,6 +324,27 @@ async function readComponentBody(request: Request, update: boolean): Promise<{ c
   } catch (error) {
     return apiError(400, error instanceof Error ? error.message : '组件数据不正确。');
   }
+}
+
+async function readValidatedSite(request: Request): Promise<SiteDocument | ApiResponse> {
+  const result = await readBoundedJson(request, siteLimits.bytes + 4096, '站点');
+  if (!result.ok) return apiError(result.status, result.message);
+  try {
+    const body = result.value as Record<string, unknown>;
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'site')) throw new Error('站点请求格式不正确');
+    return validateSite(body.site);
+  } catch (error) { return apiError(400, error instanceof Error ? error.message : '站点数据不正确。'); }
+}
+
+async function readValidatedSiteRequest(request: Request): Promise<{ site: SiteDocument; expectedRevision: string } | ApiResponse> {
+  const result = await readBoundedJson(request, siteLimits.bytes + 4096, '站点');
+  if (!result.ok) return apiError(result.status, result.message);
+  try {
+    const body = result.value as Record<string, unknown>;
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['site', 'expectedRevision'].includes(key))) throw new Error('站点请求格式不正确');
+    if (typeof body.expectedRevision !== 'string' || body.expectedRevision.length > 40 || !body.expectedRevision) throw new Error('缺少站点修订前提，请重新打开后再保存。');
+    return { site: validateSite(body.site), expectedRevision: body.expectedRevision };
+  } catch (error) { return apiError(400, error instanceof Error ? error.message : '站点数据不正确。'); }
 }
 
 async function readValidatedPage(request: Request): Promise<PageDocument | ApiResponse> {

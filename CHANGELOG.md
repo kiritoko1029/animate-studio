@@ -1,5 +1,39 @@
 # 更新日志 / Changelog
 
+## v2026.10.26 — 2026-10-26
+
+### 中文
+
+本次版本将 Animate Studio 从单页编辑器扩展为多页面站点创作平台，同时保留原有组件、交互、AI 对话和导出能力，进一步降低新用户的学习成本。
+
+- 新增任务式创建入口和常用属性直出；支持按名称或官方路径搜索高级设置，并按组件类型保存展开偏好。游客偏好保存在浏览器，账号偏好独立同步，搜索和右键临时展开不写入配置。
+- 新增版本化 `SiteDocument` 与页面树，支持创建、复制、重命名、分组、排序、设为首页和删除确认。旧页面自动作为单页站点打开，游客与云端草稿均可继续编辑。
+- 支持普通页面、详情页和 404，提供 `/products/:id` 路由参数、只读 `route` 表达式、站内页面选择器、返回动作与导航选中状态。预览、分享子路径和单文件 HTML 导出共用导航规则，刷新后仍可恢复子页面。
+- 新增可编辑的共享页头和页脚，按确认范围批量应用到页面，整次操作可撤销。分享和导出使用同一布局组合，旧单页导出继续保留原运行入口。
+- 新增 AI 整站创作：先说明页面、路由、共享布局和删除范围，用户确认后逐页生成到检查点，完成后一次应用，支持暂停、继续、结构解释和整次撤销。计划外内容不能被直接覆盖，单页与整站任务互斥。
+- 云端站点使用原页面记录和分享令牌，保存时检查修订号，避免其他标签页或设备静默覆盖。AI 整站结果在云端账号中先标记待保存，只有用户显式保存或发布才写入；分享始终发布完整站点快照。
+- 修复组件内容在固定外框内产生非预期滚动条的问题，并保留画布局部列表、代码区域等确有需要时的滚动能力。
+
+**升级说明**：旧 `PageDocument` 的版本仍为 `1`，新站点使用同样版本化的 `kind: "site"` 文档；旧页面 JSON、单页 AI 会话和原云端记录保持兼容。游客从旧 `guest-draft:v1` 迁移到 `guest-site-draft:v1`，原键保留只读备份。站点最多 24 页、2 MiB。账号展开偏好新增 SQLite、PostgreSQL 和 D1 迁移，Node 启动时应用，Cloudflare 由 Void 部署时应用。数据源、动态列表、图表、访问权限和 SEO 不属于本次交付，动态路由不等于已连接真实数据。
+
+**验证**：427 项自动化测试通过，覆盖 SQLite 账号 API、站点校验、路由、共享布局、AI 检查点、旧组件和原生导出。Node 与 Cloudflare 构建通过。真实 Chromium 验证三页站点、共享导航、动态详情、AI 计划确认与撤销/重做、HTML 刷新、分享深链及 390px 窄屏。AI 使用确定性模拟响应，浏览器分享深链使用本地快照；未调用真实付费模型。PostgreSQL 迁移已提供，本版本未连接 PostgreSQL 测试库；线上账号与远端 D1 由部署工作流执行，未在本地验收中直接操作。
+
+### English
+
+This release expands Animate Studio from a single-page editor into a multi-page site creation platform while preserving existing components, interactions, AI conversations, and exports, with a lower learning curve for new users.
+
+- Added task-based creation and direct access to common properties. Search advanced settings by name or official path and remember disclosure preferences by component type. Guest preferences stay in the browser, account preferences sync independently, and temporary search/context-menu expansion is not persisted.
+- Added a versioned `SiteDocument` and page tree with creation, duplication, renaming, groups, ordering, home-page selection, and delete confirmation. Existing pages open as single-page sites, and guest and cloud drafts remain editable.
+- Added normal, detail, and 404 pages with `/products/:id` parameters, read-only `route` expressions, page pickers, back actions, and selected-navigation states. Preview, shared deep links, and single-file HTML exports share navigation rules and restore the current route after refresh.
+- Added editable shared headers and footers with confirmed per-page application and one-step undo. Sharing and exports use the same layout composition, while legacy single-page exports keep their original runtime.
+- Added AI site creation: review pages, routes, shared layouts, and deletion scope before generating into checkpoints, then apply one undoable result. Supports pause/resume, structure explanations, and protection against out-of-scope edits and concurrent page/site AI tasks.
+- Cloud sites reuse existing page records and share tokens, with revision checks preventing silent overwrites from other tabs or devices. AI site results start as pending drafts in cloud accounts and are written only after explicit save or publish. Sharing always publishes a complete site snapshot.
+- Fixed unintended internal scrollbars in fixed-size components while retaining intentional scrolling in local lists and code regions.
+
+**Upgrade notes**: Existing `PageDocument` remains version `1`; the new site document is also versioned and uses `kind: "site"`. Existing page JSON, single-page AI sessions, and cloud records remain compatible. Guest drafts migrate from the read-only `guest-draft:v1` source to `guest-site-draft:v1`, preserving the old key. Sites support up to 24 pages and 2 MiB. Inspector preference migrations are included for SQLite, PostgreSQL, and D1, applied by Node at startup and by Void during Cloudflare deployment. Data sources, dynamic collections, charts, access control, and SEO are outside this release; dynamic routes do not imply a live data connection.
+
+**Validation**: All 427 automated tests passed, covering SQLite account APIs, site validation, routing, shared layouts, AI checkpoints, existing components, and native exports. Node and Cloudflare builds passed. Real Chromium checks covered a three-page site, shared navigation, dynamic details, AI plan confirmation and undo/redo, HTML refresh, shared deep links, and a 390px viewport. AI used deterministic mock responses and browser share checks used a local snapshot; no paid model calls were made. PostgreSQL migrations are included but were not integration-tested against a PostgreSQL database for this release. Online accounts and remote D1 are handled by the deployment workflow and were not directly modified during local verification.
+
 ## v2026.10.25 — 2026-10-25
 
 ### 中文

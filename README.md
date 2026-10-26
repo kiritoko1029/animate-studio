@@ -1,6 +1,6 @@
 # Animate Studio
 
-**Current release: [v2026.10.25](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.25)** · [Changelog (中文 / English)](CHANGELOG.md)
+**Current release: [v2026.10.26](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.26)** · [Changelog (中文 / English)](CHANGELOG.md)
 
 **A visual page builder with a free-form canvas, interactive scripts, and portable code exports.**
 
@@ -17,12 +17,13 @@ Build a page by placing components on the canvas, editing their properties, and 
 - **Free-form canvas** — drag, resize, align to a configurable grid, pan, and zoom from 5% to 400% around the pointer. Includes layers, undo/redo, and desktop/mobile previews.
 - **85 components** — layouts, forms, cards, navigation, overlays, buttons, animated text, and backgrounds. Search by Chinese or English names.
 - **Custom components** — write HTML, CSS and JavaScript with starter templates, live sandboxed previews and an in-editor guide. Save locally or to an account, share a published snapshot, and add independent copies to pages. [Component designer guide (中文)](docs/custom-components.zh-CN.md).
-- **AI pages and custom components** — a floating chat builds and edits pages component by component, can develop reusable HTML/CSS/JavaScript components, and offers a separate component creation mode. Organize local and account components into folders and upload generated components for cloud reuse. Page generation continues with live highlights, change bubbles, a rainbow canvas indicator, pause/resume and recoverable browser checkpoints. Supports OpenAI Responses and Anthropic Messages, model discovery and configurable reasoning. Configure credentials in the chat settings; settings and keys stay in your browser, and requests go directly to the selected API (browser CORS support required). [Protocol and recovery design (中文)](docs/ai-generation.md).
+- **Multi-page sites** — create, duplicate, reorder, and group pages; configure home, list, detail, and 404 routes. Reuse shared headers and footers by confirmed scope. `/products/:id` parameters, internal navigation, and back actions share one contract across preview, sharing, and exports.
+- **AI pages, sites, and custom components** — whole-site generation first confirms pages, routes, and shared layouts, then applies one undoable result with restorable checkpoints. A floating chat builds and edits pages component by component, can develop reusable HTML/CSS/JavaScript components, and offers a separate component creation mode. Organize local and account components into folders and upload generated components for cloud reuse. Page generation continues with live highlights, change bubbles, a rainbow canvas indicator, pause/resume and recoverable browser checkpoints. Supports OpenAI Responses and Anthropic Messages, model discovery and configurable reasoning. Configure credentials in the chat settings; settings and keys stay in your browser, and requests go directly to the selected API (browser CORS support required). [Protocol and recovery design (中文)](docs/ai-generation.md). a floating chat builds and edits pages component by component, can develop reusable HTML/CSS/JavaScript components, and offers a separate component creation mode. Organize local and account components into folders and upload generated components for cloud reuse. Page generation continues with live highlights, change bubbles, a rainbow canvas indicator, pause/resume and recoverable browser checkpoints. Supports OpenAI Responses and Anthropic Messages, model discovery and configurable reasoning. Configure credentials in the chat settings; settings and keys stay in your browser, and requests go directly to the selected API (browser CORS support required). [Protocol and recovery design (中文)](docs/ai-generation.md).
 - **Themes** — a monochrome light/dark workbench, eight page presets, independent component themes, and a custom theme designer.
 - **Component interactions** — shared variables, property bindings, expressions, conditional actions, and click/change events. Expression suggestions use the variables defined in your page.
 - **JavaScript editor** — syntax highlighting, autocomplete, syntax checks, test runs, and runtime logs. Built-in helpers include `ctx.fetchJSON`, `ctx.setState`, `ctx.notify`, and `ctx.sleep`.
-- **Portable exports** — standalone HTML, Vue/React wrappers around an embedded page, and JSON for continued editing. Exported pages do not require Animate UI, Motion, Radix, or Tailwind.
-- **Accounts and saved pages** — email OTP and GitHub sign-in, multiple saved pages, read-only share links, and synced appearance. Guests can keep editing and exporting.
+- **Portable exports** — standalone HTML, Vue/React wrappers around an embedded page or site, and JSON for continued editing, including legacy page JSON. Exported pages and sites do not require Animate UI, Motion, Radix, or Tailwind.
+- **Accounts and saved sites** — email OTP and GitHub sign-in, multiple saved pages, read-only share links, and synced appearance. Guests can keep editing and exporting.
 - **Local or Cloudflare hosting** — Express with SQLite/PostgreSQL, or a Cloudflare Worker with D1. See [account and storage setup](docs/accounts-and-storage.md).
 
 Workbench controls and canvas primitives use `@animate-ui/react` 2.0.0 (the latest npm release), Motion 14.5.0, and registry backgrounds/buttons pinned to Animate UI v2.1.2. Canvas, plain previews, and previews with bindings/scripts use the same official React primitives and default motion. The property panel exposes supported effect settings. HTML downloads embed this runtime; Vue/React downloads wrap the same isolated page in an iframe. See the [version record](docs/animate-ui-version.json) and [component coverage reference](docs/animate-ui-coverage.md).
@@ -73,9 +74,9 @@ Open **More (⋯) → Language** in the header to switch between English and Sim
 | HTML | A single `.html` file with CSS and JavaScript | A browser or static host; no build step |
 | Vue | `GeneratedPage.vue` | Vue 3.5+ with SFC support |
 | React | `GeneratedPage.jsx` | React 18+ with JSX support |
-| JSON | Editable page definition | Import back into Animate Studio |
+| JSON | Complete site definition; legacy pages supported | Import back into Animate Studio |
 
-Exports preserve layout, themes, bindings, events, and scripts. The design canvas scales proportionally to its container; it does not automatically reflow into a mobile layout. Custom images retain their URLs, so those assets must remain available. Code exports cannot be imported back into the editor; keep the JSON when you need to continue editing.
+Exports preserve pages, shared layouts, themes, bindings, events, and scripts. Legacy single-page exports keep their original runtime. Multi-page HTML uses `#/path` routes that survive refresh. The design canvas scales proportionally to its container; it does not automatically reflow into a mobile layout. Custom images retain their URLs, so those assets must remain available. Code exports cannot be imported back into the editor; keep the JSON when you need to continue editing.
 
 Scripts run in an isolated iframe/Worker environment with a 15-second execution limit. HTTP requests follow browser CORS rules. Scripts have no DOM access and do not import npm packages.
 

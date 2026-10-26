@@ -6,6 +6,7 @@ import { customFieldKeys, validateCustomComponentDefinition, validateCustomCompo
 import { createCustomBlock, updateInstanceDefinition } from '../custom-components/instances.ts';
 import type { AiChange, AiCreationMode, AiLibraryComponent, AiOperation, AiQuestion, AiSession } from './types.ts';
 import { AiContinuationError } from './errors.ts';
+import { normalizeSitePath } from '../../../shared/site-document.mjs';
 
 const allowed: Record<AiOperation['op'], string[]> = {
   message: ['text'], done: ['summary'], page: ['name', 'settings', 'summary'],
@@ -13,6 +14,8 @@ const allowed: Record<AiOperation['op'], string[]> = {
   update: ['id', 'props', 'frame', 'bindings', 'events', 'summary'], remove: ['id', 'summary'],
   data: ['variables', 'scripts', 'summary'], ask: ['text', 'questions'],
   component: ['id', 'component', 'componentRef', 'frame', 'summary'],
+  sitePlan: ['name', 'summary', 'pages', 'sharedLayout', 'deletes'],
+  sitePage: ['id', 'page', 'summary'], siteLayout: ['region', 'page', 'summary'],
 };
 /** Match save/export serialization: editor controls clear optional fields with undefined. */
 export function snapshotAiPage(page: PageDocument): PageDocument {
@@ -71,6 +74,25 @@ export function parseAiOperation(raw: string): AiOperation {
     }
     if (op.frame && Object.keys(op.frame).some(key => !['x', 'y', 'width', 'height'].includes(key))) throw new Error('AI 自定义组件位置包含不支持的字段。');
   }
+  if (op.op === 'sitePlan') {
+    if (typeof op.name !== 'string' || !op.name.trim() || op.name.length > 120 || !Array.isArray(op.pages) || op.pages.length < 1 || op.pages.length > 24) throw new Error('AI 站点计划格式无效。');
+    const ids = new Set<string>(), paths = new Set<string>();
+    for (const entry of op.pages) {
+      if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['id', 'name', 'path', 'kind', 'layout'].includes(key)) || typeof entry.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(entry.id) || ids.has(entry.id) || typeof entry.name !== 'string' || !entry.name.trim() || entry.name.length > 120 || !['page', 'detail', 'notFound'].includes(entry.kind) || !Array.isArray(entry.layout) || entry.layout.some(region => !['header', 'footer'].includes(region))) throw new Error('AI 站点页面计划无效。');
+      ids.add(entry.id); const path = normalizeSitePath(entry.path); if (paths.has(path)) throw new Error('AI 站点路径重复。'); paths.add(path);
+    }
+    if (!Array.isArray(op.sharedLayout) || op.sharedLayout.some(region => !['header', 'footer'].includes(region)) || new Set(op.sharedLayout).size !== op.sharedLayout.length) throw new Error('AI 共享布局计划无效。');
+    if (op.deletes !== undefined && (!Array.isArray(op.deletes) || op.deletes.length > 24 || op.deletes.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id)))) throw new Error('AI 删除范围无效。');
+  }
+  if (op.op === 'sitePage') {
+    if (typeof op.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(op.id) || !op.page) throw new Error('AI 站点页面缺少内容。');
+    validatePage(op.page);
+    if (op.page.id !== op.id) throw new Error('AI 页面内容与目标 id 不一致。');
+  }
+  if (op.op === 'siteLayout') {
+    if (!['header', 'footer'].includes(op.region ?? '')) throw new Error('AI 共享布局区域无效。');
+    if (op.page) { validatePage(op.page); if (op.page.id !== `shared-${op.region}`) throw new Error('AI 共享布局 id 无效。'); }
+  }
   return op;
 }
 
@@ -81,7 +103,7 @@ export class AiOperationDecoder {
   private seen = new Map<number, string>();
   private finished = false;
   /** The record that ended the response: done finishes the task, ask waits for the user. */
-  terminal: 'done' | 'ask' | null = null;
+  terminal: 'done' | 'ask' | 'sitePlan' | null = null;
   *push(text: string): Generator<AiOperation> {
     this.buffer += text;
     let newline: number;
@@ -107,8 +129,8 @@ export class AiOperationDecoder {
       throw new Error('AI 重复序号的内容不一致，已暂停。');
     }
     if (this.finished || op.seq !== this.sequence + 1) throw new Error('AI 操作顺序不连续，已暂停以保护页面。');
-    this.sequence = op.seq; this.seen.set(op.seq, canonical); this.finished = op.op === 'done' || op.op === 'ask';
-    if (op.op === 'done' || op.op === 'ask') this.terminal = op.op;
+    this.sequence = op.seq; this.seen.set(op.seq, canonical); this.finished = op.op === 'done' || op.op === 'ask' || op.op === 'sitePlan';
+    if (op.op === 'done' || op.op === 'ask' || op.op === 'sitePlan') this.terminal = op.op;
     return op;
   }
 }
@@ -182,7 +204,7 @@ export function applyAiOperation(page: PageDocument, op: AiOperation, resolvedCo
   let kind: AiChange['kind'] = 'page';
   let frame: Block['frame'];
   const index = op.id ? page.blocks.findIndex(block => block.id === op.id) : -1;
-  if (op.op === 'message' || op.op === 'done' || op.op === 'ask') return { page, change: null };
+  if (op.op === 'message' || op.op === 'done' || op.op === 'ask' || op.op === 'sitePlan') return { page, change: null };
   if (op.op === 'component') {
     const old = index < 0 ? undefined : page.blocks[index];
     if (old && old.type !== 'custom') throw new Error('自定义组件不能覆盖已有的内置组件。');

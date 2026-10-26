@@ -1,10 +1,11 @@
-import type { PageDocument } from '../model';
+import type { StudioDocument } from '../model';
+import type { InspectorDisclosurePreferences } from './workbench-preferences';
 
 export type AccountUser = { id: string; name: string; email: string; image?: string | null };
 export type AccountCapabilities = { cloudEnabled: boolean; emailEnabled: boolean; githubEnabled: boolean };
 export type CloudPageSummary = { id: string; name: string; createdAt: string; updatedAt: string; shareToken: string | null; publishedAt: string | null };
-export type CloudPageRecord = CloudPageSummary & { page: PageDocument; savedAt: string };
-export type Preferences = { version: 1; studioTheme: 'light' | 'dark' };
+export type CloudPageRecord = CloudPageSummary & { page: StudioDocument; savedAt: string };
+export type Preferences = { version: 1; studioTheme: 'light' | 'dark'; inspectorDisclosures?: InspectorDisclosurePreferences };
 export class AccountApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
@@ -36,4 +37,5 @@ export async function accountApi<T>(path: string, options: { method?: string; bo
 }
 
 export const cloudPagePath = (id: string) => `/api/account/pages/${encodeURIComponent(id)}`;
+export const cloudSitePath = (id: string) => `/api/account/sites/${encodeURIComponent(id)}`;
 export const shareUrl = (token: string) => `${window.location.origin}/p/${encodeURIComponent(token)}`;

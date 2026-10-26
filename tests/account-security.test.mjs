@@ -92,6 +92,9 @@ test('cross-origin mutations to auth and account APIs are rejected', async t => 
   assert.equal(createPage.status, 403, 'foreign origin cannot create pages');
   const patchPrefs = await call('/api/account/preferences', { method: 'PATCH', cookie, body: { version: 1, studioTheme: 'dark' }, origin: evil });
   assert.equal(patchPrefs.status, 403, 'foreign origin cannot change preferences');
+  const patchDisclosures = await call('/api/account/preferences', { method: 'PATCH', cookie, body: { version: 1, inspectorDisclosures: { 'component:hero:advanced': true } }, origin: evil });
+  assert.equal(patchDisclosures.status, 403, 'foreign origin cannot change disclosure preferences');
+  assert.deepEqual((await call('/api/account/preferences', { cookie })).body.inspectorDisclosures, {});
 });
 
 test('capabilities report disabled when credentials are absent and guests still work', async t => {

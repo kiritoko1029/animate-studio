@@ -6,6 +6,7 @@ import { componentScaleLimits } from '../shared/component-scale.mjs';
 import themes from '../shared/themes.json' with { type: 'json' };
 import { validateAnimationSettings } from '../shared/animation-settings.mjs';
 import { customComponentLimits, validateCustomBlockProps } from '../shared/custom-components.mjs';
+import { validateSiteDocument } from '../shared/site-document.mjs';
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'custom', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300 };
@@ -155,6 +156,10 @@ export function validatePage(page) {
   }
   try { validateInteractions(page); } catch (error) { fail(error.message); }
   return page;
+}
+
+export function validateSite(site) {
+  return validateSiteDocument(site, validatePage);
 }
 
 export function validateSaveRequest(body) {

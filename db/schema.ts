@@ -72,6 +72,7 @@ export const studioPageShare = sqliteTable('studio_page_share', {
 export const userPreferences = sqliteTable('user_preference', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
   studioTheme: text('studio_theme').notNull().default('light'),
+  inspectorDisclosures: text('inspector_disclosures').notNull().default('{}'),
   updatedAt: text('updated_at').notNull(),
 });
 

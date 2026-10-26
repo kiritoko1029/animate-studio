@@ -1,6 +1,8 @@
 import { and, eq, desc } from 'drizzle-orm';
+import type { StudioDocument } from '../shared/site-document.mjs';
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { validateInspectorDisclosures, type InspectorDisclosurePreferences, type WorkbenchPreferencesPatch } from '../src/lib/workbench-preferences.ts';
 
 /**
  * Dialect-agnostic data access for cloud pages, share snapshots and user
@@ -23,12 +25,12 @@ type AnyTable = SQLiteTable | PgTable;
 type RepositorySchema = {
   studioPages: AnyTable & { id: unknown; userId: unknown; name: unknown; page: unknown; createdAt: unknown; updatedAt: unknown };
   studioPageShare: AnyTable & { pageId: unknown; userId: unknown; token: unknown; snapshot: unknown; publishedAt: unknown };
-  userPreferences: AnyTable & { userId: unknown; studioTheme: unknown; updatedAt: unknown };
+  userPreferences: AnyTable & { userId: unknown; studioTheme: unknown; inspectorDisclosures: unknown; updatedAt: unknown };
 };
 
 export type PageSummary = { id: string; name: string; createdAt: string; updatedAt: string; shareToken: string | null; publishedAt: string | null };
 export type PageRecord = PageSummary & { page: PageDocumentLike; savedAt: string };
-export type PageDocumentLike = { version: 1; name: string; settings: Record<string, unknown>; blocks: unknown[] };
+export type PageDocumentLike = StudioDocument;
 
 export function createPageRepository(db: unknown, schema: RepositorySchema, dialect: 'sqlite' | 'pg' = 'sqlite') {
   const typed = db as {
@@ -121,6 +123,20 @@ export function createPageRepository(db: unknown, schema: RepositorySchema, dial
       return toRecord(row, shareRows[0]);
     },
 
+    async saveSite(userId: string, pageId: string, page: StudioDocument, expectedRevision: string): Promise<{ status: 'saved'; record: PageRecord } | { status: 'conflict' | 'missing' }> {
+      const existing = await this.findOwned(userId, pageId);
+      if (!existing) return { status: 'missing' };
+      const now = new Date(Math.max(Date.now(), Date.parse(existing.updatedAt) + 1)).toISOString();
+      const rows = await typed.update(schema.studioPages)
+        .set({ page: JSON.stringify(page), name: page.name, updatedAt: ts(now) })
+        .where(and(eq(schema.studioPages.id as never, pageId), eq(schema.studioPages.userId as never, userId), eq(schema.studioPages.updatedAt as never, ts(expectedRevision))))
+        .returning();
+      if (!rows[0]) return { status: 'conflict' };
+      const record = await this.findOwned(userId, pageId);
+      if (!record) return { status: 'missing' };
+      return { status: 'saved', record };
+    },
+
     async remove(userId: string, pageId: string): Promise<boolean> {
       // studio_page_share rows cascade on delete in both dialects.
       const rows = await typed.delete(schema.studioPages)
@@ -163,23 +179,31 @@ export function createPageRepository(db: unknown, schema: RepositorySchema, dial
       return { page: JSON.parse(String(row.snapshot)), publishedAt: iso(row.publishedAt) };
     },
 
-    async getPreferences(userId: string): Promise<{ version: 1; studioTheme: 'light' | 'dark'; updatedAt: string | null }> {
+    async getPreferences(userId: string): Promise<{ version: 1; studioTheme: 'light' | 'dark'; inspectorDisclosures: InspectorDisclosurePreferences; updatedAt: string | null }> {
       const rows = await typed.select()
         .from(schema.userPreferences)
         .where(eq(schema.userPreferences.userId as never, userId))
         .limit(1) as unknown as Record<string, unknown>[];
       const row = rows[0];
-      return { version: 1, studioTheme: row?.studioTheme === 'dark' ? 'dark' : 'light', updatedAt: row ? iso(row.updatedAt) : null };
+      let inspectorDisclosures: InspectorDisclosurePreferences = {};
+      try { inspectorDisclosures = validateInspectorDisclosures(JSON.parse(String(row?.inspectorDisclosures ?? '{}'))) ?? {}; } catch { /* Invalid stored values fall back to the defaults. */ }
+      return { version: 1, studioTheme: row?.studioTheme === 'dark' ? 'dark' : 'light', inspectorDisclosures, updatedAt: row ? iso(row.updatedAt) : null };
     },
 
-    async setPreferences(userId: string, studioTheme: 'light' | 'dark'): Promise<{ version: 1; studioTheme: 'light' | 'dark'; updatedAt: string }> {
+    async setPreferences(userId: string, patch: WorkbenchPreferencesPatch): Promise<{ version: 1; studioTheme: 'light' | 'dark'; inspectorDisclosures: InspectorDisclosurePreferences; updatedAt: string }> {
       const now = new Date().toISOString();
       const rows = await typed.insert(schema.userPreferences)
-        .values({ userId, studioTheme, updatedAt: ts(now) })
-        .onConflictDoUpdate({ target: schema.userPreferences.userId, set: { studioTheme, updatedAt: ts(now) } })
+        .values({ userId, studioTheme: patch.studioTheme ?? 'light', inspectorDisclosures: JSON.stringify(patch.inspectorDisclosures ?? {}), updatedAt: ts(now) })
+        .onConflictDoUpdate({ target: schema.userPreferences.userId, set: {
+          ...(patch.studioTheme !== undefined ? { studioTheme: patch.studioTheme } : {}),
+          ...(patch.inspectorDisclosures !== undefined ? { inspectorDisclosures: JSON.stringify(patch.inspectorDisclosures) } : {}),
+          updatedAt: ts(now),
+        } })
         .returning();
       const row = rows[0];
-      return { version: 1, studioTheme: row.studioTheme === 'dark' ? 'dark' : 'light', updatedAt: iso(row.updatedAt) };
+      let inspectorDisclosures: InspectorDisclosurePreferences = {};
+      try { inspectorDisclosures = validateInspectorDisclosures(JSON.parse(String(row.inspectorDisclosures ?? '{}'))) ?? {}; } catch { /* Invalid stored values fall back to the defaults. */ }
+      return { version: 1, studioTheme: row.studioTheme === 'dark' ? 'dark' : 'light', inspectorDisclosures, updatedAt: iso(row.updatedAt) };
     },
   };
 }

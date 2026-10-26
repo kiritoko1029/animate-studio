@@ -1,0 +1,1 @@
+ALTER TABLE `user_preference` ADD `inspector_disclosures` text DEFAULT '{}' NOT NULL;

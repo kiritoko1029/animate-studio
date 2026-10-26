@@ -7,6 +7,7 @@ import { handleAccountApi, toResponsePayload } from '../server/account-api.ts';
 import { createDocument } from '../src/model.ts';
 import { createApp, closeServer } from '../server/index.mjs';
 import { request as httpRequest } from 'node:http';
+import { readFile } from 'node:fs/promises';
 
 async function fixture(t, baseURL = 'http://review.test') {
   const database = await createNodeDatabase({}, { file: ':memory:' });
@@ -81,4 +82,30 @@ test('the page list does not silently hide older saved pages at an arbitrary cut
   const response = await f.request('/api/account/pages');
   assert.equal(response.status, 200);
   assert.equal(response.body.pages.length, 201);
+});
+
+test('inspector preference migration preserves existing appearance and applies only once', async t => {
+  const database = await createNodeDatabase({}, { file: ':memory:' });
+  t.after(() => database.close());
+  const sqlite = database.db.$client;
+  const target = 'sqlite-0005-inspector-preferences.sql';
+  const index = JSON.parse(await readFile(new URL('../db/migrations-node/index.json', import.meta.url), 'utf8'));
+  const previous = index.slice(0, index.indexOf(target)).filter(name => name.startsWith('sqlite-'));
+  assert.equal(previous.length, 4);
+  sqlite.exec('CREATE TABLE IF NOT EXISTS studio_migration (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)');
+  for (const name of previous) {
+    sqlite.exec(await readFile(new URL(`../db/migrations-node/${name}`, import.meta.url), 'utf8'));
+    sqlite.prepare('INSERT INTO studio_migration (name, applied_at) VALUES (?, ?)').run(name, '2026-10-25T00:00:00.000Z');
+  }
+  const now = new Date().toISOString();
+  sqlite.prepare('INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run('owner', 'Owner', 'owner@migration.test', now, now);
+  sqlite.prepare('INSERT INTO user_preference (user_id, studio_theme, updated_at) VALUES (?, ?, ?)').run('owner', 'dark', now);
+
+  assert.deepEqual(await applyNodeMigrations(database), [target]);
+  const repository = createPageRepository(database.db, database.schema);
+  assert.deepEqual(await repository.getPreferences('owner'), { version: 1, studioTheme: 'dark', inspectorDisclosures: {}, updatedAt: now });
+  await repository.setPreferences('owner', { inspectorDisclosures: { 'component:hero:advanced': true } });
+  assert.deepEqual((await repository.getPreferences('owner')).inspectorDisclosures, { 'component:hero:advanced': true });
+  assert.equal((await repository.getPreferences('owner')).studioTheme, 'dark');
+  assert.deepEqual(await applyNodeMigrations(database), []);
 });

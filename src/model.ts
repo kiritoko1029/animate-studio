@@ -10,6 +10,7 @@ export const extendedCatalog = extendedComponents;
 export const isExtendedComponent = (type: string): type is ExtendedComponentType => Object.hasOwn(extendedComponents, type);
 import type { Bindings, Action, Variable, Script } from './lib/interactions/types';
 import type { CustomTheme, ThemeId } from './lib/themes';
+export type { SiteDocument, StudioDocument } from '../shared/site-document.mjs';
 
 export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents) as ExtendedComponentType[]] as const;
 /** Built-in library types, created from catalog defaults. */

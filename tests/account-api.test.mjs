@@ -8,6 +8,7 @@ import { createNodeDatabase, applyNodeMigrations } from '../server/node-database
 import { createAuthFactory, resolveCapabilities } from '../server/auth-factory.ts';
 import { createPageRepository } from '../db/page-repository.ts';
 import { createResendSender } from '../server/resend-sender.ts';
+import { createSiteDocument, createSitePage } from '../shared/site-document.mjs';
 
 const RUN_ID = `${process.pid}-${Date.now().toString(36)}`;
 const uniqueEmail = name => `${name}-${RUN_ID}@example.test`;
@@ -222,24 +223,78 @@ test('share lifecycle: publish snapshots the draft, updates keep the token, revo
   assert.equal((await call(`/api/account/pages/${pageId}`, { cookie })).status, 404);
 });
 
-test('preferences validate input and stay per-account', async t => {
+test('site API stores complete drafts, rejects stale revisions and publishes only the saved site', async t => {
+  const { call, signIn } = await createFixture(t);
+  const cookie = await signIn(uniqueEmail('sites'));
+  const site = createSiteDocument(page('站点首页'));
+  const products = createSitePage(site, '产品列表'); products.path = '/products';
+  const detail = createSitePage(site, '产品详情', 'detail'); detail.path = '/products/:id';
+  site.pages.push(products, detail);
+  const created = await call('/api/account/sites', { method: 'POST', cookie, body: { site } });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.page.kind, 'site');
+  assert.equal(created.body.page.pages.length, 3);
+  const id = created.body.id;
+  const edited = structuredClone(site); edited.pages[1].page.blocks = page('列表内容').blocks;
+  const saved = await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site: edited, expectedRevision: created.body.updatedAt } });
+  assert.equal(saved.status, 200, JSON.stringify(saved.body));
+  assert.notEqual(saved.body.updatedAt, created.body.updatedAt);
+  assert.equal(saved.body.page.pages[1].page.blocks.length, 1);
+  const stale = await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site, expectedRevision: created.body.updatedAt } });
+  assert.equal(stale.status, 409);
+  const afterConflict = await call(`/api/account/sites/${id}`, { cookie });
+  assert.equal(afterConflict.body.page.pages[1].page.blocks.length, 1, 'a stale write cannot replace a newer draft');
+  const shared = await call(`/api/account/pages/${id}/share`, { method: 'POST', cookie });
+  assert.equal(shared.status, 200);
+  edited.pages[1].name = '仅草稿修改'; edited.pages[1].page.name = '仅草稿修改';
+  assert.equal((await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site: edited, expectedRevision: saved.body.updatedAt } })).status, 200);
+  const published = await call(`/api/shared/${shared.body.token}`);
+  assert.equal(published.body.page.pages[1].name, '产品列表', 'later draft edits do not change the published site');
+  assert.equal((await call(`/api/account/sites/${id}`, { method: 'PUT', body: { site: edited, expectedRevision: saved.body.updatedAt } })).status, 401);
+  assert.equal((await call('/api/account/sites', { method: 'POST', cookie, body: { site: { ...site, credentials: 'not-allowed' } } })).status, 400);
+  const legacy = await call('/api/account/pages', { method: 'POST', cookie, body: { page: page('旧页面') } });
+  assert.equal((await call(`/api/account/sites/${legacy.body.id}`, { cookie })).body.page.name, '旧页面', 'legacy cloud records remain openable for migration');
+});
+
+test('preferences validate input, merge fields and stay per-account', async t => {
   const { call, signIn } = await createFixture(t);
   const alice = await signIn(uniqueEmail('alice'));
   const bob = await signIn(uniqueEmail('bob'));
 
-  assert.deepEqual((await call('/api/account/preferences', { cookie: alice })).body, { version: 1, studioTheme: 'light', updatedAt: null });
+  assert.deepEqual((await call('/api/account/preferences', { cookie: alice })).body, { version: 1, studioTheme: 'light', inspectorDisclosures: {}, updatedAt: null });
   const set = await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { version: 1, studioTheme: 'dark' } });
   assert.equal(set.status, 200);
   assert.equal(set.body.studioTheme, 'dark');
+  assert.deepEqual(set.body.inspectorDisclosures, {});
   assert.equal(set.body.version, 1);
 
-  assert.equal((await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { version: 1, studioTheme: 'blue' } })).status, 400);
-  assert.equal((await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { version: 2, studioTheme: 'dark' } })).status, 400);
-  assert.equal((await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { studioTheme: 'dark' } })).status, 400);
+  const disclosures = { 'component:hero:advanced': true, 'motion:countingNumber:CountingNumber': false };
+  const expanded = await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { version: 1, inspectorDisclosures: disclosures } });
+  assert.equal(expanded.status, 200);
+  assert.equal(expanded.body.studioTheme, 'dark', 'a disclosure patch does not reset appearance');
+  assert.deepEqual(expanded.body.inspectorDisclosures, disclosures);
+  const appearanceOnly = await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body: { version: 1, studioTheme: 'light' } });
+  assert.deepEqual(appearanceOnly.body.inspectorDisclosures, disclosures, 'an appearance patch does not clear disclosures');
 
-  assert.equal((await call('/api/account/preferences', { cookie: bob })).body.studioTheme, 'light', 'no cross-account leak');
+  for (const body of [
+    { version: 1, studioTheme: 'blue' },
+    { version: 2, studioTheme: 'dark' },
+    { studioTheme: 'dark' },
+    { version: 1 },
+    { version: 1, inspectorDisclosures: null },
+    { version: 1, inspectorDisclosures: [] },
+    { version: 1, inspectorDisclosures: { 'component:hero:advanced': 'true' } },
+    { version: 1, inspectorDisclosures: { 'bad key': true } },
+    { version: 1, inspectorDisclosures: { [`component:${'x'.repeat(160)}`]: true } },
+    { version: 1, inspectorDisclosures: Object.fromEntries(Array.from({ length: 513 }, (_, index) => [`component:type${index}:advanced`, true])) },
+    { version: 1, studioTheme: 'dark', arbitrary: {} },
+  ]) assert.equal((await call('/api/account/preferences', { method: 'PATCH', cookie: alice, body })).status, 400, JSON.stringify(body));
+
+  assert.deepEqual((await call('/api/account/preferences', { cookie: bob })).body.inspectorDisclosures, {}, 'no cross-account disclosure leak');
+  assert.equal((await call('/api/account/preferences', { cookie: bob })).body.studioTheme, 'light', 'no cross-account appearance leak');
   const persisted = await call('/api/account/preferences', { cookie: alice });
-  assert.equal(persisted.body.studioTheme, 'dark');
+  assert.equal(persisted.body.studioTheme, 'light');
+  assert.deepEqual(persisted.body.inspectorDisclosures, disclosures);
 });
 
 test('invalid page payloads are rejected with 400 and persist nothing', async t => {

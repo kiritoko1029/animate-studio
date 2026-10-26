@@ -46,7 +46,7 @@ export function validateInteractions(page) {
         case 'set': keys(action, ['type', 'variable', 'expression']); expression(action.expression); if (!names.has(action.variable)) fail('动作引用的变量不存在'); break;
         case 'toggle': keys(action, ['type', 'variable']); if (!variables.some(v => v.name === action.variable && v.type === 'boolean')) fail('切换动作需要布尔变量'); break;
         case 'notify': case 'navigate': keys(action, ['type', 'expression']); expression(action.expression); break;
-        case 'reset': keys(action, ['type']); break;
+        case 'reset': case 'back': keys(action, ['type']); break;
         case 'script': keys(action, ['type', 'scriptId']); if (!ids.has(action.scriptId)) fail('动作引用的脚本不存在'); break;
         case 'condition': keys(action, ['type', 'expression', 'then', 'else']); expression(action.expression); actions(action.then, depth + 1); actions(action.else, depth + 1); break;
         default: fail('不支持的动作类型');

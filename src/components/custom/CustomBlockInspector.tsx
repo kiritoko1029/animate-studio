@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ChevronRight, CircleAlert, Cloud, HardDrive, Link2, LoaderCircle, Pencil, Puzzle, RefreshCw, RotateCcw, Save, Sparkles } from 'lucide-react';
 import { StudioButton, StudioTooltip } from '../StudioUI';
 import { ComponentScaleControls } from '../ComponentScaleControls';
+import { InspectorDisclosure, InspectorSettingsSearch, useInspectorDisclosure } from '../InspectorSettings';
 import { ThemePicker } from '../ThemePicker';
 import { useAccount } from '../AccountProvider';
 import { customFieldLabels, customFieldLimits, isSafeCustomUrl, type CustomFieldKey } from '../../../shared/custom-components.mjs';
@@ -47,6 +48,7 @@ export function CustomBlockInspector({ block, document, onChange, onFrame, onRes
   const { user } = useAccount();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const themeDisclosure = useInspectorDisclosure('component:custom:theme');
   const snapshot = block.props.custom;
   const source = snapshot?.source;
   useEffect(() => { if (source?.kind === 'cloud') library.ensureCloud(); }, [source?.kind, user?.id]);
@@ -109,6 +111,7 @@ export function CustomBlockInspector({ block, document, onChange, onFrame, onRes
 
   return <>
     <div className="inspected-component"><span className="inspected-icon"><Puzzle size={18}/></span><span><strong title={snapshot.name}>{snapshot.name}</strong><small>{t("自定义组件")}{source ? ` · v${source.revision}` : ''}</small></span><StudioTooltip label={t("恢复实例字段为组件默认值，保留代码、位置、尺寸、外观和组件联动；支持撤销")}><StudioButton className="inspector-reset" aria-label={t("恢复实例字段默认值")} disabled={!fields.length} onClick={onReset}><RotateCcw size={13}/><span>{t("恢复默认")}</span></StudioButton></StudioTooltip></div>
+    <InspectorSettingsSearch key={`settings-${block.id}`}/>
     <div className="property-section custom-source-card">
       <h3>{source?.kind === 'cloud' ? <Cloud size={13}/> : <HardDrive size={13}/>} {t("组件来源")}</h3>
       <p className={`custom-source-state custom-source-state--${state}`}>{state === 'checking' && <LoaderCircle size={12} className="spin"/>}{sourceText}</p>
@@ -121,7 +124,7 @@ export function CustomBlockInspector({ block, document, onChange, onFrame, onRes
       <p className="field-hint">{t("页面中的组件是插入时的副本：编辑、删除或取消分享源组件都不会改变它，只有点击“更新此实例”才会替换为新版本。")}</p>
       {error && <p className="field-hint ccd-field-error" role="alert">{translateMessage(error)}</p>}
     </div>
-    <ComponentScaleControls key={`scale-${block.id}`} block={block} settings={document.settings} onChange={onChange}/>
+    <InspectorDisclosure id="component:custom:scale" title="整体缩放" badge="高级"><ComponentScaleControls key={`scale-${block.id}`} block={block} settings={document.settings} onChange={onChange}/></InspectorDisclosure>
     <div className="property-section"><h3>{t("实例内容")}</h3>
       {fields.length ? fields.map(field => <FieldInput key={`${block.id}-${field}`} field={field} value={p[field] ?? snapshot.fields?.[field] ?? ''} bound={Boolean(block.bindings?.[field as 'title' | 'text' | 'label'])} onCommit={value => onChange({ ...block, props: { ...block.props, [field]: value } })}/>)
         : <p className="field-hint">{t("这个组件没有声明实例字段。可在设计器的“设置”中启用标题、正文等字段，再更新此实例。")}</p>}
@@ -134,8 +137,8 @@ export function CustomBlockInspector({ block, document, onChange, onFrame, onRes
       {(p.accent || p.background || p.color || p.radius !== undefined) && <StudioButton className="text-button" onClick={() => { const { accent: _a, background: _b, color: _c, radius: _r, ...rest } = block.props; onChange({ ...block, props: rest }); }}><RotateCcw size={12}/>{t("恢复主题样式")}</StudioButton>}
     </div>
     <div className="property-section"><h3><Sparkles size={13}/> {t("入场动效")}</h3><select aria-label={t("入场动效")} value={p.animation || 'none'} onChange={event => onChange({ ...block, props: { ...block.props, animation: event.target.value as Block['props']['animation'] } })}><option value="none">{t("无动效")}</option><option value="fade">{t("轻柔渐入")}</option><option value="slide">{t("向上浮现")}</option><option value="scale">{t("弹性缩放")}</option></select><p className="field-hint">{t("动效作用于组件外框；组件内部的动画由组件代码控制。")}</p></div>
-    <details className="component-theme-disclosure">
-      <summary><ChevronRight size={14}/><strong>{t("组件主题")}</strong><span>{p.theme ? t("独立主题") : t("跟随页面")}</span></summary>
+    <details {...themeDisclosure.detailsProps} className="component-theme-disclosure" data-inspector-advanced>
+      <summary onClick={themeDisclosure.onSummaryClick}><ChevronRight size={14}/><strong>{t("组件主题")}</strong><span>{p.theme ? t("独立主题") : t("跟随页面")}</span></summary>
       <ThemePicker customThemes={document.settings.customThemes ?? []} onDesign={theme => onDesignTheme('component', theme)} onDelete={onDeleteTheme} scope="component" value={p.theme} pageTheme={document.settings.theme} onChange={theme => { const { accent: _a, background: _b, color: _c, radius: _r, ...rest } = block.props; onChange({ ...block, props: { ...rest, theme } }); }}/>
     </details>
   </>;

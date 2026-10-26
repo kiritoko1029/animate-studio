@@ -3,13 +3,13 @@ import pageCss from '../../page.css?raw';
 import libraryCss from '../../library-blocks.css?raw';
 import portableCss from './portable.css?raw';
 import landscape from '../../../public/landscape.svg?raw';
-import type { PageDocument } from '../../model';
+import type { StudioDocument } from '../../model';
 import type { Format } from './generate';
 import { generateNativeCode } from './native';
 
 export const exportResources = { pageCss, libraryCss, portableCss, catalogCss, assets: { '/landscape.svg': `data:image/svg+xml;charset=utf-8,${encodeURIComponent(landscape)}` } };
 
-export async function downloadCode(document: PageDocument, format: Format) {
+export async function downloadCode(document: StudioDocument, format: Format) {
   const { default: bundle } = await import('virtual:animate-studio-native-export');
   const output = generateNativeCode(document, format, bundle, exportResources.assets);
   const url = URL.createObjectURL(new Blob([output.content], { type: output.mime }));

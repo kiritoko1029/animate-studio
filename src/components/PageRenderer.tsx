@@ -17,7 +17,7 @@ import * as Switch from '@animate-ui/react/primitives/radix-ui/switch';
 import { AnimatedButton, AnimatedAccordion, FadeIn, HighlightText } from './animate-ui';
 import { defaultFrame, safeUrl, isExtendedComponent, type Block, type BlockProps, type PageDocument } from '../model';
 import { blockThemeStyle, blockPortalThemeStyle, pageThemeStyle, getTheme } from '../lib/themes';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { LibraryBlock } from './LibraryBlocks';
 import '../page.css';
 import '../native-catalog.css';
@@ -26,7 +26,7 @@ import { BlockRuntimeProvider, NativeRuntimeContext, useBlockValue } from './Nat
 import { CustomBlockContent } from './custom/CustomComponentFrame';
 
 type BlockRendererProps = { block: Block; settings: PageDocument['settings']; interactive?: boolean; bounded?: boolean; preview?: boolean };
-type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string };
+type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string> };
 
 function parseItems(items = '') {
   return items.split('\n').map(line => line.trim()).filter(Boolean).map((line, index) => {
@@ -36,6 +36,7 @@ function parseItems(items = '') {
 }
 
 function ActionButton({ props, children, className = '', interactive = true, showArrow=false }: { props: BlockProps; children?: ReactNode; className?: string; interactive?: boolean;showArrow?:boolean }) {
+  const { navigate } = usePageLinks();
   const variant = props.variant === 'secondary' || props.variant === 'ghost' ? props.variant : 'primary';
   return <AnimatedButton {...motionProps<typeof AnimatedButton>({type:'button',id:'button',props}, 'Button')} className={officialClass(`page-button page-button--${variant} ${className}`, (motionProps<typeof AnimatedButton>({type:'button',id:'button',props}, 'Button')).className)} variant={variant} disabled={!interactive || motionProps<typeof AnimatedButton>({type:'button',id:'button',props}, 'Button').disabled} style={officialStyle({ borderRadius: props.radius }, (motionProps<typeof AnimatedButton>({type:'button',id:'button',props}, 'Button')).style)} onClick={event => navigate(event, props.url)}>
     {children ?? props.label ?? '了解更多'}{showArrow&&<ArrowRight size={15} strokeWidth={1.8} aria-hidden="true" />}
@@ -65,6 +66,7 @@ function NavbarMark({ props }: { props: BlockProps }) {
 }
 
 function BlockContent({ block, settings, interactive, snapshot }: { block: Block; settings: PageDocument['settings']; interactive: boolean; snapshot: boolean }) {
+  const { navigate, safeUrl, isCurrent } = usePageLinks();
   const domId = useId();
   const p = block.props;
   const [inputValue, setInputValue] = useBlockValue<string>('');
@@ -78,7 +80,7 @@ function BlockContent({ block, settings, interactive, snapshot }: { block: Block
       return <nav className="page-navbar" aria-label="页面导航"><a className="page-brand" href="#" onClick={event => navigate(event, "#")} tabIndex={interactive ? 0 : -1}><NavbarMark key={`${p.brandIcon}:${p.imageUrl}`} props={p} /><span className="page-brand-title">{p.title}</span><span className="page-brand-dot">.</span></a><div className="page-nav-links">{links.map((item, i) => {
         const [label, url] = item.split('|');
         const href = safeUrl(url || ['#features', '#about', '#contact'][i % 3]);
-        return <a key={`${item}-${i}`} href={href} onClick={event => navigate(event, href)} tabIndex={interactive ? 0 : -1}>{label}</a>;
+        return <a key={`${item}-${i}`} href={href} aria-current={isCurrent(href) ? 'page' : undefined} onClick={event => navigate(event, href)} tabIndex={interactive ? 0 : -1}>{label}</a>;
       })}</div></nav>;
     }
     case 'hero': {
@@ -186,7 +188,7 @@ export function FreePage({ document, interactive = true, replayKey = 0 }: PageRe
   </div></PagePreviewTheme.Provider>;
 }
 
-export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope }: PageRendererProps) {
-  if (interactive && (document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))) return <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} />;
+export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route }: PageRendererProps) {
+  if (interactive && (document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))) return <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} />;
   return <FreePage document={document} interactive={interactive} replayKey={replayKey} />;
 }

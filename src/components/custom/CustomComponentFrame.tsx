@@ -3,6 +3,7 @@ import { customComponentSandbox, type CustomComponentDefinition } from '../../..
 import { buildComponentDocument, randomToken, sanitizeComponentTheme, type ComponentProps, type ComponentTheme } from '../../lib/custom-components/document';
 import { createRateLimiter, readFrameMessage, updateMessage, type FrameMessage } from '../../lib/custom-components/protocol';
 import { openComponentLink } from '../../lib/custom-components/links';
+import { useSiteNavigation } from '../../lib/site-navigation';
 import { customComponentTheme, instanceProps } from '../../lib/custom-components/instances';
 import { NativeRuntimeContext } from '../NativeInteractions';
 import { guardLoops } from '../../lib/custom-components/loop-guard';
@@ -39,6 +40,8 @@ export function CustomComponentFrame({ code, props, theme, title, interactive = 
   const [restart, setRestart] = useState(0);
   const [status, setStatus] = useState<FrameStatus>('loading');
   const safeTheme = sanitizeComponentTheme(theme);
+  const siteNavigation = useSiteNavigation();
+  const navigationRef = useRef(siteNavigation); navigationRef.current = siteNavigation;
   const latest = useRef({ props, theme: safeTheme });
   latest.current = { props, theme: safeTheme };
   const callbacks = useRef({ onMessage, onClick, onStatus, interactive, suppressLinks });
@@ -73,7 +76,7 @@ export function CustomComponentFrame({ code, props, theme, title, interactive = 
         callbacks.current.onClick?.();
       } else if (message.type === 'open-link') {
         if (!callbacks.current.interactive || callbacks.current.suppressLinks || !allowLink()) return;
-        openComponentLink(message.href, frame.current);
+        if (!navigationRef.current?.navigate(message.href)) openComponentLink(message.href, frame.current);
       }
       callbacks.current.onMessage?.(message);
     };

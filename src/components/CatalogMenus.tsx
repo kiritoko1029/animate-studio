@@ -8,7 +8,7 @@ import { Menu } from '@animate-ui/react/primitives/base-ui/menu';
 import { Menubar } from '@animate-ui/react/primitives/base-ui/menubar';
 import type { Block } from '../model';
 import { safeUrl } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { motionProps, anchoredProps, officialClass, officialStyle } from '../lib/official-motion';
 import { officialAnimationProps } from '../../shared/animation-settings.mjs';
 import { PageBlockTheme } from './PagePreviewTheme';
@@ -19,6 +19,7 @@ const text=(node:MenuNode)=><>{node.label}{node.shortcut&&<span className="nativ
 function BaseMenu({block,children}:{block:Block;children:ReactNode}) { const opening=useOfficialOpen(block,'Menu');return <Menu.Root {...motionProps<typeof Menu.Root>(block,'Menu')} {...opening}>{children}</Menu.Root>; }
 
 export function CatalogMenus({block}:{block:Block}) {
+ const { navigate, safeUrl } = usePageLinks();
  const opening=useOfficialOpen(block,'DropdownMenu');
  const theme=useContext(PageBlockTheme),p=block.props;
  const [checks,setChecks]=useState<Record<string,boolean>>({}),[radios,setRadios]=useState<Record<string,string>>({});

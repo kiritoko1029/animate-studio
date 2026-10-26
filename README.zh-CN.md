@@ -1,6 +1,6 @@
 # Animate Studio
 
-**当前版本：[v2026.10.25](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.25)** · [更新日志（中文 / English）](CHANGELOG.md)
+**当前版本：[v2026.10.26](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.26)** · [更新日志（中文 / English）](CHANGELOG.md)
 
 **自由搭建页面，编写交互脚本，直接导出前端代码。**
 
@@ -16,12 +16,13 @@
 
 - **自由画布**：拖动、八方向缩放、网格吸附、图层管理、撤销重做，以及围绕鼠标位置的 5%–400% 视野缩放。
 - **85 种组件**：覆盖布局、表单、内容展示、导航、浮层、按钮、文字动效和动态背景，支持中英文搜索。
-- **AI 页面与组件创作**：悬浮聊天窗口逐组件创建和修改页面，也可开发可复用的 HTML/CSS/JavaScript 自定义组件；独立组件模式不会替换当前页面。本机与账号组件支持文件夹分组，生成结果可上传云端持久使用。页面生成时画布实时高亮、气泡提示与彩虹光晕，支持暂停接手、继续任务及浏览器检查点恢复。兼容 OpenAI Responses 和 Anthropic Messages，可读取模型列表、自定义思考强度。模型配置和密钥仅保存在浏览器，接口需允许浏览器跨域请求。详见 [协议与恢复设计](docs/ai-generation.md)。
+- **多页面站点**：在左侧“页面”面板创建、复制、排序和分组页面，设置首页、列表、详情与 404；共享页头页脚按确认范围复用。支持 `/products/:id` 路由参数、站内跳转和返回，预览、分享与导出使用同一导航契约。
+- **AI 页面、整站与组件创作**：整站先确认页面、路由与共享布局，完成后一次应用，可撤销或恢复生成前版本。悬浮聊天窗口逐组件创建和修改页面，也可开发可复用的 HTML/CSS/JavaScript 自定义组件；独立组件模式不会替换当前页面。本机与账号组件支持文件夹分组，生成结果可上传云端持久使用。页面生成时画布实时高亮、气泡提示与彩虹光晕，支持暂停接手、继续任务及浏览器检查点恢复。兼容 OpenAI Responses 和 Anthropic Messages，可读取模型列表、自定义思考强度。模型配置和密钥仅保存在浏览器，接口需允许浏览器跨域请求。详见 [协议与恢复设计](docs/ai-generation.md)。悬浮聊天窗口逐组件创建和修改页面，也可开发可复用的 HTML/CSS/JavaScript 自定义组件；独立组件模式不会替换当前页面。本机与账号组件支持文件夹分组，生成结果可上传云端持久使用。页面生成时画布实时高亮、气泡提示与彩虹光晕，支持暂停接手、继续任务及浏览器检查点恢复。兼容 OpenAI Responses 和 Anthropic Messages，可读取模型列表、自定义思考强度。模型配置和密钥仅保存在浏览器，接口需允许浏览器跨域请求。详见 [协议与恢复设计](docs/ai-generation.md)。
 - **主题设计**：黑白工作台浅色/深色切换、8 套页面预设、组件独立主题，以及自定义主题设计器。
 - **组件联动**：共享变量、属性绑定、表达式、条件动作、点击与值变化事件。表达式提示会使用当前页面已有变量。
 - **JavaScript 编辑器**：代码高亮、自动补全、语法检查、测试运行和调试日志；内置 `ctx.fetchJSON`、`ctx.setState`、`ctx.notify`、`ctx.sleep` 等函数。
-- **可移植代码导出**：导出独立 HTML 或内嵌页面的 Vue/React 包装组件，无需额外安装 Animate UI、Motion、Radix 或 Tailwind；页面 JSON 可用于继续编辑。
-- **账号与云端页面**：邮箱验证码、GitHub 登录，多页面保存、只读分享链接与个人外观同步；访客仍可自由编辑和导出。
+- **可移植代码导出**：导出独立 HTML 或内嵌页面的 Vue/React 包装组件，无需额外安装 Animate UI、Motion、Radix 或 Tailwind；站点 JSON 可用于继续编辑，旧页面 JSON 兼容。
+- **账号与云端站点**：邮箱验证码、GitHub 登录，多页面保存、只读分享链接与个人外观同步；访客仍可自由编辑和导出。
 - **本地与云端部署**：Express 支持 SQLite / PostgreSQL，Cloudflare 使用 D1；账号与邮件配置见 [接入指南](docs/accounts-and-storage.md)。
 
 工作台控件与画布原语已使用 `@animate-ui/react` 2.0.0（npm 最新版）和 Motion 14.5.0；背景与样式按钮固定使用 Animate UI v2.1.2 的 Registry 源码。画布、普通预览和带联动的预览共用官方 React 原语与默认动效；属性面板可调整官方支持的效果参数。下载的 HTML 内嵌同一运行时，Vue/React 组件通过 iframe 承载该独立页面。详见 [版本记录](docs/animate-ui-version.json) 和 [组件覆盖说明](docs/animate-ui-coverage.md)。
@@ -72,9 +73,9 @@ NODE_ENV=production npm start
 | HTML | 包含 CSS 与 JavaScript 的单个 `.html` 文件 | 浏览器或静态服务器，无需构建 |
 | Vue | `GeneratedPage.vue` | 支持单文件组件的 Vue 3.5+ 项目 |
 | React | `GeneratedPage.jsx` | 支持 JSX 的 React 18+ 项目 |
-| JSON | 完整页面定义 | 导回 Animate Studio 继续编辑 |
+| JSON | 完整站点定义，兼容旧页面 | 导回 Animate Studio 继续编辑 |
 
-导出会携带布局、主题、变量绑定、事件和脚本。设计画布按容器宽度等比缩放，不自动转换为移动端重排。自定义图片保留 URL，需要在目标环境中继续可用。代码文件不能反向导入编辑器，继续编辑请保留 JSON。
+导出会携带所有页面、共享布局、主题、变量绑定、事件和脚本；旧页面导出保持原运行入口。多页面 HTML 使用 `#/路径` 保留站内导航，刷新后恢复当前子页面。设计画布按容器宽度等比缩放，不自动转换为移动端重排。自定义图片保留 URL，需要在目标环境中继续可用。代码文件不能反向导入编辑器，继续编辑请保留 JSON。
 
 脚本在隔离的 iframe / Worker 中执行，单次运行上限 15 秒；HTTP 请求遵循浏览器 CORS 规则，不提供 DOM 访问或 npm 包导入。
 

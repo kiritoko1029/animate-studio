@@ -19,6 +19,19 @@ test('expressions support typed values, paths, short circuit, comparisons and co
   assert.equal(runtime.evaluate('state["__proto__"]'), undefined);
 });
 
+test('route context is read-only and back uses the containing preview history', async () => {
+  const { page } = fixture();
+  const button = page.blocks.find(block => block.props.label === '运行脚本，计算金额');
+  button.events = { click: [{ type: 'back' }] };
+  let count = 0;
+  const runtime = createInteractionRuntime(page, { route: { id: '42' }, onBack: () => { count++; } });
+  assert.equal(runtime.evaluate('route.id'), '42');
+  assert.equal(runtime.evaluate('route.constructor'), undefined);
+  validatePage(page);
+  await runtime.dispatch(button.id, 'click');
+  assert.equal(count, 1);
+});
+
 test('two-way values update before ordered conditional actions and notify', async () => {
   const messages = [], logs = [];
   const { page } = fixture();

@@ -29,9 +29,11 @@ npm run brand:generate     # regenerate logo/favicon/manifest assets (see Genera
 
 ## Architecture
 
-### The page document is the contract
+### The page and site documents are the contract
 
-Canvas, preview, shared pages, persistence and exports all consume one JSON document, `PageDocument` (`src/model.ts`, `version: 1`): `settings`, `blocks[]` (`{id, type, props, frame, bindings, events}`), and optional page `variables[]` / `scripts[]`. A page is a fixed design canvas (`settings.maxWidth × canvasHeight`) of absolutely positioned `frame`s scaled uniformly with a CSS transform (`FreePage` / `useFitScale`); there is no responsive reflow. Older flow-layout documents are upgraded by `toFreeDocument`.
+Canvas, preview, shared pages, persistence and exports consume JSON documents. `PageDocument` (`src/model.ts`, `version: 1`) contains `settings`, `blocks[]` (`{id, type, props, frame, bindings, events}`), and optional page `variables[]` / `scripts[]`. A page is a fixed design canvas (`settings.maxWidth × canvasHeight`) of absolutely positioned `frame`s scaled uniformly with a CSS transform (`FreePage` / `useFitScale`); there is no responsive reflow. Older flow-layout documents are upgraded by `toFreeDocument`.
+
+`SiteDocument` (`shared/site-document.mjs`, `version: 1`, `kind: "site"`) contains ordered page entries, a home page and optional shared header/footer documents. Each entry owns an independent `PageDocument`, a route and shared-layout references; it does not nest another site. `validateSite` in `server/validation.mjs` checks the complete document, including every nested page. `SitePreview.tsx` resolves static/dynamic routes and `composeSitePage` combines shared regions for preview, share and multi-page HTML export. Legacy single-page exports keep the original `InteractivePreview` entry. Guests migrate from `guest-draft:v1` to `guest-site-draft:v1` without deleting the old key. Cloud `/api/account/sites` stores a whole site in the existing `studio_page` JSON column with `expectedRevision` protection; the old page endpoints, record IDs and share tokens remain valid.
 
 `server/validation.mjs` (`validatePage`) is a strict allowlist and the gate for every save: Express, the Cloudflare handler, the Durable Object and the account API all call it. Adding a `BlockProps` field, page setting, component type or action therefore means changing `src/model.ts` **and** `validation.mjs` (and `shared/interaction-schema.mjs` for variables/bindings/actions), or saves fail with a 400 "不支持的属性".
 

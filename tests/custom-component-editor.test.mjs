@@ -41,7 +41,7 @@ function fixture(t, { user = null, storage = {}, components = [], folders = [] }
   installMatchMedia(win, { reducedMotion: true });
   installWebAnimations(win);
   // Keep JSDOM's own AbortController: motion's gestures pass its signal to JSDOM listeners.
-  Object.assign(win, { Headers, Response, structuredClone });
+  Object.assign(win, { Headers, Response, structuredClone, TextEncoder, TextDecoder });
   win.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
   win.HTMLElement.prototype.scrollIntoView = () => {};
   // Selecting a component scrolls the inspector to the top; JSDOM has no scrolling.
@@ -126,7 +126,7 @@ function fixture(t, { user = null, storage = {}, components = [], folders = [] }
   const press = (element, key, options = {}) => win.perform(() => element.dispatchEvent(new win.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options })));
   const openMenu = trigger => { assert.ok(trigger, 'menu trigger'); trigger.focus(); press(trigger, 'Enter'); };
   const text = () => doc.body.textContent;
-  const guestPage = () => JSON.parse(win.localStorage.getItem('animate-studio:guest-draft:v1')).page;
+  const guestPage = () => { const stored = JSON.parse(win.localStorage.getItem('animate-studio:guest-site-draft:v1') ?? win.localStorage.getItem('animate-studio:guest-draft:v1')); return stored.page.kind === 'site' ? stored.page.pages[0].page : stored.page; };
   const library = () => JSON.parse(win.localStorage.getItem('animate-studio:custom-components:v1') ?? '{"components":[]}').components;
   const editorFor = panel => win.CodeMirrorView.findFromDOM(doc.querySelector(`[data-panel="${panel}"] .cm-editor`));
   const ready = () => doc.querySelector('input[aria-label="页面名称"]');
@@ -456,7 +456,7 @@ function hookFixture(t, fetcher) {
   console.on('jsdomError', error => errors.push(error.message));
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://library.test', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole: console });
   const win = dom.window;
-  Object.assign(win, { Headers, Response, structuredClone });
+  Object.assign(win, { Headers, Response, structuredClone, TextEncoder, TextDecoder });
   win.fetch = (url, options = {}) => fetcher(String(url), options.method ?? 'GET', options.body ? JSON.parse(options.body) : null);
   win.eval(libraryHookBundle.outputFiles[0].text);
   t.after(() => { win.unmount(); win.close(); assert.deepEqual(errors, []); });

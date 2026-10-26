@@ -3,13 +3,14 @@ import { ChevronDown, Circle, CircleAlert, CircleCheck } from 'lucide-react';
 import { NavigationMenu as N } from '@animate-ui/react/primitives/base-ui/navigation-menu';
 import type { Block } from '../model';
 import { safeUrl } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { motionProps, officialClass, officialStyle } from '../lib/official-motion';
 import { officialAnimationProps } from '../../shared/animation-settings.mjs';
 import { PageBlockTheme } from './PagePreviewTheme';
 
 type Entry={label:string;href?:string;description?:string;icon?:'circle'|'alert'|'check';children?:Entry[];columns?:number;width?:number};
 export function CatalogNavigation({block}:{block:Block}) {
+ const { navigate, safeUrl } = usePageLinks();
  const theme=useContext(PageBlockTheme);
  const configured=officialAnimationProps(block.type,'NavigationStructure',block.props.motion).items as unknown as Entry[];
  const groups=new Map<string,Entry[]>();

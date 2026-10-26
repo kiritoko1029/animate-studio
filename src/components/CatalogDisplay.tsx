@@ -10,7 +10,7 @@ import { PageBlockTheme } from './PagePreviewTheme';
 import { usePageImage } from './PageAssets';
 import { motionProps, anchoredProps } from '../lib/official-motion';
 import { safeUrl, type Block } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 
 export function CatalogAvatars({block}:{block:Block}) {
  const theme=useContext(PageBlockTheme);
@@ -18,6 +18,7 @@ export function CatalogAvatars({block}:{block:Block}) {
  return <><AvatarGroup {...motionProps<typeof AvatarGroup>(block,'AvatarGroup')} className={officialClass("native-catalog-avatars", (motionProps<typeof AvatarGroup>(block,'AvatarGroup')).className)}>{people.map(([name,src],i)=><div key={i}><span className="native-avatar" aria-label={name}>{src && safeUrl(src)!=='#' ? <img src={safeUrl(src)} alt={name}/> : Array.from(name).slice(0,2).join('')}</span><AvatarGroupTooltip {...motionProps<typeof AvatarGroupTooltip>(block,'AvatarGroupTooltip')} className={officialClass("native-avatar-tooltip", (motionProps<typeof AvatarGroupTooltip>(block,'AvatarGroupTooltip')).className)} data-page-scheme={theme?.colorScheme} style={officialStyle(theme, (motionProps<typeof AvatarGroupTooltip>(block,'AvatarGroupTooltip')).style)}>{name}<AvatarGroupTooltipArrow {...motionProps<typeof AvatarGroupTooltipArrow>(block,'AvatarGroupTooltipArrow')} className={officialClass("native-avatar-arrow", (motionProps<typeof AvatarGroupTooltipArrow>(block,'AvatarGroupTooltipArrow')).className)}/></AvatarGroupTooltip></div>)}</AvatarGroup>{block.props.label && <p>{block.props.label}</p>}</>;
 }
 export function CatalogStars({block}:{block:Block}) {
+ const { navigate } = usePageLinks();
  const p=block.props;
  const options=motionProps<typeof GithubStars>(block,block.type==='githubStarsButton'?'GitHubStarsButton':'GithubStars');
  const starProps=motionProps<typeof GithubStarsIcon<'svg'>>(block,block.type==='githubStarsButton'?'GitHubStarsButtonIcon':'GithubStarsIcon');
@@ -30,6 +31,7 @@ export function CatalogStars({block}:{block:Block}) {
 
 }
 export function CatalogLinkPreview({block}:{block:Block}) {
+ const { navigate, safeUrl } = usePageLinks();
  const opening=useOfficialOpen(block,'PreviewLinkCard');
  const theme=useContext(PageBlockTheme);
  const options=motionProps<typeof PreviewLinkCard>(block,'PreviewLinkCard');

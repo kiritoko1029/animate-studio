@@ -26,14 +26,14 @@ test('canvas menu targets the clicked component, supports keyboard dismissal and
       import { createComponentVariable } from './src/lib/interactions/component-variable';
       import { createBlock, createDocument } from './src/model';
       const slider = {...createBlock('slider'),id:'slider'}, button = {...createBlock('button'),id:'button'};
-      window.actions = []; window.commits = [];
+      window.actions = []; window.commits = []; window.inspections = [];
       function Demo() {
         const [page, setPage] = useState({...createDocument(), blocks:[slider,button]});
-        const [selected, setSelected] = useState('slider'), [creating, setCreating] = useState(null), [menuId,setMenuId]=useState(null);
-        window.page = page; window.selected = selected;
-        return <><div data-free-stage>{page.blocks.map((block,index)=><CanvasComponentMenu key={block.id} block={block} settings={page.settings} onBlockChange={next=>setPage(current=>({...current,blocks:current.blocks.map(item=>item.id===next.id?next:item)}))} layerIndex={index} layerCount={page.blocks.length} onLayerChange={(id,action)=>window.actions.push(action+':'+id)} open={menuId===block.id} disabled={false}
+        const [selected, setSelected] = useState('slider'), [creating, setCreating] = useState(null), [menuId,setMenuId]=useState(null), [selectionCount,setSelectionCount]=useState(1);
+        window.page = page; window.selected = selected; window.setSelectionCount = setSelectionCount;
+        return <><div data-free-stage>{page.blocks.map((block,index)=><CanvasComponentMenu key={block.id} block={block} selectionCount={selectionCount} settings={page.settings} onBlockChange={next=>setPage(current=>({...current,blocks:current.blocks.map(item=>item.id===next.id?next:item)}))} layerIndex={index} layerCount={page.blocks.length} onLayerChange={(id,action)=>window.actions.push(action+':'+id)} open={menuId===block.id} disabled={false}
           onOpenChange={open=>{setMenuId(open?block.id:null);if(open)setSelected(block.id);}}
-          onInspect={(id,tab)=>window.actions.push(tab+':'+id)} onCreateVariable={setCreating}
+          onInspect={(id,tab,advanced)=>{window.actions.push(tab+':'+id);window.inspections.push({id,tab,advanced});}} onCreateVariable={setCreating}
           onAlign={(id,alignment)=>window.actions.push(alignment+':'+id)}
           onFillWidth={id=>window.actions.push('fill:'+id)}
           onDelete={id=>window.actions.push('delete:'+id)} onDuplicate={id=>window.actions.push('copy:'+id)}>
@@ -90,8 +90,22 @@ test('canvas menu targets the clicked component, supports keyboard dismissal and
   assert.equal(window.actions.length, 0, 'scale controls must not trigger other menu actions');
   choose('编辑属性');
   assert.equal(window.actions.at(-1), 'component:button');
+  assert.equal(window.inspections.at(-1).advanced, undefined);
+  open('button'); choose('高级设置…');
+  assert.equal(window.actions.at(-1), 'component:button');
+  assert.equal(window.inspections.at(-1).advanced, true);
   open('slider'); choose('绑定属性');
   assert.equal(window.actions.at(-1), 'logic:slider');
+  assert.equal(window.inspections.at(-1).advanced, undefined);
+  window.perform(() => window.setSelectionCount(2));
+  open('button');
+  assert.equal(menu().getAttribute('aria-label'), '所选组件操作');
+  choose('高级设置…');
+  assert.equal(window.actions.at(-1), 'component:button');
+  assert.equal(window.inspections.at(-1).id, 'button');
+  assert.equal(window.inspections.at(-1).tab, 'component');
+  assert.equal(window.inspections.at(-1).advanced, true);
+  window.perform(() => window.setSelectionCount(1));
   open('button'); choose('一键宽度填充');
   assert.equal(window.selected, 'button');
   assert.equal(window.actions.at(-1), 'fill:button');

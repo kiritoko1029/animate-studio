@@ -15,7 +15,7 @@ import './studio-layout.css';
 ensureBrowserRandomUUID();
 initializeLocale();
 
-const sharedMatch = window.location.pathname.match(/^\/p\/([^/]+)\/?$/);
+const sharedMatch = window.location.pathname.match(/^\/p\/([^/]+)(?:\/.*)?$/);
 const sharedComponentMatch = window.location.pathname.match(/^\/c\/([^/]+)\/?$/);
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><MotionConfig reducedMotion="user"><AnimateUIProvider reducedMotion="user">{sharedMatch ? <SharedPage token={sharedMatch[1]}/> : <AccountProvider>{sharedComponentMatch ? <SharedComponentPage token={sharedComponentMatch[1]}/> : <App />}</AccountProvider>}</AnimateUIProvider></MotionConfig></React.StrictMode>,

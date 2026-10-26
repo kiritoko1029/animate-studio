@@ -9,6 +9,7 @@ import { FreePage } from './PageRenderer';
 import { NativeRuntimeContext, type NativeRuntime } from './NativeInteractions';
 import { safeUrl } from '../model';
 import { findPageAnchor } from '../lib/page-anchors';
+import { useSiteNavigation } from '../lib/site-navigation';
 import '../interactions.css';
 
 function PreviewNotice({ message, onClose, translate }: { message: string; onClose: () => void; translate: (message: string) => string }) {
@@ -20,8 +21,9 @@ function PreviewNotice({ message, onClose, translate }: { message: string; onClo
 const keepText = (message: string) => message;
 
 export type PreviewHandle = { runScript: (id: string) => void; reset: () => void };
-export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string; translate?: (message: string) => string; locale?: string }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview', translate = keepText, locale = 'zh-CN' }, ref) {
+export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string; translate?: (message: string) => string; locale?: string; route?: Record<string, string> }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview', translate = keepText, locale = 'zh-CN', route }, ref) {
   const container = useRef<HTMLDivElement>(null);
+  const siteNavigation = useSiteNavigation();
   const [state, setState] = useState<Record<string, JsonValue>>({});
   const [logs, setLogs] = useState<RuntimeLog[]>([]);
   const [expanded, setExpanded] = useState(debug);
@@ -30,12 +32,13 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
   const activeRuntime = useRef<NativeRuntime | null>(null);
   const runtime = useMemo(() => {
     const next = createInteractionRuntime(document, {
-    storageKey: variableStorageKey(document, persistenceScope),
+    storageKey: variableStorageKey(document, persistenceScope), route: route ?? siteNavigation?.params ?? {},
     onState: setState,
     onLog: entry => queueMicrotask(() => { if (activeRuntime.current === next) setLogs(items => [...items.slice(-99), entry]); }),
-    onNotify: setNotice,
+    onNotify: setNotice, onBack: () => siteNavigation?.back(),
     onNavigate: raw => {
       const url = safeUrl(raw);
+      if (siteNavigation?.navigate(url)) return;
       if (url.startsWith('#')) {
         const surface = container.current?.querySelector('.page-surface');
         const target = findPageAnchor(surface, url);
@@ -45,7 +48,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
     },
     });
     return next;
-  }, [document, persistenceScope]);
+  }, [document, persistenceScope, route, siteNavigation]);
   const reset = () => { runtime.reset(); setRevision(value => value + 1); setNotice(null); };
   useImperativeHandle(ref, () => ({ runScript(id) {
     setExpanded(true);

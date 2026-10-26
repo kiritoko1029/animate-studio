@@ -48,7 +48,7 @@ import { HoleBackground } from './animate-ui/registry/backgrounds/hole';
 import { StarsBackground } from './animate-ui/registry/backgrounds/stars';
 import { TopographyBackground } from './animate-ui/registry/backgrounds/topography';
 import { safeUrl, type Block, type ExtendedComponentType } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import '../native-catalog.css';
 import { CatalogComposites } from './CatalogComposites';
 import { PageBlockTheme, PagePreviewTheme, useSystemScheme, type PageThemeSelection } from './PagePreviewTheme';
@@ -69,6 +69,7 @@ const popupClass = 'as-page-catalog-popup native-catalog-popup';
 /** v2 primitives retain the document's property schema; portable exports have their own runtime. */
 export default function NativeCatalogBlock({ block, snapshot = false }: { block: Block & { type: ExtendedComponentType }; snapshot?: boolean }) {
   const { type, props: p } = block;
+  const { navigate, safeUrl } = usePageLinks();
   const opening=useOfficialOpen(block,type[0].toUpperCase()+type.slice(1));
   const reduce=useReducedMotion();
   const imageSource = usePageImage(p.imageUrl);

@@ -31,6 +31,7 @@ export type AiAssistantProps = {
   onOpenLocal: (page: PageDocument) => Promise<void>;
   onOpenCloud: (id: string) => Promise<void>;
   onCreatePage: () => Promise<boolean>;
+  onCreateSite?: () => void;
   creationMode?: 'page' | 'component';
   onCreationModeChange?: (mode: 'page' | 'component') => void;
   initiallyOpen?: boolean;
@@ -229,6 +230,7 @@ export function AiAssistant(props: AiAssistantProps) {
       {props.onCreationModeChange && <div className="ai-creation-mode" role="group" aria-label={t('AI 创作类型')}>
         <StudioButton className={componentMode ? 'secondary-button' : 'primary-button'} aria-pressed={!componentMode} disabled={running || switching} onClick={() => props.onCreationModeChange?.('page')}>{t('生成页面')}</StudioButton>
         <StudioButton className={componentMode ? 'primary-button' : 'secondary-button'} aria-pressed={componentMode} disabled={running || switching} onClick={() => props.onCreationModeChange?.('component')}>{t('创建组件')}</StudioButton>
+        {props.onCreateSite && <StudioButton className="secondary-button" disabled={running || switching} onClick={props.onCreateSite}>{t('创建整站')}</StudioButton>}
       </div>}
       <div className="ai-page-picker"><AiSelect label={t(componentMode ? 'AI 组件草稿' : 'AI 目标页面')} value="current" options={pageOptions} onChange={value => void selectPage(value)} disabled={running || switching}/><StudioTooltip label={t(componentMode ? '新建 AI 组件' : '新建 AI 页面')}><StudioButton className="secondary-button ai-new-page" aria-label={t(componentMode ? '新建 AI 组件' : '新建 AI 页面')} disabled={running || switching || sessions.length + requiredNewSlots > 12 || !!recovery} onClick={() => void createPage()}>{switching ? <LoaderCircle size={15} className="spin"/> : <Plus size={16}/>}</StudioButton></StudioTooltip></div>
       {cloudLoading && <p className="ai-mini-status">{t('正在读取云端页面…')}</p>}

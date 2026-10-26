@@ -16,6 +16,7 @@ import { AiAssistant, type AiAssistantProps } from './AiAssistant';
 
 export type AiComponentRequest = { sequence: number; owner: string; kind: 'local' | 'cloud'; folderId: string | null };
 type Props = AiAssistantProps & {
+  pageRequest?: number;
   componentRequest?: AiComponentRequest | null;
   onAddComponent: (definition: CustomComponentDefinition, source: CustomComponentSource) => boolean;
   onOpenDesigner: (request: DesignerRequest) => void;
@@ -41,6 +42,10 @@ export function AiStudio(props: Props) {
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [targetFolder, setTargetFolder] = useState<Pick<AiComponentRequest, 'kind' | 'folderId'>>({ kind: 'local', folderId: null });
   useEffect(() => { const page = restoreComponentPage(props.owner); current.current = page; setComponentPage(page); setTargetFolder({ kind: 'local', folderId: null }); }, [props.owner]);
+  useEffect(() => {
+    if (!props.pageRequest) return;
+    setMode('page'); setOpenRequest(value => value + 1);
+  }, [props.pageRequest]);
   useEffect(() => {
     const request = props.componentRequest;
     if (!request || request.owner !== props.owner) return;

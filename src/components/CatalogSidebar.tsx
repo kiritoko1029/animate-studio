@@ -6,7 +6,7 @@ import * as Dialog from '@animate-ui/react/primitives/radix-ui/dialog';
 import * as Menu from '@animate-ui/react/primitives/radix-ui/dropdown-menu';
 import type { Block } from '../model';
 import { safeUrl } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { officialAnimationProps } from '../../shared/animation-settings.mjs';
 import { motionProps, officialClass, officialStyle } from '../lib/official-motion';
 import { PageBlockTheme } from './PagePreviewTheme';
@@ -21,6 +21,7 @@ export function CatalogSidebar({block}:{block:Block}) {
  return <Sidebar.Provider {...provider} data-variant={String(layout.variant)} data-collapsible={String(layout.collapsible)} open={open} onOpenChange={setOpen} className={officialClass('native-sidebar-layout',provider.className)}><SidebarBody block={block}/></Sidebar.Provider>;
 }
 function SidebarBody({block}:{block:Block}) {
+ const { navigate, safeUrl } = usePageLinks();
  const {open,setOpen,isMobile,openMobile,setOpenMobile}=Sidebar.useSidebar();
  const layout=officialAnimationProps('sidebar','SidebarLayout',block.props.motion);
  const mobile=isMobile && layout.collapsible!=='none';

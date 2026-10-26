@@ -1,1 +1,1 @@
-["sqlite-0001-accounts.sql","pg-0001-accounts.sql","sqlite-0002-components.sql","pg-0002-components.sql","sqlite-0003-component-folders.sql","pg-0003-component-folders.sql","sqlite-0004-component-folder-limit.sql","pg-0004-component-folder-limit.sql"]
+["sqlite-0001-accounts.sql","pg-0001-accounts.sql","sqlite-0002-components.sql","pg-0002-components.sql","sqlite-0003-component-folders.sql","pg-0003-component-folders.sql","sqlite-0004-component-folder-limit.sql","pg-0004-component-folder-limit.sql","sqlite-0005-inspector-preferences.sql","pg-0005-inspector-preferences.sql"]

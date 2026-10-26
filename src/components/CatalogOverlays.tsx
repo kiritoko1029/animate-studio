@@ -5,12 +5,13 @@ import * as HoverCard from '@animate-ui/react/primitives/radix-ui/hover-card';
 import * as Tooltip from '@animate-ui/react/primitives/radix-ui/tooltip';
 import type { Block } from '../model';
 import { safeUrl } from '../model';
-import { navigate } from '../lib/navigation';
+import { usePageLinks } from '../lib/navigation';
 import { motionProps, anchoredProps, officialClass, officialStyle } from '../lib/official-motion';
 import { PageBlockTheme } from './PagePreviewTheme';
 import { useOfficialOpen } from './useOfficialOpen';
 
 export function CatalogOverlays({block}:{block:Block}) {
+ const { navigate, safeUrl } = usePageLinks();
  const p=block.props,theme=useContext(PageBlockTheme),id=useId();
  const opening=useOfficialOpen(block,block.type==='hoverCard'?'HoverCard':block.type==='tooltip'?'Tooltip':'Popover');
  const trigger=<Button className="as-page-catalog-button">{p.label || '打开'}</Button>;

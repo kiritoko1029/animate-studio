@@ -2,7 +2,7 @@ import { blockLabel } from '../i18n/catalog';
 import { t } from '../i18n';
 import { useRef, type ReactElement, type KeyboardEvent } from 'react';
 import { ContextMenu } from '@animate-ui/react/primitives/radix-ui/context-menu';
-import { AlignHorizontalDistributeCenter, AlignHorizontalJustifyEnd, AlignHorizontalJustifyStart, ArrowLeftRight, ArrowDown, ArrowUp, ArrowUpToLine, ArrowDownToLine, Copy, Database, Link2, Settings2, Trash2 } from 'lucide-react';
+import { AlignHorizontalDistributeCenter, AlignHorizontalJustifyEnd, AlignHorizontalJustifyStart, ArrowLeftRight, ArrowDown, ArrowUp, ArrowUpToLine, ArrowDownToLine, Copy, Database, Link2, Settings2, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { type Block, type PageDocument } from '../model';
 import { ComponentScaleControls } from './ComponentScaleControls';
 import type { HorizontalAlignment } from '../lib/canvas-bounds';
@@ -33,7 +33,7 @@ function navigateRow(event: KeyboardEvent<HTMLElement>) {
 export function CanvasComponentMenu({ block, selectionCount = 1, settings, onBlockChange, children, open, disabled, onOpenChange, onInspect, onCreateVariable, onAlign, onFillWidth, onDuplicate, onDelete, layerIndex, layerCount, onLayerChange }: {
   block: Block; children: ReactElement; open: boolean; disabled: boolean; onOpenChange: (open: boolean) => void;
   selectionCount?: number; settings: PageDocument['settings']; onBlockChange: (block: Block) => void;
-  onInspect: (id: string, tab: InspectorTab) => void; onCreateVariable: (id: string) => void;
+  onInspect: (id: string, tab: InspectorTab, advanced?: boolean) => void; onCreateVariable: (id: string) => void;
   onDuplicate: (id: string) => void; onDelete: (id: string) => void;
   onAlign: (id: string, alignment: HorizontalAlignment) => void;
   onFillWidth: (id: string) => void;
@@ -66,6 +66,7 @@ export function CanvasComponentMenu({ block, selectionCount = 1, settings, onBlo
       onInteractOutside={() => { restoreFocus.current = false; }}>
       <ContextMenu.Label className="canvas-menu-label">{selectionCount > 1 ? t("已选 {0} 个组件", { 0: selectionCount }) : blockLabel(block)}</ContextMenu.Label>
       <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'component'))}><Settings2 size={15} />{selectionCount > 1 ? t("批量编辑属性") : t("编辑属性")}</ContextMenu.Item>
+      <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'component', true))}><SlidersHorizontal size={15} />{t("高级设置…")}</ContextMenu.Item>
       {selectionCount <= 1 && <>
       <ContextMenu.Item onSelect={() => run(() => onInspect(block.id, 'logic'))}><Link2 size={15} />{t("绑定属性")}</ContextMenu.Item>
       <ContextMenu.Item onSelect={() => run(() => onCreateVariable(block.id))}><Database size={15} />{t("创建变量并绑定…")}</ContextMenu.Item>

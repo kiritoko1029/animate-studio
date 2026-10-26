@@ -9,14 +9,15 @@ const decoder = new TextDecoder();
 
 export type BodyResult = { ok: true; value: unknown } | { ok: false; status: number; message: string };
 
-export async function readBoundedJson(request: Request, maxBodyBytes = 512 * 1024): Promise<BodyResult> {
+export async function readBoundedJson(request: Request, maxBodyBytes = 512 * 1024, subject = '页面'): Promise<BodyResult> {
+  const limit = maxBodyBytes >= 1024 * 1024 ? `${maxBodyBytes / (1024 * 1024)} MiB` : `${Math.round(maxBodyBytes / 1024)} KB`;
   const contentType = request.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
   if (contentType !== 'application/json') {
     return { ok: false, status: 415, message: '请求正文必须使用 application/json。' };
   }
   const declared = Number(request.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBodyBytes) {
-    return { ok: false, status: 413, message: '页面数据过大（上限 512 KB）。' };
+    return { ok: false, status: 413, message: `${subject}数据过大（上限 ${limit}）。` };
   }
   const reader = request.body?.getReader();
   if (!reader) return { ok: false, status: 400, message: '请求正文必须是有效的 JSON。' };
@@ -29,7 +30,7 @@ export async function readBoundedJson(request: Request, maxBodyBytes = 512 * 102
       length += value.byteLength;
       if (length > maxBodyBytes) {
         await reader.cancel();
-        return { ok: false, status: 413, message: '页面数据过大（上限 512 KB）。' };
+        return { ok: false, status: 413, message: `${subject}数据过大（上限 ${limit}）。` };
       }
       chunks.push(value);
     }

@@ -1,0 +1,6 @@
+.site-preview { min-width: 0; }
+.site-preview-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--studio-200); background: var(--studio-0); color: var(--studio-950); }
+.site-preview-toolbar select { min-width: 0; max-width: min(420px, 70vw); padding: 6px 8px; border: 1px solid var(--studio-200); border-radius: 6px; background: var(--studio-0); color: inherit; font: inherit; }
+.site-not-found { box-sizing: border-box; max-width: 560px; margin: 80px auto; padding: 32px; color: var(--studio-950); text-align: center; }
+.site-not-found h1 { margin: 0 0 16px; font-size: 48px; }
+.site-not-found p { margin-bottom: 24px; color: var(--studio-500); line-height: 1.7; }

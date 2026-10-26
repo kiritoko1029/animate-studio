@@ -1,6 +1,7 @@
 import { t, translateMessage } from '../i18n';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { RotateCcw, Sparkles } from 'lucide-react';
+import { useInspectorDisclosure } from './InspectorSettings';
 import { officialAnimationControls, animationValuesEqual, validateAnimationSetting, type AnimationControl, type AnimationValue, type AnimationSettings as Settings } from '../../shared/animation-settings.mjs';
 import { StudioButton } from './StudioUI';
 import { Switch } from './animate-ui/components/radix/switch';
@@ -48,6 +49,17 @@ function TextSettingField({field,name,value,onChange}:{field:AnimationControl;na
   return <><input aria-label={name} aria-invalid={!!error} aria-describedby={error?id:undefined} placeholder={t("沿用默认")} value={draft} maxLength={field.maxLength??200} onChange={event=>{const text=event.target.value;setDraft(text);try{const next=text===''&&field.value===undefined?undefined:text;if(next!==undefined)validateAnimationSetting(field,next,name);setError('');previous.current=text;onChange(next);}catch(error){setError(error instanceof Error?error.message:t("输入无效"));}}}/>{error&&<span id={id} role="alert" className="field-error">{translateMessage(error)}{t("；尚未应用")}</span>}</>;
 }
 
+function OfficialPropertyGroup({ type, group, fields, defaultOpen, renderField }: { type: string; group: string; fields: Record<string, AnimationControl>; defaultOpen: boolean; renderField: (group: string, key: string, field: AnimationControl) => ReactNode }) {
+  const disclosure = useInspectorDisclosure(`motion:${type}:${group}`, defaultOpen);
+  const advancedDisclosure = useInspectorDisclosure(`motion:${type}:${group}:advanced`);
+  const basic = Object.entries(fields).filter(([, field]) => !field.advanced);
+  const advanced = Object.entries(fields).filter(([, field]) => field.advanced);
+  return <details {...disclosure.detailsProps} className="official-property-group"><summary onClick={disclosure.onSummaryClick}>{group} <small>{Object.keys(fields).length} {t("个属性")}</small></summary>
+    {basic.map(([key, field]) => renderField(group, key, field))}
+    {advanced.length > 0 && (basic.length ? <details {...advancedDisclosure.detailsProps} className="official-advanced"><summary onClick={advancedDisclosure.onSummaryClick}>{t("更多官方属性（{0}）", { 0: advanced.length })}</summary>{advanced.map(([key, field]) => renderField(group, key, field))}</details> : advanced.map(([key, field]) => renderField(group, key, field)))}
+  </details>;
+}
+
 export function AnimationSettings({ type, value = {}, onChange, extra = false, mixedKeys = [], onFieldChange }: { type: string; value?: Settings; onChange: (value: Settings) => void; extra?: boolean; mixedKeys?: string[]; onFieldChange?: (key: string, value: AnimationValue | undefined) => void }) {
   const [resetVersion, setResetVersion] = useState(0);
   const groups = officialAnimationControls[type]?.groups;
@@ -75,13 +87,7 @@ export function AnimationSettings({ type, value = {}, onChange, extra = false, m
   return <div className="property-section official-motion-settings">
     <h3><Sparkles size={13}/>{extra ? t("附加动效设置") : t("官方属性")}<StudioButton className="text-button" onClick={() => { setResetVersion(n => n + 1); onChange({}); }} aria-label={extra ? t("恢复附加动效默认") : t("恢复官方动效默认")}><RotateCcw size={12}/>{t("恢复默认")}</StudioButton></h3>
     {!extra && <p className="field-hint">{t("默认沿用官方示例。留空的可选属性使用组件默认值；修改后即时生效。")}</p>}
-    {Object.entries(groups).map(([group, fields], groupIndex) => {
-      const basic=Object.entries(fields).filter(([,field])=>!field.advanced), advanced=Object.entries(fields).filter(([,field])=>field.advanced);
-      return <details className="official-property-group" key={group} open={groupIndex === 0}><summary>{group} <small>{Object.keys(fields).length} {t("个属性")}</small></summary>
-        {basic.map(([key,field])=>renderField(group,key,field))}
-        {advanced.length>0 && (basic.length ? <details className="official-advanced"><summary>{t("更多官方属性（{0}）", { 0: advanced.length })}</summary>{advanced.map(([key,field])=>renderField(group,key,field))}</details> : advanced.map(([key,field])=>renderField(group,key,field)))}
-      </details>;
-    })}
+    {Object.entries(groups).map(([group, fields], groupIndex) => <OfficialPropertyGroup key={`${type}:${group}`} type={type} group={group} fields={fields} defaultOpen={groupIndex === 0} renderField={renderField}/>)}
 
   </div>;
 }

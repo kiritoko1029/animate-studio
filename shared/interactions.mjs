@@ -81,8 +81,8 @@ export function createInteractionRuntime(config, options = {}) {
       let node;
       if (token.value === '(') { node = expression(0); take(')'); }
       else if (['true', 'false', 'null'].includes(token.value)) node = ['literal', { true: true, false: false, null: null }[token.value]];
-      else if (['state', 'event'].includes(token.value)) node = ['root', token.value];
-      else throw new Error('仅支持 state、event、常量和运算符');
+      else if (['state', 'event', 'route'].includes(token.value)) node = ['root', token.value];
+      else throw new Error('仅支持 state、event、route、常量和运算符');
       while (peek() === '.' || peek() === '[') {
         let key;
         if (peek() === '.') { i++; key = tokens[i++]; if (!key || key.kind !== 'symbol' || !/^[A-Za-z_$][\w$]*$/.test(key.value)) throw new Error('属性名无效'); key = ['literal', key.value]; }
@@ -110,7 +110,7 @@ export function createInteractionRuntime(config, options = {}) {
     function visit(node) {
       const [type, a, b, c] = node;
       if (type === 'literal') return a;
-      if (type === 'root') return a === 'state' ? snapshot : event;
+      if (type === 'root') return a === 'state' ? snapshot : a === 'route' ? (options.route ?? {}) : event;
       if (type === 'get') { const target = visit(a), key = String(visit(b)); return target != null && !forbidden.has(key) && Object.hasOwn(Object(target), key) ? target[key] : undefined; }
       if (type === 'if') return visit(a) ? visit(b) : visit(c);
       if (type === 'unary') { const value = visit(b); return a === '!' ? !value : a === '-' ? -Number(value) : Number(value); }
@@ -186,7 +186,7 @@ export function createInteractionRuntime(config, options = {}) {
         }
       }
       const ctx = {
-        state: data.state, event: data.event,
+        state: data.state, event: data.event, route: data.route ?? {},
         setState(name, value) { writes.push([name, value]); if (writes.length > 100) throw new Error('脚本最多修改 100 次'); this.state[name] = value; },
         log(...values) { if (logs.length < 50) logs.push(values.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(' ')); },
         notify(message) { if (notices.length < 10) notices.push(String(message).slice(0, 2000)); },
@@ -228,7 +228,7 @@ export function createInteractionRuntime(config, options = {}) {
       const cancel = () => { cleanup(); reject(new Error('脚本运行已取消')); };
       function receive(e) {
         if (e.source !== frame.contentWindow || e.data?.token !== token) return;
-        if (e.data.ready) { frame.contentWindow.postMessage({ token, payload: { code: script.code, state: clone(state), event: clone(event), baseURL: document.baseURI } }, '*'); return; }
+        if (e.data.ready) { frame.contentWindow.postMessage({ token, payload: { code: script.code, state: clone(state), event: clone(event), route: clone(options.route ?? {}), baseURL: document.baseURI } }, '*'); return; }
         cleanup(); const result = e.data.result;
         if (!result || result.error) reject(new Error(result?.error || '脚本运行失败'));
         else resolve(result);
@@ -264,6 +264,7 @@ export function createInteractionRuntime(config, options = {}) {
         case 'set': setState(action.variable, evaluate(action.expression, event)); break;
         case 'toggle': setState(action.variable, !state[action.variable]); break;
         case 'reset': reset(); generation = epoch; break;
+        case 'back': options.onBack?.(); break;
         case 'notify': options.onNotify?.(String(evaluate(action.expression, event) ?? '')); break;
         case 'navigate': {
           const url = String(evaluate(action.expression, event) ?? '');
