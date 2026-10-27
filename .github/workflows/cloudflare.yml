@@ -64,7 +64,7 @@ jobs:
       - name: Deploy through Void
         if: steps.credentials.outputs.configured == 'true'
         env:
-          NODE_OPTIONS: --import ./scripts/cloudflare-deploy-diagnostics.mjs
+          NODE_OPTIONS: --import ${{ github.workspace }}/scripts/cloudflare-deploy-diagnostics.mjs
         run: npm run deploy:cloudflare
       - name: Preserve resource IDs and migration history
         if: always() && steps.credentials.outputs.configured == 'true'

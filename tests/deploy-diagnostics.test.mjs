@@ -3,9 +3,14 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const diagnostics = new URL('../scripts/cloudflare-deploy-diagnostics.mjs', import.meta.url).href;
+const deployEntry = new URL('../node_modules/void/dist/cli/cli.mjs', import.meta.url).pathname;
 
-function runFixture(source) {
-  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
+function runFixture(source, entry = deployEntry) {
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', `
+    process.argv[1] = ${JSON.stringify(entry)};
+    process.argv[2] = 'deploy';
+    ${source}
+  `], {
     encoding: 'utf8',
     env: { ...process.env, NODE_OPTIONS: '' },
     timeout: 15_000,
@@ -40,4 +45,14 @@ test('Cloudflare diagnostics leave successful non-JSON responses untouched', () 
   `);
   assert.equal(stdout.trim(), 'ready');
   assert.equal(stderr, '');
+});
+
+test('Cloudflare diagnostics do not alter Cloudflare child processes', () => {
+  const childEntry = new URL('../node_modules/cf/bin/cf', import.meta.url).pathname;
+  const { stdout } = runFixture(`
+    const originalFetch = globalThis.fetch;
+    await import(${JSON.stringify(diagnostics)});
+    console.log(globalThis.fetch === originalFetch);
+  `, childEntry);
+  assert.equal(stdout.trim(), 'true');
 });

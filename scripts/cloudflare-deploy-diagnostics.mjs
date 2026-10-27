@@ -22,4 +22,7 @@ export function withCloudflareDiagnostics(fetchImpl, report) {
   };
 }
 
-globalThis.fetch = withCloudflareDiagnostics(globalThis.fetch, console.error);
+const entry = process.argv[1]?.replaceAll('\\', '/');
+if ((entry?.endsWith('/void/dist/cli/cli.mjs') || entry?.endsWith('/.bin/void')) && process.argv[2] === 'deploy') {
+  globalThis.fetch = withCloudflareDiagnostics(globalThis.fetch, console.error);
+}
