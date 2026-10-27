@@ -1,5 +1,37 @@
 # 更新日志 / Changelog
 
+## v2026.10.27 — 2026-10-27
+
+### 中文
+
+本次版本完善内容维护、站点媒体、响应式布局和发布治理，同时保留自由画布、AI 对话、自定义组件与既有导出能力。用户可以不写 JSON 维护数据内容，并在确认后发布、回滚或离线交付完整站点。
+
+- 发布中心支持公开差异检查、最近 20 个不可变版本、历史对比、公开回滚和恢复草稿。发布同时校验草稿修订与当前公开版本；回滚生成带来源的新版本，不覆盖编辑草稿，关闭分享保留历史。
+- 逐页 SEO 支持标题、描述、分享图与收录设置。Node 和 Cloudflare 公开 HTML 注入 canonical、Open Graph/Twitter 和 robots；静态页面提供 sitemap，动态详情和 404 默认不收录，离线 HTML 使用保守 noindex。
+- 站点媒体库支持 PNG/JPEG/WebP/GIF 上传、搜索与复用，单张 5 MiB、每站 100 张 / 50 MiB。游客使用 IndexedDB，云端使用私有文件或 R2；迁移失败阻止发布，历史素材按版本保留，导出内嵌实际使用的图片。
+- CMS 内容集合支持文本、多行文本、数字、布尔、链接和图片字段，可新增、编辑、复制和删除记录，并绑定列表、表格、图表及路由详情。缺失详情明确报错；集合随站点保存、发布和回滚，不是公共写库。
+- 可选响应式布局保留桌面原文档，分别编辑平板和手机的 frame、页面高度和显隐，支持候选重置、撤销与恢复固定画布。预览、分享与离线导出按真实容器宽度选择布局，窄屏共享侧栏改为上下排列；旧页面不自动重排。
+- AI 整站支持内容集合结构和明确标记的示例内容，不发送现有记录正文，不上传或伪造素材。修复整站画布高度校验、组件文字选择、集合编辑状态、子模板响应式校验和跨断点隐藏恢复。
+
+**升级说明**：页面与站点结构版本保持 `1`。发布历史和媒体库分别新增 0007、0008 SQLite/PostgreSQL/D1 迁移，Node 启动时应用，Cloudflare 由部署工作流应用。内容集合嵌入站点文档；响应式默认关闭，候选布局需逐页审阅，不保证所有艺术排版自动无损转换。
+
+**验证**：522 项自动化测试通过，双端类型检查、Node 与 Cloudflare 串行构建及差异格式检查通过。真实 Chrome 验证集合编辑、公开发布与回滚、SEO、媒体上传与迁移失败重试、320/390/768px 响应式、动态表单和离线 HTML；隔离 D1/R2 验证发布、素材访问与配额。验收使用临时 SQLite、真实本地 OTP、独立浏览器和确定性 AI 输出；未配置一次性 PostgreSQL 测试库，未调用真实模型或在线上账号、远端资源中直接验收。远端部署与迁移由工作流执行。
+
+### English
+
+This release completes content management, site media, responsive layouts, and publishing governance while preserving the free-form canvas, AI chat, custom components, and existing exports. Users can maintain structured content without JSON, then review, publish, roll back, or deliver a complete site offline.
+
+- The publish center adds public diff review, the latest 20 immutable versions, historical comparisons, public rollback, and draft restoration. Publishing checks both draft revision and published version. Rollback creates a source-linked version without replacing the current draft; sharing history is retained when disabled.
+- Per-page SEO covers titles, descriptions, social images, and indexing. Node and Cloudflare inject canonical, Open Graph/Twitter, and robots metadata into public HTML. Static pages receive a sitemap; dynamic details and 404 routes stay unindexed by default, while offline HTML uses conservative noindex.
+- The media library uploads, searches, and reuses PNG/JPEG/WebP/GIF images with 5 MiB per file and 100 images / 50 MiB per site. Guests use IndexedDB; cloud sites use private files or R2. Failed migrations block publication, historical assets remain available for rollback, and exports embed the images actually used.
+- Embedded content collections support text, long text, number, boolean, URL, and image fields with record creation, editing, duplication, and deletion. Bind them to lists, tables, charts, and route-matched details with explicit missing-record errors. Collections travel with site drafts, publication, and rollback; they are not a public write database.
+- Optional responsive layouts preserve desktop blocks while editing tablet/mobile frames, page height, and visibility with reset, undo, and fixed-canvas restoration. Preview, sharing, and offline exports use the real container width. Narrow shared sidebars stack above content; existing pages never opt in automatically.
+- AI site creation accepts collection schemas and clearly marked sample records without exposing existing record bodies or fabricating media. Also fixes AI canvas-height validation, text selection, collection editor state, responsive child-template validation, and visibility inheritance.
+
+**Upgrade notes**: Page and site schema versions remain `1`. Publish-history and media migrations are included as 0007 and 0008 for SQLite, PostgreSQL, and D1, applied by Node at startup and by the deployment workflow. Collections are embedded in the site document, not a public CMS. Responsive mode is opt-in; candidate layouts require review and do not guarantee lossless conversion of every artistic composition.
+
+**Validation**: All 522 automated tests passed, along with both type checks, serial Node and Cloudflare builds, and diff-format checks. Real Chrome verified collection editing, publishing and rollback, SEO, media uploads and migration retries, 320/390/768px responsive layouts, dynamic forms, and offline HTML. Isolated D1/R2 checks covered publication, asset access, and quotas. Verification used temporary SQLite, local OTP, isolated browsers, and deterministic AI output. No disposable PostgreSQL database was configured, and no live model, online account, or remote resource was directly exercised; deployment and migrations run in the workflow.
+
 ## v2026.10.26.1 — 2026-10-26
 
 ### 中文

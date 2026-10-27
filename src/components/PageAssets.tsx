@@ -1,9 +1,19 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { safeUrl } from '../model';
+import { parseMediaReference } from '../../shared/media.mjs';
+import { MediaContext } from '../lib/media/context.ts';
 
-/** Only the export generator supplies embedded bundled assets; document URLs stay validated. */
 export const PageAssets = createContext<Record<string,string>>({});
 export function usePageImage(value?: string) {
-  const assets = useContext(PageAssets);
-  return value && Object.hasOwn(assets,value) ? assets[value] : safeUrl(value);
+  const assets = useContext(PageAssets), media = useContext(MediaContext);
+  const id = parseMediaReference(value), [resolved, setResolved] = useState('#');
+  useEffect(() => {
+    if (!id || !media) return;
+    let active = true; setResolved('#');
+    void media.resolve(id).then(url => { if (active) setResolved(url); }).catch(() => { if (active) setResolved('#'); });
+    return () => { active = false; };
+  }, [id, media?.resolve]);
+  if (value && Object.hasOwn(assets,value)) return assets[value];
+  if (id) return resolved;
+  return safeUrl(value, true);
 }

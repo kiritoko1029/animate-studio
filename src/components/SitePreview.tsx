@@ -3,15 +3,19 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { StudioDocument } from '../model';
 import { composeSitePage, matchSiteRoute, normalizeSitePath, toSiteDocument } from '../../shared/site-document.mjs';
 import { SiteNavigationContext, type SiteNavigation } from '../lib/site-navigation';
-import { PageRenderer } from './PageRenderer';
+import { PageRenderer, useFitScale } from './PageRenderer';
 import { StudioButton } from './StudioUI';
 import { t } from '../i18n';
+import { resolveSeo } from '../../shared/seo.mjs';
+import { applySeoMetadata } from '../lib/seo';
+import { responsiveDevice } from '../lib/responsive';
 import './site-preview.css';
 
 type Props = { document: StudioDocument; mode?: 'editor' | 'share' | 'export'; basePath?: string; initialPath?: string; persistenceScope?: string; replayKey?: number; toolbar?: boolean; dataPageId?: string };
 export function SitePreview({ document, mode = 'editor', basePath = '', initialPath, persistenceScope = 'preview', replayKey = 0, toolbar = false, dataPageId }: Props) {
   const site = useMemo(() => toSiteDocument(document), [document]);
   const container = useRef<HTMLDivElement>(null), pathRef = useRef('/');
+  const containerWidth = useFitScale(container, 1).availableWidth;
   const history = useRef({ past: [] as string[], future: [] as string[] });
   const browserPath = useCallback(() => {
     if (mode === 'export' && window.location.hash.startsWith('#/')) return window.location.hash.slice(1);
@@ -47,7 +51,7 @@ export function SitePreview({ document, mode = 'editor', basePath = '', initialP
     return () => window.removeEventListener(mode === 'export' ? 'hashchange' : 'popstate', change);
   }, [browserPath, mode]);
   const match = useMemo(() => matchSiteRoute(site, path), [site, path]), entry = match?.entry ?? site.pages.find(item => item.kind === 'notFound');
-  const composed = useMemo(() => entry ? composeSitePage(site, entry) : null, [site, entry]);
+  const composed = useMemo(() => entry ? composeSitePage(site, entry, containerWidth ?? undefined) : null, [site, entry, containerWidth]);
   const navigation = useMemo<SiteNavigation>(() => ({
     navigate: raw => { if (!/^\/(?!\/)/.test(raw) && !raw.startsWith('#/')) return false; go(raw); return true; },
     href: raw => {
@@ -63,9 +67,10 @@ export function SitePreview({ document, mode = 'editor', basePath = '', initialP
   }), [site, match, entry?.id, go, back, mode, basePath, routePath]);
   useEffect(() => {
     if (mode === 'editor') return;
-    const title = window.document.title; window.document.title = `${entry?.name ?? '404'} · ${site.name}`;
-    return () => { window.document.title = title; };
-  }, [entry?.name, site.name, mode]);
+    const origin = /^https?:$/.test(window.location.protocol) ? window.location.origin : undefined;
+    const seo = { ...resolveSeo(site, path, { origin, basePath: mode === 'share' ? basePath : '', canonical: mode === 'share', resolveAsset: id => mode === 'share' ? `/api/shared/${basePath.split('/')[2]}/media/${id}` : undefined }), ...(mode === 'export' ? { robots: 'noindex,nofollow', noIndex: true } : {}) };
+    return applySeoMetadata(seo);
+  }, [site, path, mode, basePath]);
   useEffect(() => {
     const surface = container.current;
     if (!surface) return;
@@ -74,6 +79,6 @@ export function SitePreview({ document, mode = 'editor', basePath = '', initialP
   }, [entry?.id, path, mode]);
   return <SiteNavigationContext.Provider value={navigation}><div className="site-preview" ref={container} data-site-route={path} data-site-page={entry?.id ?? 'not-found'}>
     {toolbar && <nav className="site-preview-toolbar" aria-label={t('站点预览导航')}><StudioButton aria-label={t('返回上一页')} disabled={mode === 'editor' && !history.current.past.length} onClick={back}><ArrowLeft size={14}/></StudioButton><StudioButton aria-label={t('前进一页')} disabled={mode !== 'editor' || !history.current.future.length} onClick={forward}><ArrowRight size={14}/></StudioButton><select aria-label={t('站点页面')} value={entry?.path ?? path} onChange={event => go(event.target.value.replace(/:[A-Za-z][A-Za-z0-9_]*/g, 'example'))}>{site.pages.map(item => <option key={item.id} value={item.path}>{item.name} · {item.path}</option>)}</select></nav>}
-    {composed && entry ? <PageRenderer key={entry.id} document={composed} persistenceScope={'kind' in document ? `${persistenceScope}:${entry.id}` : persistenceScope} replayKey={replayKey} route={match?.params ?? {}} dataSources={site.dataSources ?? []} dataAccess={{ scope: mode, pageId: dataPageId }}/> : <main className="site-not-found"><h1>404</h1><p>{t('没有找到这个页面。请检查链接，或返回首页。')}</p><StudioButton className="primary-button" onClick={() => go('/')}>{t('返回首页')}</StudioButton></main>}
+    {composed && entry ? <PageRenderer key={entry.id} document={composed} breakpoint={responsiveDevice(entry.page.settings, containerWidth ?? undefined)} persistenceScope={'kind' in document ? `${persistenceScope}:${entry.id}` : persistenceScope} replayKey={replayKey} route={match?.params ?? {}} dataSources={site.dataSources ?? []} dataAccess={{ scope: mode, pageId: dataPageId }}/> : <main className="site-not-found"><h1>404</h1><p>{t('没有找到这个页面。请检查链接，或返回首页。')}</p><StudioButton className="primary-button" onClick={() => go('/')}>{t('返回首页')}</StudioButton></main>}
   </div></SiteNavigationContext.Provider>;
 }

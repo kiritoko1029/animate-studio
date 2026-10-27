@@ -10,7 +10,7 @@ export default defineConfig({
   routing: { notFound: 'none', fallbacks: { '/p/*': '/', '/c/*': '/' } },
   inference: {
     appType: 'void',
-    bindings: { db: true },
+    bindings: { db: true, storage: true },
   },
   worker: {
     compatibility_date: '2026-10-19',

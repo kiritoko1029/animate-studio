@@ -1,10 +1,12 @@
 import type { StudioDocument } from '../model';
 import type { InspectorDisclosurePreferences } from './workbench-preferences';
+import type { PublishResult } from './publishing';
 
 export type AccountUser = { id: string; name: string; email: string; image?: string | null };
 export type AccountCapabilities = { cloudEnabled: boolean; emailEnabled: boolean; githubEnabled: boolean };
-export type CloudPageSummary = { id: string; name: string; createdAt: string; updatedAt: string; shareToken: string | null; publishedAt: string | null };
+export type CloudPageSummary = { id: string; name: string; createdAt: string; updatedAt: string; shareToken: string | null; publishedAt: string | null; publishedVersion: number | null };
 export type CloudPageRecord = CloudPageSummary & { page: StudioDocument; savedAt: string };
+export type PublishCommit = { record: CloudPageRecord; result: PublishResult };
 export type Preferences = { version: 1; studioTheme: 'light' | 'dark'; inspectorDisclosures?: InspectorDisclosurePreferences };
 export class AccountApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -38,4 +40,7 @@ export async function accountApi<T>(path: string, options: { method?: string; bo
 
 export const cloudPagePath = (id: string) => `/api/account/pages/${encodeURIComponent(id)}`;
 export const cloudSitePath = (id: string) => `/api/account/sites/${encodeURIComponent(id)}`;
+export const cloudSiteVersionsPath = (id: string) => `${cloudSitePath(id)}/versions`;
+export const cloudSiteVersionPath = (id: string, version: number) => `${cloudSiteVersionsPath(id)}/${version}`;
 export const shareUrl = (token: string) => `${window.location.origin}/p/${encodeURIComponent(token)}`;
+export type { PublishResult, PublishVersionDetail, PublishVersionSummary } from './publishing';

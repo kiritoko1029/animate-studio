@@ -6,9 +6,11 @@ import { customComponentLimits, validateCustomComponentDefinition, type CustomCo
 import { componentFolderLimits, validateComponentFolderName } from '../shared/component-folders.mjs';
 import type { PageDocument, SiteDocument } from '../src/model';
 import { validateSite } from './validation.mjs';
-import { siteLimits } from '../shared/site-document.mjs';
+import { isSiteDocument, siteLimits } from '../shared/site-document.mjs';
 import { validateInspectorDisclosures } from '../src/lib/workbench-preferences.ts';
+import { parsePublishRequest, parseRollbackRequest, parsePublishVersion, type PublishRequest, type PublishStatus } from '../src/lib/publishing.ts';
 import { handleDataAccountApi, type DataAccountContext } from './data-account-api.ts';
+import { handleMediaAccountApi, type MediaAccountContext } from './media-account-api.ts';
 
 /**
  * Account API endpoints shared by the Express server and the Cloudflare
@@ -35,6 +37,7 @@ export type AccountApiContext = {
   /** The deployment's canonical origin (Better Auth baseURL). */
   canonicalOrigin?: string;
   data?: Omit<DataAccountContext, 'repository'>;
+  media?: Omit<MediaAccountContext, 'pages'>;
 };
 
 type ApiResponsePayload = { status: number; body?: unknown; headers?: Record<string, string> };
@@ -47,11 +50,17 @@ function json(body: unknown, status = 200): ApiResponse { return new ApiResponse
 function noContent(): ApiResponse { return new ApiResponse({ status: 204, headers: securityHeaders }); }
 function apiError(status: number, message: string): ApiResponse { return json({ error: message }, status); }
 function isApiResponse(value: unknown): value is ApiResponse { return value instanceof ApiResponse; }
+function publicationResponse(result: PublishStatus): ApiResponse {
+  if (result.status === 'published' || result.status === 'unchanged') return json(result.result);
+  if (result.status === 'missing') return apiError(404, '未找到该站点或发布版本。');
+  if (result.status === 'closed') return apiError(409, '分享已关闭，请使用发布功能重新公开站点。');
+  return apiError(409, '草稿或公开版本已变化，请刷新发布状态后重试。');
+}
 
 export type AccountApiResponse = { status: number; body?: unknown; headers?: Record<string, string> };
 
-export function toResponsePayload(result: ApiResponse): AccountApiResponse {
-  return result.payload;
+export function toResponsePayload(result: ApiResponse | AccountApiResponse): AccountApiResponse {
+  return result instanceof ApiResponse ? result.payload : result;
 }
 
 
@@ -60,7 +69,7 @@ export async function handleAccountApi(
   request: Request,
   context: AccountApiContext,
   path: string,
-): Promise<ApiResponse | null> {
+): Promise<ApiResponse | AccountApiResponse | null> {
   const { repository } = context;
   const method = request.method;
 
@@ -80,6 +89,8 @@ export async function handleAccountApi(
   }
 
   if (path.startsWith('/api/shared/')) {
+    const media = await handleMediaAccountApi(request, { pages: repository, repository: context.media?.repository as MediaAccountContext['repository'], storage: context.media?.storage ?? null, newId: context.media?.newId ?? context.newPageId }, path);
+    if (media) return media;
     const token = path.slice('/api/shared/'.length);
     if (method !== 'GET' || !/^[A-Za-z0-9_-]{16,64}$/.test(token)) return apiError(404, '分享链接不存在或已失效。');
     const published = await repository.findPublished(token);
@@ -102,6 +113,8 @@ export async function handleAccountApi(
 
   const session = await context.resolveUser(request);
   if (!session) return apiError(401, '请先登录后再使用云端页面。');
+  const media = await handleMediaAccountApi(request, { pages: repository, repository: context.media?.repository as MediaAccountContext['repository'], storage: context.media?.storage ?? null, newId: context.media?.newId ?? context.newPageId }, path, session.id);
+  if (media) return media;
   if (path.startsWith('/api/account/data/')) {
     const data = await handleDataAccountApi(request, { repository, credentials: context.data?.credentials, encryptionSecret: context.data?.encryptionSecret, canonicalOrigin: context.canonicalOrigin, query: context.data?.query }, path, session.id);
     if (data) return json(data.body, data.status);
@@ -118,14 +131,41 @@ export async function handleAccountApi(
   }
   if (path.startsWith(`${sitesPrefix}/`)) {
     const rest = path.slice(sitesPrefix.length + 1).split('/');
-    if (rest.length !== 1 || !isValidId(rest[0])) return apiError(404, '未找到该站点。');
-    const record = await repository.findOwned(session.id, rest[0]);
+    const pageId = rest[0];
+    if (!isValidId(pageId)) return apiError(404, '未找到该站点。');
+    if (rest.length > 1 && rest[1] === 'versions') {
+      const record = await repository.findOwned(session.id, pageId);
+      if (!record) return apiError(404, '未找到该站点。');
+      if (rest.length === 2) {
+        if (method !== 'GET') return apiError(405, '不支持此请求方法。');
+        return json({ versions: await repository.listVersions(session.id, pageId) });
+      }
+      const version = rest.length >= 3 ? parsePublishVersion(rest[2]) : null;
+      if (version === null) return apiError(404, '未找到该发布版本。');
+      const detail = await repository.findVersion(session.id, pageId, version);
+      if (!detail) return apiError(404, '未找到该发布版本。');
+      if (isSiteDocument(detail.page)) validateSite(detail.page); else validateAccountPage({ page: detail.page });
+      if (rest.length === 3) {
+        if (method !== 'GET') return apiError(405, '不支持此请求方法。');
+        return json(detail);
+      }
+      if (rest.length === 4 && rest[3] === 'rollback') {
+        if (method !== 'POST') return apiError(405, '不支持此请求方法。');
+        const body = await readPublicationBody(request, true);
+        if (isApiResponse(body)) return body;
+        if (typeof body !== 'number') return apiError(400, '回滚请求格式不正确。');
+        return publicationResponse(await repository.rollback(session.id, pageId, context.newShareToken(), version, body));
+      }
+      return apiError(404, '未找到 API。');
+    }
+    if (rest.length !== 1) return apiError(404, '未找到该站点。');
+    const record = await repository.findOwned(session.id, pageId);
     if (!record) return apiError(404, '未找到该站点。');
     if (method === 'GET') return json(record);
     if (method === 'PUT') {
       const body = await readValidatedSiteRequest(request);
       if (isApiResponse(body)) return body;
-      const result = await repository.saveSite(session.id, rest[0], body.site, body.expectedRevision);
+      const result = await repository.saveSite(session.id, pageId, body.site, body.expectedRevision);
       if (result.status === 'missing') return apiError(404, '未找到该站点。');
       if (result.status === 'conflict') return apiError(409, '站点已在其他标签页或设备更新。当前修改仍保留，请导出备份后重新打开，或另存为新站点。');
       if (result.status === 'saved') return json(result.record);
@@ -162,15 +202,23 @@ export async function handleAccountApi(
         return record ? json(record) : apiError(404, '未找到该页面。');
       }
       if (method === 'DELETE') {
+        const keys = context.media ? await context.media.repository.listStorageKeys(session.id, pageId) : [];
         const removed = await repository.remove(session.id, pageId);
+        if (removed && context.media) for (const key of keys) await context.media.storage!.remove(key);
         return removed ? noContent() : apiError(404, '未找到该页面。');
       }
       return apiError(405, '不支持此请求方法。');
     }
     if (rest.length === 2 && rest[1] === 'share') {
       if (method === 'POST') {
-        const published = await repository.publish(session.id, pageId, context.newShareToken());
-        return published ? json(published) : apiError(404, '未找到该页面。');
+        const body = await readPublicationBody(request, false);
+        if (isApiResponse(body)) return body;
+        if (typeof body === 'number') return apiError(400, '发布请求格式不正确。');
+        if (context.media) {
+          const draft = await repository.findOwned(session.id, pageId);
+          if (draft && (await context.media.repository.missingReferences(session.id, pageId, draft.page, true)).length) return apiError(409, '仍有图片未上传到当前站点，请先在媒体库完成迁移。');
+        }
+        return publicationResponse(await repository.publish(session.id, pageId, context.newShareToken(), body));
       }
       if (method === 'DELETE') {
         const revoked = await repository.unpublish(session.id, pageId);
@@ -351,6 +399,13 @@ async function readValidatedSiteRequest(request: Request): Promise<{ site: SiteD
     if (typeof body.expectedRevision !== 'string' || body.expectedRevision.length > 40 || !body.expectedRevision) throw new Error('缺少站点修订前提，请重新打开后再保存。');
     return { site: validateSite(body.site), expectedRevision: body.expectedRevision };
   } catch (error) { return apiError(400, error instanceof Error ? error.message : '站点数据不正确。'); }
+}
+
+async function readPublicationBody(request: Request, rollback: boolean): Promise<PublishRequest | number | ApiResponse> {
+  const result = await readBoundedJson(request, 4096, rollback ? '回滚' : '发布');
+  if (!result.ok) return apiError(result.status, result.message);
+  try { return rollback ? parseRollbackRequest(result.value) : parsePublishRequest(result.value); }
+  catch (error) { return apiError(400, error instanceof Error ? error.message : '发布请求格式不正确。'); }
 }
 
 async function readValidatedPage(request: Request): Promise<PageDocument | ApiResponse> {

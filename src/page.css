@@ -1,5 +1,6 @@
 .page-surface {
   --page-accent: #408668;
+  --page-on-accent: #000;
   --page-bg: #fff;
   --page-accent-ink: color-mix(in srgb, var(--page-accent) 90%, #172c21);
   --page-ink: #283a31;
@@ -14,6 +15,7 @@
   line-height: 1.6;
   isolation: isolate;
 }
+.page-surface ::selection { background: var(--page-accent); color: var(--page-on-accent); }
 .page-surface *, .page-surface *::before, .page-surface *::after { box-sizing: border-box; }
 .page-surface button, .page-surface input { font: inherit; }
 .page-surface button, .page-surface a { -webkit-tap-highlight-color: transparent; }

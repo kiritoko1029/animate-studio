@@ -101,11 +101,42 @@ test('inspector preference migration preserves existing appearance and applies o
   sqlite.prepare('INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run('owner', 'Owner', 'owner@migration.test', now, now);
   sqlite.prepare('INSERT INTO user_preference (user_id, studio_theme, updated_at) VALUES (?, ?, ?)').run('owner', 'dark', now);
 
-  assert.deepEqual(await applyNodeMigrations(database), [target, 'sqlite-0006-data-credentials.sql']);
+  assert.deepEqual(await applyNodeMigrations(database), [target, 'sqlite-0006-data-credentials.sql', 'sqlite-0007-publish-versions.sql', 'sqlite-0008-media-library.sql']);
   const repository = createPageRepository(database.db, database.schema);
   assert.deepEqual(await repository.getPreferences('owner'), { version: 1, studioTheme: 'dark', inspectorDisclosures: {}, updatedAt: now });
   await repository.setPreferences('owner', { inspectorDisclosures: { 'component:hero:advanced': true } });
   assert.deepEqual((await repository.getPreferences('owner')).inspectorDisclosures, { 'component:hero:advanced': true });
   assert.equal((await repository.getPreferences('owner')).studioTheme, 'dark');
   assert.deepEqual(await applyNodeMigrations(database), []);
+});
+
+test('publish version migration backfills existing shares without changing snapshots or links', async t => {
+  const database = await createNodeDatabase({}, { file: ':memory:' });
+  t.after(() => database.close());
+  const sqlite = database.db.$client;
+  const index = JSON.parse(await readFile(new URL('../db/migrations-node/index.json', import.meta.url), 'utf8'));
+  const previous = index.filter(name => name.startsWith('sqlite-') && name < 'sqlite-0007-');
+  sqlite.exec('CREATE TABLE IF NOT EXISTS studio_migration (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)');
+  for (const name of previous) {
+    sqlite.exec(await readFile(new URL(`../db/migrations-node/${name}`, import.meta.url), 'utf8'));
+    sqlite.prepare('INSERT INTO studio_migration (name, applied_at) VALUES (?, ?)').run(name, '2026-10-26T00:00:00.000Z');
+  }
+  const now = new Date().toISOString(), pageId = crypto.randomUUID();
+  const snapshot = { version: 1, kind: 'site', id: crypto.randomUUID(), name: '公开快照', homePageId: 'home', pages: [{ id: 'home', name: '首页', path: '/', kind: 'page', layout: [], page: { ...createDocument(true), id: 'home', name: '首页' } }], sharedLayout: {} };
+  sqlite.prepare('INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run('owner', 'Owner', 'owner@publish-migration.test', now, now);
+  sqlite.prepare('INSERT INTO studio_page (id, user_id, name, page, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)').run(pageId, 'owner', '未发布草稿', JSON.stringify(createDocument(true)), now, now);
+  sqlite.prepare('INSERT INTO studio_page_share (page_id, user_id, token, snapshot, published_at) VALUES (?, ?, ?, ?, ?)').run(pageId, 'owner', 'migration-token', JSON.stringify(snapshot), now);
+
+  assert.deepEqual(await applyNodeMigrations(database), ['sqlite-0007-publish-versions.sql', 'sqlite-0008-media-library.sql']);
+  const repository = createPageRepository(database.db, database.schema);
+  const published = await repository.findPublished('migration-token');
+  assert.equal(published.page.name, '公开快照');
+  assert.equal(published.publishedVersion, 1);
+  const version = await repository.findVersion('owner', pageId, 1);
+  assert.equal(version.page.name, '公开快照');
+  assert.equal(version.createdAt, now);
+  assert.equal((await repository.findOwned('owner', pageId)).publishedVersion, 1);
+  assert.deepEqual(await applyNodeMigrations(database), []);
+  assert.equal(await repository.remove('owner', pageId), true);
+  assert.deepEqual(await repository.listVersions('owner', pageId), []);
 });

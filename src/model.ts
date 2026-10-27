@@ -3,8 +3,10 @@ import navbarIcons from '../shared/navbar-icons.json' with { type: 'json' };
 import type { AnimationSettings } from '../shared/animation-settings.mjs';
 import { canvasLimits, defaultCanvasSize } from '../shared/canvas-sizes.mjs';
 import { canvasBounds, clampFrame } from './lib/canvas-bounds.ts';
+import { pruneResponsiveFrames } from './lib/responsive.ts';
 import type { CatalogEffect } from './lib/catalog-effects';
 import type { CustomComponentSnapshot } from '../shared/custom-components.mjs';
+import { parseMediaReference } from '../shared/media.mjs';
 export type ExtendedComponentType = keyof typeof extendedComponents;
 export const extendedCatalog = extendedComponents;
 export const isExtendedComponent = (type: string): type is ExtendedComponentType => Object.hasOwn(extendedComponents, type);
@@ -30,7 +32,7 @@ export type BlockProps = {
   animation?: 'none' | 'fade' | 'slide' | 'scale';
   navigation?: 'custom' | 'site';
   sourceId?: string; submitSourceId?: string;
-  dataFields?: Record<string, Partial<Record<'title' | 'text' | 'label' | 'url', string>>>;
+  dataFields?: Record<string, Partial<Record<'title' | 'text' | 'label' | 'url' | 'imageUrl', string>>>;
   dataColumns?: { key: string; label: string; path: string; aggregate?: 'sum' | 'count' | 'avg' | 'min' | 'max' }[];
   chartType?: 'line' | 'area' | 'column' | 'bar' | 'pie'; categoryField?: string;
   chartColors?: string[]; showLegend?: boolean; showGrid?: boolean; showTooltip?: boolean; showValues?: boolean; innerRadius?: number;
@@ -44,7 +46,7 @@ export type BlockFrame = { x: number; y: number; width: number; height: number }
 export type Block = { id: string; type: ComponentType; props: BlockProps; frame?: BlockFrame; children?: Block[]; bindings?: Bindings; events?: { click?: Action[]; change?: Action[] } };
 export type PageDocument = {
   version: 1; name: string; id?: string;
-  settings: { background: string; accent: string; theme?: ThemeId; customThemes?: CustomTheme[]; maxWidth: number; padding: number; layout?: 'flow' | 'free'; canvasHeight?: number };
+  settings: { background: string; accent: string; theme?: ThemeId; customThemes?: CustomTheme[]; maxWidth: number; padding: number; layout?: 'flow' | 'free'; canvasHeight?: number; responsive?: import('./lib/responsive.ts').ResponsiveSettings };
   blocks: Block[]; variables?: Variable[]; scripts?: Script[];
 };
 export const catalog: {type: BuiltinComponentType; name: string; english: string; group: string; description: string}[] = [
@@ -170,7 +172,7 @@ export function toFreeDocument(document: PageDocument): PageDocument {
     cursor+=frame.height+16;
     return {...block,frame};
   });
-  return {...document,id:document.id??crypto.randomUUID(),settings:{...document.settings,layout:'free',canvasHeight:Math.min(canvasLimits.maxHeight,Math.max(document.settings.canvasHeight||1400,contentBottom+margin))},blocks};
+  return pruneResponsiveFrames({...document,id:document.id??crypto.randomUUID(),settings:{...document.settings,layout:'free',canvasHeight:Math.min(canvasLimits.maxHeight,Math.max(document.settings.canvasHeight||1400,contentBottom+margin))},blocks});
 }
 export function createDocument(blank = false): PageDocument {
   const types:BuiltinComponentType[]=['navbar','hero','card','card','accordion','footer'];
@@ -180,8 +182,9 @@ export function createDocument(blank = false): PageDocument {
 export const blockName = (type: ComponentType) => type==='custom' ? '自定义组件' : catalog.find(c=>c.type===type)?.name ?? type;
 /** Display name of a placed block; custom instances show their component name. */
 export const blockLabel = (block: Pick<Block,'type'|'props'>) => block.type==='custom' ? block.props.custom?.name || '自定义组件' : blockName(block.type);
-export function safeUrl(value?: string) {
+export function safeUrl(value?: string, image = false) {
   if (!value) return '#';
+  if (image && parseMediaReference(value)) return value!;
   if (/[\s\\\u0000-\u001f\u007f]/u.test(value)) return '#';
   if (value.startsWith('#') || (value.startsWith('/')&&!value.startsWith('//'))) return value;
   try {const url=new URL(value);if(['http:','https:'].includes(url.protocol)&&/^https?:\/\//i.test(value)&&url.hostname)return value;if(['mailto:','tel:'].includes(url.protocol)&&url.pathname)return value;} catch { /* Invalid URLs are inert in the preview. */ }

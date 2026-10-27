@@ -155,7 +155,7 @@ test('two users own separate page sets; foreign ids read as 404', async t => {
     await call(`/api/account/pages/${pageId}`, { cookie: bob }),
     await call(`/api/account/pages/${pageId}`, { method: 'PUT', cookie: bob, body: { page: page('篡改') } }),
     await call(`/api/account/pages/${pageId}`, { method: 'DELETE', cookie: bob }),
-    await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie: bob }),
+    await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie: bob, body: { expectedRevision: created.body.savedAt, expectedPublishedVersion: null } }),
   ]) {
     assert.equal(result.status, 404, 'another owner must see 404, not 403');
   }
@@ -186,8 +186,9 @@ test('share lifecycle: publish snapshots the draft, updates keep the token, revo
   const created = await call('/api/account/pages', { method: 'POST', cookie, body: { page: page('草稿 v1') } });
   const pageId = created.body.id;
 
-  const share = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie });
+  const share = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie, body: { expectedRevision: created.body.savedAt, expectedPublishedVersion: null } });
   assert.equal(share.status, 200);
+  assert.equal(share.body.version, 1);
   const { token } = share.body;
   assert.match(token, /^[0-9a-f]{22}$/);
   assert.ok(share.body.publishedAt);
@@ -197,30 +198,44 @@ test('share lifecycle: publish snapshots the draft, updates keep the token, revo
   assert.equal(anonymous.body.page.name, '草稿 v1');
 
   // Draft-only edits must not leak into the published snapshot.
-  await call(`/api/account/pages/${pageId}`, { method: 'PUT', cookie, body: { page: page('草稿 v2 未发布') } });
+  const draftV2 = await call(`/api/account/pages/${pageId}`, { method: 'PUT', cookie, body: { page: page('草稿 v2 未发布') } });
   const stillOld = await call(`/api/shared/${token}`);
   assert.equal(stillOld.body.page.name, '草稿 v1', 'draft edits must not leak publicly');
 
   // Republish updates the snapshot, keeping the same token.
-  const republished = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie });
+  const republished = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie, body: { expectedRevision: draftV2.body.savedAt, expectedPublishedVersion: 1 } });
   assert.equal(republished.body.token, token, 'token stays stable across updates');
+  assert.equal(republished.body.version, 2);
   const anonymousV2 = await call(`/api/shared/${token}`);
   assert.equal(anonymousV2.body.page.name, '草稿 v2 未发布');
+
+  const rollback = await call(`/api/account/sites/${pageId}/versions/1/rollback`, { method: 'POST', cookie, body: { expectedPublishedVersion: 2 } });
+  assert.equal(rollback.status, 200, JSON.stringify(rollback.body));
+  assert.equal(rollback.body.version, 3);
+  assert.equal(rollback.body.sourceVersion, 1);
+  assert.equal((await call(`/api/shared/${token}`)).body.page.name, '草稿 v1', 'legacy page snapshots can roll back without a site migration');
+  assert.equal((await call(`/api/account/pages/${pageId}`, { cookie })).body.page.name, '草稿 v2 未发布', 'public rollback never overwrites the draft');
+  assert.equal((await call(`/api/account/sites/${pageId}/versions`, { cookie })).body.versions.length, 3);
 
   // Anonymous readers cannot mutate.
   assert.equal((await call(`/api/account/pages/${pageId}`, { method: 'PUT', body: { page: page() } })).status, 401);
   assert.equal((await call(`/api/shared/${token}`, { method: 'PUT', body: { page: page() } })).status, 404);
 
-  // Revoke removes public access; the page itself survives.
+  // Revoke removes public access; the page and history survive.
   assert.equal((await call(`/api/account/pages/${pageId}/share`, { method: 'DELETE', cookie })).status, 204);
   assert.equal((await call(`/api/shared/${token}`)).status, 404);
   assert.equal((await call(`/api/account/pages/${pageId}`, { cookie })).status, 200);
+  assert.equal((await call(`/api/account/sites/${pageId}/versions`, { cookie })).body.versions.length, 3);
+  assert.equal((await call(`/api/account/sites/${pageId}/versions/1/rollback`, { method: 'POST', cookie, body: { expectedPublishedVersion: 3 } })).status, 409);
 
-  // Delete removes page and share together.
-  const second = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie });
+  // Delete removes page, share and history together.
+  const current = await call(`/api/account/pages/${pageId}`, { cookie });
+  const second = await call(`/api/account/pages/${pageId}/share`, { method: 'POST', cookie, body: { expectedRevision: current.body.savedAt, expectedPublishedVersion: null } });
+  assert.equal(second.body.version, 4);
   assert.equal((await call(`/api/account/pages/${pageId}`, { method: 'DELETE', cookie })).status, 204);
   assert.equal((await call(`/api/shared/${second.body.token}`)).status, 404);
   assert.equal((await call(`/api/account/pages/${pageId}`, { cookie })).status, 404);
+  assert.equal((await call(`/api/account/sites/${pageId}/versions`, { cookie })).status, 404);
 });
 
 test('site API stores complete drafts, rejects stale revisions and publishes only the saved site', async t => {
@@ -244,7 +259,7 @@ test('site API stores complete drafts, rejects stale revisions and publishes onl
   assert.equal(stale.status, 409);
   const afterConflict = await call(`/api/account/sites/${id}`, { cookie });
   assert.equal(afterConflict.body.page.pages[1].page.blocks.length, 1, 'a stale write cannot replace a newer draft');
-  const shared = await call(`/api/account/pages/${id}/share`, { method: 'POST', cookie });
+  const shared = await call(`/api/account/pages/${id}/share`, { method: 'POST', cookie, body: { expectedRevision: saved.body.savedAt, expectedPublishedVersion: null } });
   assert.equal(shared.status, 200);
   edited.pages[1].name = '仅草稿修改'; edited.pages[1].page.name = '仅草稿修改';
   assert.equal((await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site: edited, expectedRevision: saved.body.updatedAt } })).status, 200);
@@ -330,4 +345,85 @@ test('OTP expiry is enforced', async t => {
   // verifies the configured expiry window indirectly: a fresh OTP works.
   const fresh = await call('/api/auth/sign-in/email-otp', { method: 'POST', body: { email: uniqueEmail('frank'), otp: sent[0].otp } });
   assert.equal(fresh.status, 200, 'fresh OTP within window signs in');
+});
+
+test('site publish versions are owner-only, immutable, conflict-safe and retain history after closing', async t => {
+  const { call, signIn } = await createFixture(t);
+  const cookie = await signIn(uniqueEmail('versions')), other = await signIn(uniqueEmail('versions-other'));
+  const site = createSiteDocument(page('第一版'));
+  const created = await call('/api/account/sites', { method: 'POST', cookie, body: { site } });
+  const id = created.body.id;
+  const publish = (expectedRevision, expectedPublishedVersion) => call(`/api/account/pages/${id}/share`, { method: 'POST', cookie, body: { expectedRevision, expectedPublishedVersion } });
+  const first = await publish(created.body.savedAt, null);
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.equal(first.body.version, 1);
+  const token = first.body.token;
+  const history = await call(`/api/account/sites/${id}/versions`, { cookie });
+  assert.equal(history.body.versions.length, 1);
+  assert.equal(history.body.versions[0].page, undefined, 'version lists contain metadata, not full snapshots');
+  assert.equal((await call(`/api/account/sites/${id}/versions/1`, { cookie })).body.page.name, site.name);
+  for (const path of [`/api/account/sites/${id}/versions`, `/api/account/sites/${id}/versions/1`, `/api/account/sites/${id}/versions/1/rollback`]) {
+    const response = await call(path, { method: path.endsWith('rollback') ? 'POST' : 'GET', cookie: other, body: path.endsWith('rollback') ? { expectedPublishedVersion: 1 } : undefined });
+    assert.equal(response.status, 404, 'another owner cannot read or mutate version history');
+  }
+  site.pages[0].page.blocks[0].props.title = '第二版';
+  const saved = await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site, expectedRevision: created.body.savedAt } });
+  assert.equal(saved.status, 200);
+  assert.equal((await call(`/api/shared/${token}`)).body.page.pages[0].page.blocks[0].props.title, '你好');
+  const second = await publish(saved.body.savedAt, 1);
+  assert.equal(second.body.version, 2);
+  assert.equal(second.body.token, token);
+  const unchanged = await publish(saved.body.savedAt, 2);
+  assert.equal(unchanged.body.unchanged, true);
+  assert.equal((await call(`/api/account/sites/${id}/versions`, { cookie })).body.versions.length, 2);
+  assert.equal((await publish(saved.body.savedAt, 1)).status, 409);
+  assert.equal((await call(`/api/account/sites/${id}/versions`, { cookie })).body.versions.length, 2);
+
+  const rollback = await call(`/api/account/sites/${id}/versions/1/rollback`, { method: 'POST', cookie, body: { expectedPublishedVersion: 2 } });
+  assert.equal(rollback.status, 200, JSON.stringify(rollback.body));
+  assert.equal(rollback.body.version, 3);
+  assert.equal(rollback.body.sourceVersion, 1);
+  assert.equal(rollback.body.token, token);
+  assert.equal((await call(`/api/shared/${token}`)).body.page.pages[0].page.blocks[0].props.title, '你好');
+  assert.equal((await call(`/api/account/sites/${id}`, { cookie })).body.page.pages[0].page.blocks[0].props.title, '第二版');
+  assert.equal((await call(`/api/account/sites/${id}/versions/1/rollback`, { method: 'POST', cookie, body: { expectedPublishedVersion: 2 } })).status, 409);
+  assert.equal((await call(`/api/account/pages/${id}/share`, { method: 'DELETE', cookie })).status, 204);
+  assert.equal((await call(`/api/shared/${token}`)).status, 404);
+  assert.equal((await call(`/api/account/sites/${id}/versions`, { cookie })).body.versions.length, 3);
+  assert.equal((await call(`/api/account/sites/${id}/versions/1/rollback`, { method: 'POST', cookie, body: { expectedPublishedVersion: 3 } })).status, 409);
+  const reopened = await publish(saved.body.savedAt, null);
+  assert.equal(reopened.body.version, 4);
+  assert.notEqual(reopened.body.token, token, 'a revoked token is not silently resurrected');
+  assert.equal((await call(`/api/account/pages/${id}/share`, { method: 'POST', cookie, body: {} })).status, 400);
+  assert.equal((await call(`/api/account/sites/${id}/versions/1/rollback`, { method: 'POST', cookie, body: {} })).status, 400);
+  assert.equal((await call(`/api/account/sites/${id}/versions/not-a-version`, { cookie })).status, 404);
+});
+
+test('concurrent publishing preserves one consistent snapshot and history keeps the latest twenty versions', async t => {
+  const { call, signIn } = await createFixture(t);
+  const cookie = await signIn(uniqueEmail('publish-race'));
+  const site = createSiteDocument(page('并发发布'));
+  const created = await call('/api/account/sites', { method: 'POST', cookie, body: { site } });
+  const id = created.body.id;
+  const publish = (expectedRevision, expectedPublishedVersion) => call(`/api/account/pages/${id}/share`, { method: 'POST', cookie, body: { expectedRevision, expectedPublishedVersion } });
+  const concurrent = await Promise.all([publish(created.body.savedAt, null), publish(created.body.savedAt, null)]);
+  assert.deepEqual(concurrent.map(result => result.status).sort(), [200, 409]);
+  const token = concurrent.find(result => result.status === 200).body.token;
+  let revision = created.body.savedAt;
+  for (let version = 2; version <= 22; version++) {
+    site.name = `版本 ${version}`;
+    const saved = await call(`/api/account/sites/${id}`, { method: 'PUT', cookie, body: { site, expectedRevision: revision } });
+    assert.equal(saved.status, 200);
+    revision = saved.body.savedAt;
+    const published = await publish(revision, version - 1);
+    assert.equal(published.status, 200, JSON.stringify(published.body));
+    assert.equal(published.body.token, token);
+  }
+  const history = await call(`/api/account/sites/${id}/versions`, { cookie });
+  assert.equal(history.body.versions.length, 20);
+  assert.equal(history.body.versions[0].version, 22);
+  assert.equal(history.body.versions.at(-1).version, 3);
+  assert.equal((await call(`/api/account/sites/${id}/versions/2`, { cookie })).status, 404);
+  assert.equal((await call(`/api/account/sites/${id}/versions/3`, { cookie })).status, 200);
+  assert.equal((await call(`/api/shared/${token}`)).body.publishedVersion, 22);
 });

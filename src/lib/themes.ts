@@ -58,7 +58,7 @@ export function pageThemeStyle(settings: PageDocument['settings']) {
   return {
     ...componentTokens,
     ...(settings.theme ? tokens(getTheme(settings.theme, settings.customThemes), settings.accent) : {}),
-    '--page-accent': settings.accent, '--page-bg': settings.background,
+    '--page-accent': settings.accent, '--page-on-accent': contrastingText(settings.accent), '--page-bg': settings.background,
     background: settings.background,
   };
 }

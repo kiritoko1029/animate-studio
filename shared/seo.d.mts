@@ -1,0 +1,14 @@
+import type { StudioDocument } from './site-document.mjs';
+export type SeoSettings = { title?: string; description?: string; imageUrl?: string; noIndex?: boolean };
+export type SeoOptions = { origin?: string; basePath?: string; canonical?: boolean; publishedAt?: string; resolveAsset?: (id: string) => string | undefined };
+export type ResolvedSeo = { title: string; description: string; imageUrl?: string; canonical?: string; robots: string; noIndex: boolean; notFound: boolean; siteName: string; type: 'website' };
+export type SeoMetaEntry = { key: string; name?: string; property?: string; content: string };
+export function escapeSeoText(value: unknown): string;
+export function isSeoImage(value: unknown): boolean;
+export function validateSeo(value: unknown): SeoSettings;
+export function resolveSeo(document: StudioDocument, rawPath?: string, options?: SeoOptions): ResolvedSeo;
+export function seoMetaEntries(seo: ResolvedSeo): SeoMetaEntry[];
+export function renderSeoHead(seo: ResolvedSeo): string;
+export function sitemapEntries(site: StudioDocument, options?: SeoOptions): { url: string; lastmod?: string }[];
+export function renderSitemap(site: StudioDocument, options?: SeoOptions): string;
+export function renderPublicRobots(site: StudioDocument, options?: SeoOptions): string;

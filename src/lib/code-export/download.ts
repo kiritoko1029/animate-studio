@@ -9,9 +9,9 @@ import { generateNativeCode } from './native';
 
 export const exportResources = { pageCss, libraryCss, portableCss, catalogCss, assets: { '/landscape.svg': `data:image/svg+xml;charset=utf-8,${encodeURIComponent(landscape)}` } };
 
-export async function downloadCode(document: StudioDocument, format: Format) {
+export async function downloadCode(document: StudioDocument, format: Format, assets: Record<string, string> = {}) {
   const { default: bundle } = await import('virtual:animate-studio-native-export');
-  const output = generateNativeCode(document, format, bundle, exportResources.assets);
+  const output = generateNativeCode(document, format, bundle, { ...exportResources.assets, ...assets });
   const url = URL.createObjectURL(new Blob([output.content], { type: output.mime }));
   const anchor = window.document.createElement('a');
   anchor.href = url;

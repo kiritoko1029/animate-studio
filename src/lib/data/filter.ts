@@ -15,7 +15,7 @@ export function filterRecords<T extends Record<string, JsonValue>>(records: T[],
 type DataPage = { items: Record<string, JsonValue>[]; value: JsonValue; page: number; pageCount: number };
 export function filteredDataPage<T extends DataPage>(result: T, source: DataSource | undefined, field?: string, selected?: JsonValue): T {
   const records = filterRecords(chartRecords(source, result.value, result.items), field, selected);
-  if (source?.kind !== 'static') return { ...result, items: records };
+  if (!source || source.kind === 'rest') return { ...result, items: records };
   const pageSize = source.pageSize ?? 5, pageCount = Math.max(1, Math.ceil(records.length / pageSize)), page = Math.min(result.page, pageCount);
   return { ...result, items: records.slice((page - 1) * pageSize, page * pageSize), page, pageCount };
 }

@@ -48,7 +48,7 @@ export type FreeCanvasProps = {
   onLayerChange: (id: string, action: LayerAction) => void;
   onInsertAfter?: (id: string) => void;
   isDragging: boolean;
-  device: 'desktop' | 'mobile';
+  device: 'desktop' | 'tablet' | 'mobile';
 };
 
 type GridPreferences = CanvasGridPreferences;

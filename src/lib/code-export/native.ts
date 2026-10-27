@@ -1,6 +1,7 @@
 import type { StudioDocument } from '../../model';
 import type { CodeExport, Format } from './generate';
 import { escapeHtml, js } from './nodes.ts';
+import { renderSeoHead, resolveSeo } from '../../../shared/seo.mjs';
 
 type NativeBundle = { code:string; css:string };
 
@@ -9,7 +10,8 @@ export function generateNativeCode(page: StudioDocument, format: Format, bundle:
   const document = page;
   const code = bundle.code.replace(/<\/script/gi,'<\\/script');
   const css = bundle.css.replace(/<\/style/gi,'<\\/style');
-  const html = `<!doctype html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(document.name)}</title><style>${css}</style></head><body><div id="animate-studio-page"></div><script>\n${code}\nconst dispose = AnimateStudioNative.mount(window.document.getElementById('animate-studio-page'), ${js(document)}, ${js(assets)});\nwindow.addEventListener('pagehide',dispose,{once:true});\n</script></body></html>`;
+  const seo = { ...resolveSeo(page, '/', { canonical: false }), canonical: undefined, robots: 'noindex,nofollow', noIndex: true };
+  const html = `<!doctype html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">${renderSeoHead(seo)}<style>${css}</style></head><body><div id="animate-studio-page"></div><script>\n${code}\nconst dispose = AnimateStudioNative.mount(window.document.getElementById('animate-studio-page'), ${js(document)}, ${js(assets)});\nwindow.addEventListener('pagehide',dispose,{once:true});\n</script></body></html>`;
   const name=page.name.replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g,'-').replace(/[. ]+$/g,'').slice(0,100)||'page';
   if(format==='html')return {filename:`${name}.html`,mime:'text/html;charset=utf-8',content:html};
   // A self-contained frame keeps the bundled React runtime and its portals/styles isolated

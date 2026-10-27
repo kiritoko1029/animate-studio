@@ -130,7 +130,7 @@ export function ChartBlock({ block, interactive }: { block: Block; interactive: 
   const records = useMemo(() => chartRecords(result.source, result.value, demo ? sample : result.items), [result.source, result.value, result.items, demo]);
   const filtered = useMemo(() => filterRecords(records, p.filterField || (p.filterVariable ? p.categoryField : ''), selected), [records, p.filterField, p.filterVariable, p.categoryField, selected]);
   const data = useMemo(() => buildChartData(filtered, p.categoryField ?? '', (p.dataColumns ?? []).slice(0, type === 'pie' ? 1 : 4)), [filtered, p.categoryField, p.dataColumns, type]);
-  const scope = demo ? '内置示例 · 选择数据源后替换' : result.source?.kind === 'static' ? `全部 ${records.length} 条静态记录${filtered.length !== records.length ? ` · 筛选后 ${filtered.length} 条` : ''}` : `第 ${result.page} 页 · ${records.length} 条记录${filtered.length !== records.length ? ` · 筛选后 ${filtered.length} 条` : ''}`;
+  const scope = demo ? '内置示例 · 选择数据源后替换' : result.source?.kind === 'collection' ? `全部 ${records.length} 条集合记录${filtered.length !== records.length ? ` · 筛选后 ${filtered.length} 条` : ''}` : result.source?.kind === 'static' ? `全部 ${records.length} 条静态记录${filtered.length !== records.length ? ` · 筛选后 ${filtered.length} 条` : ''}` : `第 ${result.page} 页 · ${records.length} 条记录${filtered.length !== records.length ? ` · 筛选后 ${filtered.length} 条` : ''}`;
   const select = (point: Selection) => {
     const category = selected === point.category ? '' : point.category;
     setLocalSelection(category);
@@ -145,7 +145,7 @@ export function ChartBlock({ block, interactive }: { block: Block; interactive: 
   };
   const widget = (isExpanded: boolean) => {
     const canvas = <ChartCanvas block={block} data={data} type={type} interactive={interactive} expanded={isExpanded} compact={compact} selected={selected} onSelect={select} onExpand={isExpanded ? undefined : openFocus} view={view} setView={setView} scope={scope} refresh={result.refresh} hasSource={!!result.source}/>;
-    return <div className="chart-widget"><div className="data-chart-heading"><h3>{p.title || '数据图表'}</h3>{demo ? <span>示例数据</span> : selected && <button type="button" data-chart-clear className="chart-filter" disabled={!interactive} onClick={() => select({ category: selected, series: '', value: null })}>清除筛选：{selected}</button>}</div>{demo ? canvas : <DataCollectionState result={{ ...result, items: filtered }} interactive={interactive} pagination={result.source?.kind !== 'static'}>{canvas}</DataCollectionState>}</div>;
+    return <div className="chart-widget"><div className="data-chart-heading"><h3>{p.title || '数据图表'}</h3>{demo ? <span>示例数据</span> : selected && <button type="button" data-chart-clear className="chart-filter" disabled={!interactive} onClick={() => select({ category: selected, series: '', value: null })}>清除筛选：{selected}</button>}</div>{demo ? canvas : <DataCollectionState result={{ ...result, items: filtered }} interactive={interactive} pagination={result.source?.kind === 'rest'}>{canvas}</DataCollectionState>}</div>;
   };
   return <><section className="data-chart" inert={expanded}>{widget(false)}</section>{expanded && <FocusChart title={p.title || '数据图表'} theme={theme} returnFocus={returnFocus.current} onClose={() => setExpanded(false)}>{widget(true)}</FocusChart>}</>;
 }

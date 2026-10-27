@@ -8,6 +8,9 @@ import * as sqliteSchema from '../db/schema.ts';
 import { randomUUID } from 'node:crypto';
 import { createDataCredentialRepository } from '../db/data-credential-repository.ts';
 import { normalizeAllowedHost } from './data-query.ts';
+import { handlePublicPage, matchPublicPagePath } from './public-page.ts';
+import { createMediaRepository } from '../db/media-repository.ts';
+import { createR2MediaStorage } from './media-storage.ts';
 
 /**
  * Cloudflare-side account API.
@@ -34,6 +37,8 @@ type Env = {
   AUTH_GITHUB_CLIENT_SECRET?: string;
   STUDIO_TRUSTED_ORIGINS?: string;
   STUDIO_DATA_ALLOWED_HOSTS?: string;
+  ASSETS?: { fetch: (request: Request) => Promise<Response> };
+  STORAGE?: Parameters<typeof createR2MediaStorage>[0];
 };
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(body, {
@@ -82,6 +87,7 @@ export async function handleCloudAccountApi(request: Request, env: Env): Promise
       capabilities: factory.capabilities,
       trustedOrigins: env.STUDIO_TRUSTED_ORIGINS?.split(',').map(v => v.trim()).filter(Boolean),
       resolveUser: req => resolveSessionUser(factory.auth, req),
+      media: { repository: createMediaRepository(database.db as never, database.schema as never, database.provider), storage: createR2MediaStorage(env.STORAGE), newId: () => randomUUID() },
       data: {
         credentials: createDataCredentialRepository(database.db, (database.schema as typeof sqliteSchema).studioDataCredentials, database.provider),
         encryptionSecret: secret,
@@ -91,9 +97,27 @@ export async function handleCloudAccountApi(request: Request, env: Env): Promise
     if (!result) return json({ error: '未找到 API。' }, 404);
     const payload = toResponsePayload(result);
     if (payload.status === 204) return new Response(null, { status: 204, headers: payload.headers });
+    if (payload.body instanceof Uint8Array) return new Response(payload.body.slice().buffer as ArrayBuffer, { status: payload.status, headers: payload.headers });
     return json(payload.body, payload.status, payload.headers ?? {});
   } catch {
     return json({ error: '服务暂时无法处理请求，请重试。' }, 500);
+  } finally {
+    await database.dispose();
+  }
+}
+
+export async function handleCloudPublicPage(request: Request, env: Env): Promise<Response | null> {
+  if (!matchPublicPagePath(new URL(request.url).pathname)) return null;
+  const database = await createCloudDatabase(env);
+  if (!database) return json({ error: '服务端未配置账号数据库。' }, 503);
+  try {
+    if (!env.ASSETS) return json({ error: '公开页面资源尚未配置。' }, 503);
+    const shell = await env.ASSETS.fetch(new Request(new URL('/', request.url), { headers: { Accept: 'text/html' } }));
+    if (!shell.ok) return json({ error: '公开页面资源暂时不可用。' }, 502);
+    const repository = createPageRepository(database.db as never, database.schema as never, database.provider);
+    return await handlePublicPage(request, repository, await shell.text());
+  } catch {
+    return json({ error: '公开页面暂时无法读取，请稍后重试。' }, 500);
   } finally {
     await database.dispose();
   }

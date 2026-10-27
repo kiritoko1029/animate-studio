@@ -67,7 +67,21 @@ export const studioPageShare = pgTable('studio_page_share', {
   token: text('token').notNull().unique(),
   snapshot: text('snapshot').notNull(),
   publishedAt: timestamp('published_at', { withTimezone: false }).notNull().defaultNow(),
+  activeVersion: integer('active_version').notNull().default(0),
 });
+
+export const studioPageVersions = pgTable('studio_page_version', {
+  id: text('id').primaryKey(),
+  pageId: text('page_id').notNull().references(() => studioPages.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  version: integer('version').notNull(),
+  snapshot: text('snapshot').notNull(),
+  sourceVersion: integer('source_version'),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+}, table => [
+  uniqueIndex('studio_page_version_page_version_idx').on(table.pageId, table.version),
+  index('studio_page_version_user_page_idx').on(table.userId, table.pageId, table.version),
+]);
 
 export const userPreferences = pgTable('user_preference', {
   userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
@@ -117,3 +131,16 @@ export const studioDataCredentials = pgTable('studio_data_credential', {
   createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
 }, table => [index('studio_data_credential_user_idx').on(table.userId)]);
+
+export const studioMedia = pgTable('studio_media', {
+  id: text('id').primaryKey(),
+  pageId: text('page_id').notNull().references(() => studioPages.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  mime: text('mime').notNull(),
+  size: integer('size').notNull(),
+  hash: text('hash').notNull(),
+  storageKey: text('storage_key').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: false }),
+}, table => [index('studio_media_owner_page_idx').on(table.userId, table.pageId, table.createdAt)]);

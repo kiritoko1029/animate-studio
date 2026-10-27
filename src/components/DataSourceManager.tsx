@@ -26,7 +26,7 @@ function sourceReferences(site: SiteDocument, id: string) {
   return references;
 }
 export function DataSourceManager({ site, onChange, dataPageId }: { site: SiteDocument; onChange: (site: SiteDocument) => void; dataPageId?: string }) {
-  const sources = site.dataSources ?? [];
+  const sources = (site.dataSources ?? []).filter(source => source.kind !== 'collection');
   const [selected, setSelected] = useState(sources[0]?.id ?? ''), [draft, setDraft] = useState<DataSource | null>(sources[0] ? structuredClone(sources[0]) : null);
   const [testing, setTesting] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const [fields, setFields] = useState<DataField[]>([]), [sample, setSample] = useState<JsonValue | null>(null);
@@ -43,7 +43,7 @@ export function DataSourceManager({ site, onChange, dataPageId }: { site: SiteDo
   const change = (patch: Partial<DataSource>) => { setDraft(previous => previous ? { ...previous, ...patch } : previous); setFields([]); setSample(null); setMessage(''); setError(''); };
   const save = () => {
     if (!draft) return;
-    try { const next = validateDataSources([...sources.filter(source => source.id !== draft.id), draft]); onChange({ ...site, dataSources: next }); setSelected(draft.id); setMessage('数据源已保存，正在自动保存站点。'); setError(''); }
+    try { const next = validateDataSources([...(site.dataSources ?? []).filter(source => source.id !== draft.id), draft]); onChange({ ...site, dataSources: next }); setSelected(draft.id); setMessage('数据源已保存，正在自动保存站点。'); setError(''); }
     catch (cause) { setError(cause instanceof Error ? cause.message : '数据源配置无效。'); }
   };
   const test = async () => {
@@ -64,7 +64,7 @@ export function DataSourceManager({ site, onChange, dataPageId }: { site: SiteDo
     const references = sourceReferences(site, draft.id);
     if (references.length && !window.confirm(`这个数据源被 ${references.length} 个组件使用：\n${references.join('\n')}\n${clear ? '将同时解除这些组件的绑定。' : '将保留为未绑定组件，之后可重新选择数据源。'}`)) return;
     const clean = (block: import('../model').Block): import('../model').Block => ({ ...block, props: { ...block.props, ...(clear && block.props.sourceId === draft.id ? { sourceId: '' } : {}), ...(clear && block.props.submitSourceId === draft.id ? { submitSourceId: '' } : {}) }, ...(block.children ? { children: block.children.map(clean) } : {}) });
-    onChange({ ...site, dataSources: sources.filter(source => source.id !== draft.id), pages: clear ? site.pages.map(entry => ({ ...entry, page: { ...entry.page, blocks: entry.page.blocks.map(clean) } })) : site.pages, sharedLayout: clear ? Object.fromEntries(Object.entries(site.sharedLayout).map(([key, page]) => [key, { ...page, blocks: page.blocks.map(clean) }])) : site.sharedLayout });
+    onChange({ ...site, dataSources: (site.dataSources ?? []).filter(source => source.id !== draft.id), pages: clear ? site.pages.map(entry => ({ ...entry, page: { ...entry.page, blocks: entry.page.blocks.map(clean) } })) : site.pages, sharedLayout: clear ? Object.fromEntries(Object.entries(site.sharedLayout).map(([key, page]) => [key, { ...page, blocks: page.blocks.map(clean) }])) : site.sharedLayout });
     setDraft(null); setSelected(''); setFields([]); setSample(null); setMessage('数据源已删除。');
   };
   const json = (key: 'items' | 'headers' | 'query' | 'body', value: string) => { try { change({ [key]: value.trim() ? JSON.parse(value) : key === 'items' ? [] : undefined }); setError(''); } catch { setError('JSON 格式无效，请检查引号、逗号和括号。'); } };

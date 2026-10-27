@@ -1,8 +1,9 @@
 import type { PageDocument } from '../src/model.ts';
 import type { DataSource } from './data-sources.mjs';
+import type { SeoSettings } from './seo.mjs';
 export type SiteRegion = 'header' | 'footer' | 'sidebar';
 export type SitePageKind = 'page' | 'detail' | 'notFound';
-export type SitePageEntry = { id: string; name: string; path: string; kind: SitePageKind; group?: string; page: PageDocument; layout: SiteRegion[] };
+export type SitePageEntry = { id: string; name: string; path: string; kind: SitePageKind; group?: string; seo?: SeoSettings; page: PageDocument; layout: SiteRegion[] };
 export type SiteDocument = { version: 1; kind: 'site'; id: string; name: string; homePageId: string; pages: SitePageEntry[]; sharedLayout: Partial<Record<SiteRegion, PageDocument>>; dataSources?: DataSource[] };
 export type StudioDocument = PageDocument | SiteDocument;
 export type SiteTarget = string;
@@ -15,7 +16,7 @@ export function createLayoutDocument(region: SiteRegion, settings: PageDocument[
 export function createSitePage(site: SiteDocument, name?: string, kind?: SitePageKind): SitePageEntry;
 export function getActiveDocument(site: SiteDocument, target: SiteTarget): PageDocument | null;
 export function replaceActiveDocument(site: SiteDocument, target: SiteTarget, page: PageDocument): SiteDocument;
-export function updateSitePage(site: SiteDocument, id: string, patch: Partial<Pick<SitePageEntry, 'name' | 'path' | 'kind' | 'group' | 'layout'>>): SiteDocument;
+export function updateSitePage(site: SiteDocument, id: string, patch: Partial<Pick<SitePageEntry, 'name' | 'path' | 'kind' | 'group' | 'seo' | 'layout'>>): SiteDocument;
 export function duplicateSitePage(site: SiteDocument, id: string): { site: SiteDocument; id: string };
 export function moveSitePage(site: SiteDocument, id: string, direction: number): SiteDocument;
 export function reorderSitePage(site: SiteDocument, id: string, beforeId?: string): SiteDocument;
@@ -23,5 +24,5 @@ export function setSiteHomePage(site: SiteDocument, id: string): SiteDocument;
 export function inspectSiteLinks(site: SiteDocument): { pageId: string; blockId: string; url: string; missing: boolean }[];
 export function removeSitePage(site: SiteDocument, id: string): SiteDocument;
 export function matchSiteRoute(site: SiteDocument, rawPath: unknown): { entry: SitePageEntry; params: Record<string, string>; path: string } | null;
-export function composeSitePage(site: SiteDocument, entry: SitePageEntry): PageDocument;
+export function composeSitePage(site: SiteDocument, entry: SitePageEntry, containerWidth?: number): PageDocument;
 export function validateSiteDocument(site: unknown, validatePage: (page: unknown) => unknown): SiteDocument;

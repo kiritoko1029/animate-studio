@@ -1,7 +1,7 @@
 import type { PageDocument } from '../../model.ts';
 import type { CustomComponentDefinition, CustomComponentFields, CustomComponentSize } from '../../../shared/custom-components.mjs';
 import type { DataSource } from '../../../shared/data-sources.mjs';
-import type { SiteRegion } from '../../../shared/site-document.mjs';
+import type { SiteRegion, SitePageEntry } from '../../../shared/site-document.mjs';
 export type AiPublicDataSource = Omit<DataSource, 'method' | 'transport' | 'credentialId' | 'headers' | 'query' | 'body'> & { method?: 'GET'; transport?: 'direct' };
 
 export type AiProvider = 'openai' | 'anthropic';
@@ -42,7 +42,7 @@ export type AiOperation = {
   props?: Record<string, unknown>; frame?: Record<string, unknown>; settings?: Record<string, unknown>;
   name?: string; bindings?: unknown; events?: unknown; variables?: unknown; scripts?: unknown; questions?: AiQuestion[];
   component?: CustomComponentDefinition; componentRef?: AiComponentRef;
-  page?: PageDocument; pages?: { id: string; name: string; path: string; kind: 'page' | 'detail' | 'notFound'; layout: SiteRegion[] }[];
+  page?: PageDocument; pages?: { id: string; name: string; path: string; kind: 'page' | 'detail' | 'notFound'; seo?: SitePageEntry['seo']; layout: SiteRegion[] }[];
   sharedLayout?: SiteRegion[]; deletes?: string[]; region?: SiteRegion; source?: AiPublicDataSource; dataSources?: AiPublicDataSource[];
 };
 /** Thinking text is provider-returned display content; summaries take precedence within each request. */

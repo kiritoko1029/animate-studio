@@ -1,11 +1,13 @@
 import { t, translateMessage, getLocale } from '../i18n';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Cloud, Copy, ExternalLink, Code2, LoaderCircle, LogOut, Mail, MoreHorizontal, Moon, Sun, Share2, Trash2, UserRound, X } from 'lucide-react';
+import { Cloud, Code2, LoaderCircle, LogOut, Mail, MoreHorizontal, Moon, Sun, Share2, Trash2, UserRound, X } from 'lucide-react';
 import { StudioButton, StudioDialog } from './StudioUI';
 import { useAccount } from './AccountProvider';
 import { LanguageMenuItems } from './LanguageMenuItems';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from './animate-ui/components/radix/dropdown-menu';
-import { accountApi, cloudPagePath, shareUrl, type CloudPageRecord, type CloudPageSummary } from '../lib/account-api';
+import { accountApi, type CloudPageRecord, type CloudPageSummary, type PublishCommit, type PublishResult } from '../lib/account-api';
+import type { SiteDocument, StudioDocument } from '../model';
+import { PublishCenterDialog } from './PublishCenterDialog';
 import '../account.css';
 
 function DialogHeading({ title, close }: { title: string; close: () => void }) {
@@ -69,10 +71,13 @@ type Props = {
   studioTheme: 'light' | 'dark';
   onToggleTheme: () => void;
   targetId: string | null;
+  getSite: () => SiteDocument;
   onSaveCloud: () => Promise<CloudPageRecord>;
   onOpenPage: (id: string) => Promise<void>;
   onDeletePage: (id: string) => Promise<void>;
-  onPublish: () => Promise<{ token: string; publishedAt: string }>;
+  onPublish: (expectedPublishedVersion: number | null, siteId: string | null, documentId: string) => Promise<PublishCommit>;
+  onRollback: (siteId: string, version: number, expectedPublishedVersion: number) => Promise<PublishResult>;
+  onRestoreDraft: (siteId: string, page: StudioDocument) => Promise<void>;
   onBeforeSignOut: () => Promise<void>;
   onGuest: () => Promise<void>;
   notify: (message: string) => void;
@@ -91,15 +96,12 @@ export function AccountControls(props: Props) {
   const busyRef = useRef(false);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [listVersion, setListVersion] = useState(0);
-  const shareReadVersion = useRef(0);
   const userRef = useRef(user?.id); userRef.current = user?.id;
   const close = () => { if (!busyRef.current) { setDialog(null); setError(''); setDeleting(null); } };
   const show = (value: 'pages' | 'share') => { setError(''); setDeleting(null); setDialog(user ? value : 'login'); };
   useEffect(() => {
-    setPages([]); setToken(null); setPublishedAt(null); setDeleting(null); setError('');
+    setPages([]); setDeleting(null); setError('');
     if (!user) setDialog(current => current === 'login' ? current : null);
   }, [user?.id]);
   useEffect(() => {
@@ -111,17 +113,6 @@ export function AccountControls(props: Props) {
       .finally(() => { if (!controller.signal.aborted) setListLoading(false); });
     return () => controller.abort();
   }, [user?.id, dialog, listVersion]);
-  useEffect(() => {
-    const version = ++shareReadVersion.current;
-    setToken(null); setPublishedAt(null); setListLoading(false);
-    if (!user || dialog !== 'share' || !props.targetId) return;
-    const controller = new AbortController(); setListLoading(true);
-    void accountApi<CloudPageRecord>(cloudPagePath(props.targetId), { signal: controller.signal })
-      .then(data => { if (!controller.signal.aborted && version === shareReadVersion.current) { setToken(data.shareToken); setPublishedAt(data.publishedAt); } })
-      .catch(failure => { if (!controller.signal.aborted) setError(errorText(failure)); })
-      .finally(() => { if (!controller.signal.aborted) setListLoading(false); });
-    return () => controller.abort();
-  }, [user?.id, dialog, props.targetId]);
   async function run(action: () => Promise<void>) {
     if (busyRef.current) return;
     const owner = userRef.current; busyRef.current = true; setBusy(true); setError('');
@@ -162,17 +153,11 @@ export function AccountControls(props: Props) {
         {listLoading ? <div className="account-empty"><LoaderCircle size={20} className="spin"/>{t("正在读取页面…")}</div> : !pages.length ? <div className="account-empty"><Cloud size={28}/><strong>{t("还没有云端页面")}</strong><p>{t("保存当前作品后，就能在其他设备继续编辑。")}</p></div> : pages.map(page => <article className={`cloud-page-item ${page.id === props.targetId ? 'active' : ''}`} key={page.id}>
           <StudioButton className="cloud-page-open" disabled={busy} onClick={() => void run(async () => { await props.onOpenPage(page.id); setDialog(null); })}><span>{page.name || t("未命名页面")}</span><small>{page.id === props.targetId ? t("正在编辑 · ") : ''}{page.shareToken ? t("已分享 · ") : ''}{time(page.updatedAt)}</small></StudioButton>
           <StudioButton className="icon-button" aria-label={t("删除页面：{0}", { 0: page.name })} disabled={busy} onClick={() => setDeleting(page.id)}><Trash2 size={15}/></StudioButton>
-          {deleting === page.id && <div className="cloud-delete-confirm"><p>{t("删除「{0}」及其分享链接？此操作无法撤销。", { 0: page.name })}</p><div><StudioButton className="secondary-button" disabled={busy} onClick={() => setDeleting(null)}>{t("取消")}</StudioButton><StudioButton className="primary-button" disabled={busy} onClick={() => void run(async () => { await props.onDeletePage(page.id); setDeleting(null); setListVersion(value => value + 1); props.notify(t("页面已删除")); })}>{t("确认删除")}</StudioButton></div></div>}
+          {deleting === page.id && <div className="cloud-delete-confirm"><p>{t("删除「{0}」及其分享链接与发布历史？此操作无法撤销。", { 0: page.name })}</p><div><StudioButton className="secondary-button" disabled={busy} onClick={() => setDeleting(null)}>{t("取消")}</StudioButton><StudioButton className="primary-button" disabled={busy} onClick={() => void run(async () => { await props.onDeletePage(page.id); setDeleting(null); setListVersion(value => value + 1); props.notify(t("页面已删除")); })}>{t("确认删除")}</StudioButton></div></div>}
         </article>)}
       </div>
       {!listLoading && <StudioButton className="account-text-button" disabled={busy} onClick={() => setListVersion(value => value + 1)}>{t("刷新列表")}</StudioButton>}
     </StudioDialog>}
-    {dialog === 'share' && user && <StudioDialog title={t("分享页面")} className="account-dialog" onClose={close} dismissOutside={!busy}>
-      <DialogHeading title={t("分享页面")} close={close}/>
-      <p className="account-description">{t("任何持有链接的人都能预览整个站点。继续编辑不会改变已分享内容，点击“更新分享内容”后才会发布所有页面的最新草稿。")}</p>
-      {listLoading ? <p className="account-hint">{t("正在读取分享状态…")}</p> : token ? <><label className="account-label" htmlFor="share-link">{t("分享链接")}</label><div className="share-link-field"><input id="share-link" readOnly value={shareUrl(token)} onFocus={event => event.target.select()}/><StudioButton className="icon-button" aria-label={t("复制分享链接")} onClick={async () => { try { await navigator.clipboard.writeText(shareUrl(token)); props.notify(t("分享链接已复制")); } catch { setError(t("请选中上方链接，手动复制。")); } }}><Copy size={16}/></StudioButton></div><a className="account-preview-link" href={shareUrl(token)} target="_blank" rel="noreferrer">{t("打开分享预览")}<ExternalLink size={13}/></a>{publishedAt && <p className="account-hint">{t("最近发布：")}{time(publishedAt)}</p>}</> : <p className="account-hint">{props.targetId ? t("当前站点尚未分享。") : t("创建分享时，会先把当前站点保存到你的云端空间。")}</p>}
-      {error && <p className="account-error" role="alert">{translateMessage(error)}</p>}
-      <div className="account-dialog-actions"><StudioButton className="primary-button" disabled={busy || listLoading || !capabilities.cloudEnabled} onClick={() => void run(async () => { const result = await props.onPublish(); shareReadVersion.current++; setToken(result.token); setPublishedAt(result.publishedAt); props.notify(t("分享内容已发布")); })}>{busy ? <LoaderCircle size={14} className="spin"/> : <Share2 size={14}/>} {token ? t("更新分享内容") : t("创建分享链接")}</StudioButton>{token && props.targetId && <StudioButton className="secondary-button" disabled={busy} onClick={() => void run(async () => { await accountApi(cloudPagePath(props.targetId!) + '/share', { method: 'DELETE' }); setToken(null); setPublishedAt(null); props.notify(t("分享已关闭，原链接不再可访问")); })}>{t("关闭分享")}</StudioButton>}</div>
-    </StudioDialog>}
+    {dialog === 'share' && user && <PublishCenterDialog targetId={props.targetId} cloudEnabled={capabilities.cloudEnabled} getSite={props.getSite} onPublish={props.onPublish} onRollback={props.onRollback} onRestoreDraft={props.onRestoreDraft} onClose={close} notify={props.notify}/>}
   </>;
 }

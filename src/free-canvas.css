@@ -88,7 +88,7 @@
 
 @container canvas-tools (max-width:520px){.free-canvas-grid-controls button>span{display:none}.free-canvas-grid-controls button{width:26px;padding:0}.free-canvas-grid-controls select{max-width:48px}.free-canvas-meta-controls{width:100%;justify-content:space-between}.free-canvas-meta>span:first-child>span{display:none}}
 
-.free-canvas-frame--interactive { cursor:default; }
+.free-canvas-frame--interactive { cursor:default; user-select:text; -webkit-user-select:text; }
 .free-canvas-frame--interactive .free-canvas-block-content { pointer-events:auto; }
 .free-canvas-frame--interactive .free-canvas-selection-bar { background:var(--canvas-ui-950); }
 .free-canvas-selection-actions .canvas-interaction-toggle { width:auto;gap:calc(3px / var(--canvas-scale));padding-inline:calc(5px / var(--canvas-scale));font-size:calc(11px / var(--canvas-scale)); }

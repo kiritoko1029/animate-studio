@@ -36,7 +36,7 @@ export function formatAxisValue(value: number) { return Math.abs(value) >= 10000
 export function shortChartLabel(value: string, max = 12) { const characters = [...value]; return characters.length > max ? `${characters.slice(0, max - 1).join('')}…` : value; }
 export function chartRecord(value: JsonValue): ChartRecord { return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : { value }; }
 export function chartRecords(source: DataSource | undefined, value: JsonValue, currentPage: ChartRecord[]): ChartRecord[] {
-  return source?.kind === 'static' && Array.isArray(value) ? value.map(chartRecord) : currentPage;
+  return source?.kind !== 'rest' && Array.isArray(value) ? value.map(chartRecord) : currentPage;
 }
 
 export function recommendChartMapping(records: ChartRecord[]): { categoryField: string; dataColumns: ChartSeries[] } {

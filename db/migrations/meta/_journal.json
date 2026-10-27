@@ -43,6 +43,20 @@
       "when": 1793009338618,
       "tag": "20261026100858_great_dreaming_celestial",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793074055847,
+      "tag": "20261027040735_same_tomorrow_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793104072822,
+      "tag": "20261027122752_fancy_valeria_richards",
+      "breakpoints": true
     }
   ]
 }

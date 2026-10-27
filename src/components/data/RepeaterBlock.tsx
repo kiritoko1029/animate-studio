@@ -29,7 +29,7 @@ export function RepeaterBlock({ block, settings, interactive }: { block: Block; 
       for (const [key, template] of Object.entries(fields)) {
         const value = itemField(template, item, index);
         if (key === 'url') props.url = value === undefined ? '#' : text(value);
-        else if (['title', 'text', 'label'].includes(key)) props[key as 'title' | 'text' | 'label'] = text(value);
+        else if (['title', 'text', 'label', 'imageUrl'].includes(key)) props[key as 'title' | 'text' | 'label' | 'imageUrl'] = text(value);
       }
       return <BlockRenderer key={child.id} block={{ ...child, id: `${block.id}-${id}-${child.id}`, props, frame: undefined }} settings={settings} interactive={interactive}/>;
     })}</article>;

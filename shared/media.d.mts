@@ -1,0 +1,12 @@
+import type { StudioDocument } from './site-document.mjs';
+export type MediaMime = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+export type MediaAsset = { id: string; name: string; mime: MediaMime; size: number; createdAt: string; removed?: boolean };
+export type MediaUsage = { count: number; bytes: number };
+export const mediaLimits: { fileBytes: number; perSite: number; totalBytes: number };
+export function isMediaId(value: unknown): value is string;
+export function mediaReference(id: string): string;
+export function parseMediaReference(value: unknown): string | null;
+export function collectMediaReferences(document: StudioDocument): string[];
+export function validateMediaName(value: unknown): string;
+export function inspectImage(value: Uint8Array | ArrayBuffer): MediaMime;
+export function mediaUsage(assets: MediaAsset[]): MediaUsage;

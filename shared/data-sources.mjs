@@ -1,3 +1,5 @@
+import { prepareCollection, validateCollectionSource } from './collections.mjs';
+
 export const dataSourceLimits = { perSite: 20, responseBytes: 1024 * 1024, timeoutMs: 15000, pageSize: 100, items: 500 };
 const roots = ['route', 'state', 'form'];
 const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
@@ -88,6 +90,7 @@ export function resolveDataValue(value, context, url = false) {
 }
 export function prepareDataSource(source, context = {}) {
   if (source.kind === 'static') return { value: readDataPath(source.items ?? [], source.responsePath) };
+  if (source.kind === 'collection') return prepareCollection(source, context);
   const url = resolveTemplate(source.url, context, true);
   if (!/^(?:https?:\/\/|\/(?!\/))/.test(url) || /[\u0000-\u0020\u007f\\]/u.test(url)) fail('请求地址无效');
   const parsed = new URL(url, 'https://studio.invalid');
@@ -96,16 +99,17 @@ export function prepareDataSource(source, context = {}) {
   return { url: url.startsWith('/') ? `${parsed.pathname}${parsed.search}` : parsed.href, method: source.method ?? 'GET', headers: resolveDataValue(source.headers ?? {}, context), body: source.body === undefined ? undefined : resolveDataValue(source.body, context) };
 }
 export function normalizeDataValue(source, value) {
+  if (source.kind === 'collection' && source.mode === 'single' && value === null) fail('没有找到匹配的内容记录，请检查链接或新建内容。');
   checkJson(value);
   if (source.mode === 'collection' && !Array.isArray(value)) fail(`数据源「${source.name}」应返回数组，请检查响应路径`);
   if (source.mode === 'single' && !plain(value)) fail(`数据源「${source.name}」应返回对象，请检查响应路径`);
   return value;
 }
 export function validateDataSource(source) {
-  record(source, ['id', 'name', 'kind', 'mode', 'items', 'url', 'method', 'headers', 'query', 'body', 'responsePath', 'timeoutMs', 'pageSize', 'transport', 'credentialId'], 'dataSource');
+  record(source, ['id', 'name', 'kind', 'mode', 'items', 'url', 'method', 'headers', 'query', 'body', 'responsePath', 'timeoutMs', 'pageSize', 'transport', 'credentialId', 'fields', 'records', 'detailField', 'detailParameter'], 'dataSource');
   if (!idPattern.test(source.id)) fail('数据源 id 必须以字母开头，且最长 40 字符');
   text(source.name, 80, 'dataSource.name');
-  if (!['static', 'rest'].includes(source.kind)) fail('数据源类型无效');
+  if (!['static', 'rest', 'collection'].includes(source.kind)) fail('数据源类型无效');
   if (!['collection', 'single'].includes(source.mode)) fail('数据源返回类型无效');
   if (source.responsePath !== undefined) { text(source.responsePath, 300, 'dataSource.responsePath', true); readDataPath(null, source.responsePath); }
   if (source.timeoutMs !== undefined && (!Number.isInteger(source.timeoutMs) || source.timeoutMs < 100 || source.timeoutMs > dataSourceLimits.timeoutMs)) fail('请求超时必须在 100–15000 毫秒之间');
@@ -115,6 +119,8 @@ export function validateDataSource(source) {
     if (source.url !== undefined || source.method !== undefined && source.method !== 'GET' || source.body !== undefined || source.headers !== undefined || source.query !== undefined || source.transport === 'proxy' || source.credentialId !== undefined) fail('静态数据不需要请求地址、请求头或凭据');
     checkJson(source.items ?? []);
     normalizeDataValue(source, readDataPath(source.items ?? [], source.responsePath));
+  } else if (source.kind === 'collection') {
+    validateCollectionSource(source);
   } else {
     if (source.items !== undefined) fail('REST 数据源不能同时包含静态数据');
     text(source.url, 2048, 'dataSource.url');

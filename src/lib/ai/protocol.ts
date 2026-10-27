@@ -8,6 +8,9 @@ import type { AiChange, AiCreationMode, AiLibraryComponent, AiOperation, AiQuest
 import { AiContinuationError } from './errors.ts';
 import { normalizeSitePath } from '../../../shared/site-document.mjs';
 import { validateDataSource, validateDataSources } from '../../../shared/data-sources.mjs';
+import { validateSeo } from '../../../shared/seo.mjs';
+import { collectMediaReferences } from '../../../shared/media.mjs';
+import { normalizeAiPageDocument } from './page-normalization.ts';
 
 const allowed: Record<AiOperation['op'], string[]> = {
   message: ['text'], done: ['summary'], page: ['name', 'settings', 'summary'],
@@ -79,7 +82,8 @@ export function parseAiOperation(raw: string): AiOperation {
     if (typeof op.name !== 'string' || !op.name.trim() || op.name.length > 120 || !Array.isArray(op.pages) || op.pages.length < 1 || op.pages.length > 24) throw new Error('AI 站点计划格式无效。');
     const ids = new Set<string>(), paths = new Set<string>();
     for (const entry of op.pages) {
-      if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['id', 'name', 'path', 'kind', 'layout'].includes(key)) || typeof entry.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(entry.id) || ids.has(entry.id) || typeof entry.name !== 'string' || !entry.name.trim() || entry.name.length > 120 || !['page', 'detail', 'notFound'].includes(entry.kind) || !Array.isArray(entry.layout) || entry.layout.some(region => !['header', 'footer', 'sidebar'].includes(region))) throw new Error('AI 站点页面计划无效。');
+      if (!entry || typeof entry !== 'object' || Object.keys(entry).some(key => !['id', 'name', 'path', 'kind', 'layout', 'seo'].includes(key)) || typeof entry.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(entry.id) || ids.has(entry.id) || typeof entry.name !== 'string' || !entry.name.trim() || entry.name.length > 120 || !['page', 'detail', 'notFound'].includes(entry.kind) || !Array.isArray(entry.layout) || entry.layout.some(region => !['header', 'footer', 'sidebar'].includes(region))) throw new Error('AI 站点页面计划无效。');
+      if (entry.seo !== undefined) validateSeo(entry.seo);
       ids.add(entry.id); const path = normalizeSitePath(entry.path); if (paths.has(path)) throw new Error('AI 站点路径重复。'); paths.add(path);
     }
     if (!Array.isArray(op.sharedLayout) || op.sharedLayout.some(region => !['header', 'footer', 'sidebar'].includes(region)) || new Set(op.sharedLayout).size !== op.sharedLayout.length) throw new Error('AI 共享布局计划无效。');
@@ -91,16 +95,21 @@ export function parseAiOperation(raw: string): AiOperation {
   }
   if (op.op === 'sitePage') {
     if (typeof op.id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(op.id) || !op.page) throw new Error('AI 站点页面缺少内容。');
+    op.page = normalizeAiPageDocument(op.page);
     validatePage(op.page);
     if (op.page.id !== op.id) throw new Error('AI 页面内容与目标 id 不一致。');
   }
   if (op.op === 'dataSource') {
-    if (!op.source || typeof op.source !== 'object' || Array.isArray(op.source) || (op.source.method ?? 'GET') !== 'GET' || (op.source.transport ?? 'direct') !== 'direct' || ['credentialId', 'headers', 'query', 'body'].some(key => Object.hasOwn(op.source!, key))) throw new Error('AI 只能创建公开静态数据或浏览器直接读取的 GET 数据源，不能配置凭据或写入。');
+    if (!op.source || typeof op.source !== 'object' || Array.isArray(op.source) || (op.source.method ?? 'GET') !== 'GET' || (op.source.transport ?? 'direct') !== 'direct' || ['credentialId', 'headers', 'query', 'body'].some(key => Object.hasOwn(op.source!, key))) throw new Error('AI 只能创建内容集合、公开静态数据或浏览器直接读取的 GET 数据源，不能配置凭据或写入。');
     validateDataSource(op.source);
   }
   if (op.op === 'siteLayout') {
     if (!['header', 'footer', 'sidebar'].includes(op.region ?? '')) throw new Error('AI 共享布局区域无效。');
-    if (op.page) { validatePage(op.page); if (op.page.id !== `shared-${op.region}`) throw new Error('AI 共享布局 id 无效。'); }
+    if (op.page) {
+      op.page = normalizeAiPageDocument(op.page, op.region!);
+      validatePage(op.page);
+      if (op.page.id !== `shared-${op.region}`) throw new Error('AI 共享布局 id 无效。');
+    }
   }
   return op;
 }
@@ -277,6 +286,8 @@ export function applyAiOperation(page: PageDocument, op: AiOperation, resolvedCo
     if (!f || f.x < margin || f.y < margin || f.x + f.width > next.settings.maxWidth - margin || f.y + f.height > height - margin) throw new Error('AI 组件超出画布边界，请先扩展画布或调整位置。');
   }
   if (new TextEncoder().encode(JSON.stringify(next)).byteLength > 500 * 1024) throw new Error('AI 页面超过可保存大小，已保留之前的修改。');
+  const existingAssets = new Set(collectMediaReferences(page));
+  if (collectMediaReferences(next).some(id => !existingAssets.has(id))) throw new Error('AI 不能新增或伪造媒体素材，请先在媒体库上传并选择。');
   const summary = op.summary || ({ add: '新增组件', update: '修改组件', remove: '删除组件', page: '更新页面设置' })[kind];
   return { page: next, change: JSON.stringify(next) === JSON.stringify(page) ? null : { blockId: op.id, kind, summary, frame }, ...(warnings.length ? { warnings } : {}) };
 }

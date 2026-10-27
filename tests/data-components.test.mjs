@@ -108,3 +108,30 @@ test('legacy tables keep their static rows without a selected data source', asyn
   await until(() => f.doc.querySelector('.page-data-table'), 'legacy table renders');
   assert.equal(f.doc.querySelector('tbody td').textContent, '品牌官网');
 });
+
+test('content collections render real list, image, table, chart and route detail data', async t => {
+  const f = fixture(t), page = createDocument(true);
+  const fields = [{ key: 'title', label: '标题', type: 'text' }, { key: 'text', label: '正文', type: 'longText' }, { key: 'views', label: '阅读量', type: 'number' }, { key: 'cover', label: '封面', type: 'image' }];
+  const records = [{ id: 'a1', values: { title: '第一篇', text: '正文一', views: 12, cover: 'https://images.example.com/one.png' } }, { id: 'b2', values: { title: '第二篇', text: '正文二', views: 20, cover: '' } }];
+  const list = createBlock('repeater'), table = createBlock('table'), chart = createBlock('chart'), detail = createBlock('text');
+  list.children.push({ id: 'cover', type: 'image', props: { imageUrl: '', title: '封面' } });
+  list.props = { ...list.props, sourceId: 'articles', dataFields: { ...list.props.dataFields, cover: { imageUrl: 'cover' } } };
+  list.frame = { x: 20, y: 20, width: 680, height: 800 };
+  table.props = { ...table.props, sourceId: 'articles', dataColumns: [{ key: 'title', label: '标题', path: 'title' }, { key: 'views', label: '阅读量', path: 'views' }] };
+  table.frame = { x: 720, y: 20, width: 480, height: 310 };
+  chart.props = { ...chart.props, sourceId: 'articles', chartType: 'column', categoryField: 'title', dataColumns: [{ key: 'views', label: '阅读量', path: 'views', aggregate: 'sum' }] };
+  chart.frame = { x: 720, y: 350, width: 480, height: 440 };
+  detail.frame = { x: 20, y: 850, width: 680, height: 160 };
+  detail.bindings = { text: { kind: 'expression', value: 'data.article.title' } };
+  page.blocks = [list, table, chart, detail];
+  const sources = [{ id: 'articles', name: '文章', kind: 'collection', mode: 'collection', fields, records, pageSize: 5 }, { id: 'article', name: '文章详情', kind: 'collection', mode: 'single', fields, records, detailField: 'id', detailParameter: 'id' }];
+  f.mount(page, sources);
+  f.win.requestDataSource(f.win.JSON.parse(JSON.stringify(sources[0]))).then(value => { f.win.directValue = value; }, error => { f.win.directError = error.message; });
+  await until(() => f.win.directValue || f.win.directError, 'direct collection resolves');
+  assert.equal(f.win.directError, undefined);
+  await until(() => f.doc.querySelectorAll('[data-repeater-item]').length === 2 && f.doc.querySelectorAll('.page-data-table tbody tr').length === 2, `collection records render: ${f.doc.body.textContent} ${f.errors.join(' | ')}`);
+  assert.equal(f.doc.querySelector('[data-repeater-item="a1"] .page-image-figure img').getAttribute('src'), 'https://images.example.com/one.png');
+  assert.equal(f.doc.querySelector(`[data-block-id="${detail.id}"] .page-paragraph`).textContent, '第一篇');
+  assert.equal(f.doc.querySelectorAll('[data-chart-mark]').length, 2);
+  assert.match(f.doc.querySelector('.chart-meta').textContent, /全部 2 条集合记录/);
+});

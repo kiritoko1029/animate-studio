@@ -8,6 +8,8 @@ import { validateAnimationSettings } from '../shared/animation-settings.mjs';
 import { customComponentLimits, validateCustomBlockProps } from '../shared/custom-components.mjs';
 import { validateSiteDocument } from '../shared/site-document.mjs';
 import { readDataPath } from '../shared/data-sources.mjs';
+import { validateResponsive } from '../src/lib/responsive.ts';
+import { parseMediaReference } from '../shared/media.mjs';
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'repeater', 'form', 'chart', 'custom', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300, name: 40, error: 500, successUrl: 2048, successText: 500, errorText: 500, categoryField: 500, filterField: 500, filterVariable: 40 };
@@ -89,6 +91,7 @@ function validateCustomThemes(value) {
 function safeUrl(value, image = false) {
   if (value === '') return true;
   if (/[\s\\\u0000-\u001f\u007f]/u.test(value) || /%(?:00|0a|0d)/i.test(value)) return false;
+  if (image && parseMediaReference(value)) return true;
   if (value.startsWith('/') && !value.startsWith('//')) return true;
   if (!image && value.startsWith('#')) return true;
   try {
@@ -104,7 +107,7 @@ export function validatePage(page) {
   if (page.version !== 1) fail('仅支持版本 1 的页面');
   if (Object.hasOwn(page, 'id') && (typeof page.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(page.id))) fail('页面 id 无效');
   string(page.name, 120, 'page.name', false);
-  record(page.settings, ['background', 'accent', 'maxWidth', 'padding', 'layout', 'canvasHeight', 'theme', 'customThemes'], 'page.settings');
+  record(page.settings, ['background', 'accent', 'maxWidth', 'padding', 'layout', 'canvasHeight', 'theme', 'customThemes', 'responsive'], 'page.settings');
   required(page.settings, ['background', 'accent', 'maxWidth', 'padding'], 'page.settings');
   const validThemes = Object.hasOwn(page.settings, 'customThemes') ? validateCustomThemes(page.settings.customThemes) : new Set(themeIds);
   if (Object.hasOwn(page.settings, 'theme') && !validThemes.has(page.settings.theme)) fail('page.settings.theme 的主题无效');
@@ -162,7 +165,7 @@ export function validatePage(page) {
         if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 12) fail('字段映射必须是最多 12 个子组件的对象');
         for (const [childId, fields] of Object.entries(value)) {
           if (!/^[a-zA-Z0-9_-]{1,100}$/.test(childId) || !block.children?.some(child => child.id === childId)) fail('字段映射的子组件不存在');
-          record(fields, ['title', 'text', 'label', 'url'], '字段映射');
+          record(fields, ['title', 'text', 'label', 'url', 'imageUrl'], '字段映射');
           Object.values(fields).forEach(itemMapping);
         }
       } else if (key === 'dataColumns') {
@@ -203,10 +206,11 @@ export function validatePage(page) {
           if ((child.props.minLength ?? 0) > (child.props.maxLength ?? 10000)) fail('字段最小长度不能大于最大长度');
         }
       }
-      validatePage({ ...page, blocks: block.children });
+      validatePage({ ...page, settings: { ...page.settings, responsive: undefined }, blocks: block.children });
     }
   }
   try { validateInteractions(page); } catch (error) { fail(error.message); }
+  try { validateResponsive(page); } catch (error) { fail(error.message); }
   return page;
 }
 

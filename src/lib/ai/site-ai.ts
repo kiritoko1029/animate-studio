@@ -4,6 +4,8 @@ import { createDocument } from '../../model.ts';
 import { validatePage, validateSite } from '../../../server/validation.mjs';
 import { AiOperationDecoder, aiSystemPrompt, parseAiOperation } from './protocol.ts';
 import { streamAi, safeAiError } from './client.ts';
+import { normalizeAiPageDocument } from './page-normalization.ts';
+import { collectMediaReferences } from '../../../shared/media.mjs';
 import type { AiOperation, AiProfile, AiProvider } from './types.ts';
 
 export type SitePlanEntry = NonNullable<AiOperation['pages']>[number];
@@ -14,7 +16,7 @@ export const siteAiKey = (owner: string, siteId: string) => `animate-studio:ai-s
 export function explainSite(site: SiteDocument): string {
   const lines = site.pages.map(entry => `• ${entry.name}：${entry.path}${entry.id === site.homePageId ? '（首页）' : ''}${entry.kind === 'detail' ? '，可在绑定中使用 route 参数' : ''}${entry.layout.length ? `，使用${entry.layout.map(region => region === 'header' ? '页头' : region === 'sidebar' ? '侧栏' : '页脚').join('和')}` : ''}`);
   const missing = inspectSiteLinks(site).filter(link => link.missing).length;
-  return `站点「${site.name}」共有 ${site.pages.length} 个页面。\n${lines.join('\n')}\n共享布局：${Object.keys(site.sharedLayout).map(region => region === 'header' ? '页头' : region === 'sidebar' ? '侧栏' : '页脚').join('、') || '未启用'}。\n数据源：${site.dataSources?.map(source => `${source.id}（${source.kind === 'static' ? '静态数据' : '公开接口'}）`).join('、') || '未配置'}。\n${missing ? `有 ${missing} 个链接需要修复，请在页面面板检查路径。` : '已配置的站内链接都有可识别的目标。'}\n在“页面”面板中修改结构，选中组件后可继续调整内容和交互。`;
+  return `站点「${site.name}」共有 ${site.pages.length} 个页面。\n${lines.join('\n')}\n共享布局：${Object.keys(site.sharedLayout).map(region => region === 'header' ? '页头' : region === 'sidebar' ? '侧栏' : '页脚').join('、') || '未启用'}。\n数据源：${site.dataSources?.map(source => `${source.id}（${source.kind === 'static' ? '静态数据' : source.kind === 'collection' ? '内容集合' : '公开接口'}）`).join('、') || '未配置'}。\n${missing ? `有 ${missing} 个链接需要修复，请在页面面板检查路径。` : '已配置的站内链接都有可识别的目标。'}\n在“页面”面板中修改结构，选中组件后可继续调整内容和交互。`;
 }
 
 export function validateSitePlan(site: SiteDocument, input: SitePlan): SitePlan {
@@ -32,6 +34,8 @@ export function validateSitePlan(site: SiteDocument, input: SitePlan): SitePlan 
     if (entry.layout.some(region => !input.sharedLayout.includes(region))) throw new Error('页面引用了计划外的共享布局。');
   }
   if (!ids.has(site.homePageId) && input.deletes.includes(site.homePageId)) throw new Error('不能删除首页。');
+  const existingAssets = new Set(collectMediaReferences(site));
+  if (collectMediaReferences({ pages: input.pages, dataSources: input.dataSources } as SiteDocument).some(id => !existingAssets.has(id))) throw new Error('AI 不能新增或伪造媒体素材，请先在媒体库上传并选择。');
   return structuredClone(input);
 }
 
@@ -41,32 +45,38 @@ export function siteFromPlan(site: SiteDocument, plan: SitePlan): SiteDocument {
   const planned = plan.pages.map(spec => {
     const old = site.pages.find(entry => entry.id === spec.id);
     const page = old ? { ...old.page, name: spec.name } : { ...createDocument(true), id: spec.id, name: spec.name, settings: structuredClone(site.pages[0].page.settings) };
-    return { id: spec.id, name: spec.name, path: spec.path, kind: spec.kind, ...(old?.group ? { group: old.group } : {}), page, layout: spec.layout.filter(region => site.sharedLayout[region]) };
+    return { id: spec.id, name: spec.name, path: spec.path, kind: spec.kind, ...(old?.group ? { group: old.group } : {}), seo: structuredClone(spec.seo ?? old?.seo), page, layout: spec.layout.filter(region => site.sharedLayout[region]) };
   });
   const used = new Set(plan.pages.map(entry => entry.id));
   const pages = [...planned, ...retained.filter(entry => !used.has(entry.id))];
   return validateSite(JSON.parse(JSON.stringify({ ...site, name: plan.name, pages, dataSources: plan.dataSources ?? site.dataSources, sharedLayout: Object.fromEntries(Object.entries(site.sharedLayout).filter(([region]) => plan.sharedLayout.includes(region as SiteRegion))) })));
 }
 
+function preserveApprovedMedia(site: SiteDocument, next: SiteDocument): SiteDocument {
+  const allowed = new Set(collectMediaReferences(site));
+  if (collectMediaReferences(next).some(id => !allowed.has(id))) throw new Error('AI 不能新增或伪造媒体素材，请先在媒体库上传并选择。');
+  return next;
+}
 export function applySiteOperation(site: SiteDocument, plan: SitePlan, operation: AiOperation): SiteDocument {
   if (operation.op === 'sitePage') {
     const spec = plan.pages.find(entry => entry.id === operation.id);
     if (!spec || !operation.page || operation.page.name !== spec.name) throw new Error('AI 试图修改计划外页面，已暂停。');
-    const exists = site.pages.some(entry => entry.id === spec.id);
-    const entry: SitePageEntry = { ...spec, page: operation.page, layout: spec.layout.filter(region => site.sharedLayout[region]) };
-    return validateSite({ ...site, pages: exists ? site.pages.map(item => item.id === spec.id ? entry : item) : [...site.pages, entry] });
+    const previous = site.pages.find(entry => entry.id === spec.id);
+    const exists = !!previous;
+    const entry: SitePageEntry = { ...spec, seo: structuredClone(spec.seo ?? previous?.seo), page: normalizeAiPageDocument(operation.page), layout: spec.layout.filter(region => site.sharedLayout[region]) };
+    return preserveApprovedMedia(site, validateSite({ ...site, pages: exists ? site.pages.map(item => item.id === spec.id ? entry : item) : [...site.pages, entry] }));
   }
   if (operation.op === 'siteLayout') {
     const region = operation.region!;
     if (!plan.sharedLayout.includes(region)) throw new Error('AI 试图修改计划外的共享布局。');
     const sharedLayout = { ...site.sharedLayout };
-    if (operation.page) sharedLayout[region] = operation.page; else delete sharedLayout[region];
-    return validateSite({ ...site, sharedLayout, pages: site.pages.map(entry => ({ ...entry, layout: operation.page ? entry.layout : entry.layout.filter(item => item !== region) })) });
+    if (operation.page) sharedLayout[region] = normalizeAiPageDocument(operation.page, region); else delete sharedLayout[region];
+    return preserveApprovedMedia(site, validateSite({ ...site, sharedLayout, pages: site.pages.map(entry => ({ ...entry, layout: operation.page ? entry.layout : entry.layout.filter(item => item !== region) })) }));
   }
   if (operation.op === 'dataSource') {
     parseAiOperation(JSON.stringify(operation));
     if (!plan.dataSources?.some(source => source.id === operation.source?.id)) throw new Error('AI 数据源未包含在已确认的计划中。');
-    return validateSite({ ...site, dataSources: [...(site.dataSources ?? []).filter(source => source.id !== operation.source!.id), operation.source!] });
+    return preserveApprovedMedia(site, validateSite({ ...site, dataSources: [...(site.dataSources ?? []).filter(source => source.id !== operation.source!.id), operation.source!] }));
   }
   throw new Error('整站生成只接受已确认的页面、布局和数据源操作。');
 }
@@ -100,10 +110,10 @@ export function writeSiteAiSession(session: SiteAiSession, storage: Pick<Storage
 }
 
 function siteAiSources(sources: SiteDocument['dataSources']): NonNullable<SiteDocument['dataSources']> {
-  return (sources ?? []).map(source => ({ id: source.id, name: source.name, kind: source.kind, mode: source.mode, url: source.url?.split('?')[0], method: source.method, responsePath: source.responsePath, pageSize: source.pageSize, timeoutMs: source.timeoutMs, transport: source.transport }));
+  return (sources ?? []).map(source => ({ id: source.id, name: source.name, kind: source.kind, mode: source.mode, url: source.url?.split('?')[0], method: source.method, responsePath: source.responsePath, pageSize: source.pageSize, timeoutMs: source.timeoutMs, transport: source.transport, fields: source.kind === 'collection' ? structuredClone(source.fields) : undefined, detailField: source.detailField, detailParameter: source.detailParameter }));
 }
 export function siteSummary(site: SiteDocument) {
-  return { id: site.id, name: site.name, homePageId: site.homePageId, pages: site.pages.map(entry => ({ id: entry.id, name: entry.name, path: entry.path, kind: entry.kind, layout: entry.layout, blocks: entry.page.blocks.length })), sharedLayout: Object.fromEntries(Object.entries(site.sharedLayout).map(([region, page]) => [region, { blocks: page.blocks.length }])), dataSources: siteAiSources(site.dataSources).map(source => ({ id: source.id, name: source.name, kind: source.kind, mode: source.mode, url: source.url, method: source.method ?? 'GET', responsePath: source.responsePath, pageSize: source.pageSize })) };
+  return { id: site.id, name: site.name, homePageId: site.homePageId, pages: site.pages.map(entry => ({ id: entry.id, name: entry.name, path: entry.path, kind: entry.kind, seo: entry.seo, layout: entry.layout, blocks: entry.page.blocks.length })), sharedLayout: Object.fromEntries(Object.entries(site.sharedLayout).map(([region, page]) => [region, { blocks: page.blocks.length }])), media: collectMediaReferences(site).map(id => ({ reference: `asset:${id}` })), dataSources: siteAiSources(site.dataSources).map(source => ({ id: source.id, name: source.name, kind: source.kind, mode: source.mode, url: source.url, method: source.method ?? 'GET', responsePath: source.responsePath, pageSize: source.pageSize })) };
 }
 
 type RunOptions = {
@@ -120,8 +130,10 @@ export async function runSiteAi(options: RunOptions): Promise<{ plan: SitePlan; 
   const messages: string[] = [];
   const context = JSON.stringify({ mode: options.phase === 'plan' ? 'site-plan' : 'site-generate', task: options.task.slice(0, 12000), site: options.phase === 'plan' ? siteSummary(original) : draft ? { ...draft, dataSources: siteAiSources(draft.dataSources) } : draft, approvedPlan: plan ? { ...plan, dataSources: undefined } : plan });
   if (context.length > 240000) throw new Error('站点上下文过大，请缩小本次任务范围后再生成。');
-  const siteDataPrompt = `SITE DATA: sitePlan may include dataSources; each entry is a static JSON source or a public REST GET source. Use dataSource operations only for a source declared in the approved plan: {"v":1,"seq":2,"op":"dataSource","source":{"id":"books","name":"Books","kind":"rest","mode":"collection","url":"https://api.example.com/books","method":"GET","transport":"direct"},"summary":"Connect public books"}. AI never adds credentials, auth headers, proxy transport, POST/PUT/PATCH/DELETE, or arbitrary request code; never executes a request, submits a form or publishes. A form may leave submitSourceId empty for the user to configure, or reference an existing user-owned write source. Repeater/table sourceId selects a collection; detail bindings may use data.book.title and data.books[0].title. Use sidebar in layout/siteLayout for an admin shell with navigation:"site"; its PageDocument id is shared-sidebar. CHARTS: for dashboard tasks use chart with sourceId from the approved plan, categoryField for the dimension and dataColumns [{key,label,path,aggregate:'sum'|'count'|'avg'|'min'|'max'}]. Use line/area for trends, column/bar for comparisons and pie for nonnegative proportions. Keep mappings when changing chartType; pie uses the first metric and supports innerRadius for a ring. filterVariable must name a string variable defined in the same PageDocument, with filterField as a safe path. Chart selection emits {category,series,value} in event.value and filters loaded rows, not a server query. Static charts aggregate all rows, REST charts aggregate the current page; disclose that scope and never invent a connected API or a global total. Explain pages, sources and any remaining user steps in the final summary.`;
-  const system = `${aiSystemPrompt}\nThis is an atomic multi-page SITE task. The original page protocol is background only. Use ONLY the site operations below plus message/done. Never use add/update/remove/data/page/component in this task.\nPlanning phase (mode="site-plan"): emit one optional message then exactly one sitePlan terminal record: {"v":1,"seq":1,"op":"sitePlan","name":"Site name","summary":"Pages and scope","pages":[{"id":"existing-or-new-stable-id","name":"Home","path":"/","kind":"page","layout":["header","footer"]},{"id":"products","name":"Products","path":"/products","kind":"page","layout":["header","footer"]},{"id":"product-detail","name":"Product detail","path":"/products/:id","kind":"detail","layout":["header","footer"]}],"sharedLayout":["header","footer"],"deletes":[]}. Existing ids must be retained for pages being modified. Omit unchanged existing pages rather than replacing them. Any deletion must be explicit in deletes and summary; never delete the home page. Only list sharedLayout that the user should have.\nGeneration phase (mode="site-generate"): approvedPlan is confirmed by the user. Emit one complete sitePage for EACH new/changed planned page: {"v":1,"seq":1,"op":"sitePage","id":"products","page":{"version":1,"id":"products","name":"Products","settings":{"background":"#ffffff","accent":"#171717","maxWidth":1920,"padding":48,"layout":"free","canvasHeight":1080},"blocks":[]},"summary":"Build product list"}. page.id and page.name must match the plan; blocks use the existing catalog and exact free-canvas frames. Use real internal paths from the plan in buttons and navbar items, never pretend API or CMS data is connected. Build useful content in every new page and detail sample content clearly marked as examples. Do not change paths or ids. Use siteLayout with region:"header"|"footer" and a complete PageDocument whose id is "shared-header" or "shared-footer" to create/update confirmed shared regions. Existing unchanged pages/layouts are already in the draft and must not be regenerated. Finish only after every new planned page exists, then emit done. Return only NDJSON, no markdown.\n${siteDataPrompt}`;
+  const siteDataPrompt = `MEDIA: media contains only approved asset: references already used by the current site. Reuse only these exact references for imageUrl or SEO; never invent a UUID or claim an upload happened. Unknown asset references are rejected.
+SEO: each sitePlan page may include seo {title,description,imageUrl,noIndex}; use concise user-visible content and safe existing/public image URLs only. Preserve existing SEO when not in the approved scope. Dynamic detail and 404 pages are never promised as indexed URLs. Never claim publication or search-engine placement has happened.
+SITE DATA: sitePlan may include dataSources; each entry is a static JSON source, a public REST GET source or an embedded content collection. A collection has kind:"collection", fields:[{key,label,type:"text"|"longText"|"number"|"boolean"|"url"|"image"}], records:[{id,values:{...}}] and mode:"collection" or "single". Use mode:"single" with detailField:"id" (or an existing field key) and detailParameter matching the route parameter, for example /articles/:id. Missing detail records are errors, never a fallback to the first record. Generate only clearly marked sample content and never claim that records came from a live CMS. Content collections are saved, published, versioned and exported with the site document; they are not a public write database. Existing record bodies are not included in your context; only their schema is available. Collection images may use only approved asset references listed in MEDIA. Use dataSource operations only for a source declared in the approved plan: {"v":1,"seq":2,"op":"dataSource","source":{"id":"books","name":"Books","kind":"rest","mode":"collection","url":"https://api.example.com/books","method":"GET","transport":"direct"},"summary":"Connect public books"}. AI never adds credentials, auth headers, proxy transport, POST/PUT/PATCH/DELETE, or arbitrary request code; never executes a request, submits a form or publishes. A form may leave submitSourceId empty for the user to configure, or reference an existing user-owned write source. Repeater/table sourceId selects a collection; detail bindings may use data.book.title and data.books[0].title. Use sidebar in layout/siteLayout for an admin shell with navigation:"site"; its PageDocument id is shared-sidebar. CHARTS: for dashboard tasks use chart with sourceId from the approved plan, categoryField for the dimension and dataColumns [{key,label,path,aggregate:'sum'|'count'|'avg'|'min'|'max'}]. Use line/area for trends, column/bar for comparisons and pie for nonnegative proportions. Keep mappings when changing chartType; pie uses the first metric and supports innerRadius for a ring. filterVariable must name a string variable defined in the same PageDocument, with filterField as a safe path. Chart selection emits {category,series,value} in event.value and filters loaded rows, not a server query. Static charts aggregate all rows, REST charts aggregate the current page; disclose that scope and never invent a connected API or a global total. Explain pages, sources and any remaining user steps in the final summary.`;
+  const system = `${aiSystemPrompt}\nThis is an atomic multi-page SITE task. The original page protocol is background only. Use ONLY the site operations below plus message/done. Never use add/update/remove/data/page/component in this task.\nPlanning phase (mode="site-plan"): emit one optional message then exactly one sitePlan terminal record: {"v":1,"seq":1,"op":"sitePlan","name":"Site name","summary":"Pages and scope","pages":[{"id":"existing-or-new-stable-id","name":"Home","path":"/","kind":"page","layout":["header","footer"]},{"id":"products","name":"Products","path":"/products","kind":"page","layout":["header","footer"]},{"id":"product-detail","name":"Product detail","path":"/products/:id","kind":"detail","layout":["header","footer"]}],"sharedLayout":["header","footer"],"deletes":[]}. Existing ids must be retained for pages being modified. Omit unchanged existing pages rather than replacing them. Any deletion must be explicit in deletes and summary; never delete the home page. Only list sharedLayout that the user should have.\nGeneration phase (mode="site-generate"): approvedPlan is confirmed by the user. Emit one complete sitePage for EACH new/changed planned page: {"v":1,"seq":1,"op":"sitePage","id":"products","page":{"version":1,"id":"products","name":"Products","settings":{"background":"#ffffff","accent":"#171717","maxWidth":1920,"padding":48,"layout":"free","canvasHeight":1080},"blocks":[]},"summary":"Build product list"}. page.id and page.name must match the plan; blocks use the existing catalog and exact free-canvas frames. Use real internal paths from the plan in buttons and navbar items, never pretend API or CMS data is connected. Build useful content in every new page and detail sample content clearly marked as examples. Do not change paths or ids. Use siteLayout with region:"header"|"footer"|"sidebar" and a complete PageDocument whose id is "shared-" + region to create/update confirmed shared regions. Canvas budgets: ordinary pages and sidebar are 320–6000 px high, header/footer 320–1000 px; reserve header/footer heights so every composed page stays within 6000 px. Frames and bottom page padding must fit inside canvasHeight, and content must never be clipped or hidden behind an internal scrollbar. Existing unchanged pages/layouts are already in the draft and must not be regenerated. Finish only after every new planned page exists, then emit done. Return only NDJSON, no markdown.\n${siteDataPrompt}`;
   let completed = false, resultPlan = plan;
   const accept = (operation: AiOperation) => {
     if (operation.op === 'message') { if (operation.text) { messages.push(operation.text); options.onMessage?.(operation.text); } return; }

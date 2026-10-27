@@ -32,9 +32,10 @@ import { FormBlock } from './data/FormBlock';
 import { ChartBlock } from './data/ChartBlock';
 import './data/data-blocks.css';
 import type { DataSource } from '../../shared/data-sources.mjs';
+import { pageAtWidth, responsiveDevice } from '../lib/responsive';
 
 type BlockRendererProps = { block: Block; settings: PageDocument['settings']; interactive?: boolean; bounded?: boolean; preview?: boolean };
-type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string>; dataSources?: DataSource[]; dataAccess?: { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string } };
+type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string>; dataSources?: DataSource[]; dataAccess?: { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string }; breakpoint?: import('../lib/responsive').ResponsiveDevice };
 
 function parseItems(items = '') {
   return items.split('\n').map(line => line.trim()).filter(Boolean).map((line, index) => {
@@ -154,7 +155,7 @@ export function BlockRenderer({ block: savedBlock, settings, interactive = true,
   return <motion.div className={className} data-theme={p.theme??settings.theme} data-page-scheme={getTheme(p.theme??settings.theme, settings.customThemes).scheme} style={style} initial={initial} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: reducedMotion ? 0 : .42, ease: [.22, 1, .36, 1] }}>{content}</motion.div>;
 }
 
-/** Fit a fixed design width inside an observed container without scaling it up. */
+/** Fit a design canvas inside the real container and expose that container's width. */
 export function useFitScale(ref: RefObject<HTMLElement | null>, designWidth: number) {
   const [availableWidth, setAvailableWidth] = useState<number | null>(null);
   useLayoutEffect(() => {
@@ -169,28 +170,30 @@ export function useFitScale(ref: RefObject<HTMLElement | null>, designWidth: num
     observer.observe(element);
     return () => observer.disconnect();
   }, [ref]);
-  return availableWidth === null ? 1 : Math.min(1, Math.max(0, availableWidth) / Math.max(1, designWidth));
+  return { availableWidth, scale: availableWidth === null ? 1 : Math.min(1, Math.max(0, availableWidth) / Math.max(1, designWidth)) };
 }
 
-export function FreePage({ document, interactive = true, replayKey = 0 }: PageRendererProps) {
+export function FreePage({ document, interactive = true, replayKey = 0, breakpoint }: PageRendererProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const { availableWidth } = useFitScale(viewportRef, document.settings.maxWidth);
+  const rendered = pageAtWidth(document, availableWidth ?? undefined);
   const [selection, setScheme] = useState<PageThemeSelection | null>(null);
   const systemScheme=useSystemScheme();
   const scheme=selection === 'system' ? systemScheme : selection;
   const theme = scheme === 'dark' ? 'animate-dark' : 'animate-light';
-  const settings = scheme ? { ...document.settings, theme, accent:getTheme(theme).accent, background: getTheme(theme).canvas } as PageDocument['settings'] : document.settings;
+  const settings = scheme ? { ...rendered.settings, theme, accent:getTheme(theme).accent, background: getTheme(theme).canvas } as PageDocument['settings'] : rendered.settings;
   const resolvedScheme = scheme ?? (getTheme(settings.theme, settings.customThemes).scheme === 'dark' ? 'dark' : 'light');
-  const designWidth = Math.max(1, document.settings.maxWidth);
+  const designWidth = Math.max(1, rendered.settings.maxWidth);
   let nextY = 32;
-  const positionedBlocks = document.blocks.map(block => {
+  const positionedBlocks = rendered.blocks.map(block => {
     const frame = block.frame ?? defaultFrame(block.type, designWidth, 32, nextY);
     nextY = Math.max(nextY, frame.y + frame.height + 24);
     return { block, frame };
   });
-  const designHeight = Math.max(1, document.settings.canvasHeight ?? Math.max(1200, nextY));
-  const scale = useFitScale(viewportRef, designWidth);
+  const designHeight = Math.max(1, rendered.settings.canvasHeight ?? Math.max(1200, nextY));
+  const scale = availableWidth === null ? 1 : Math.min(1, Math.max(0, availableWidth) / designWidth);
   const style = pageThemeStyle(settings) as CSSProperties;
-  return <PagePreviewTheme.Provider value={{ scheme: resolvedScheme, selection:selection ?? resolvedScheme, setScheme }}><div className="page-surface page-surface--free" style={style}>
+  return <PagePreviewTheme.Provider value={{ scheme: resolvedScheme, selection:selection ?? resolvedScheme, setScheme }}><div className="page-surface page-surface--free" data-responsive-device={breakpoint ?? responsiveDevice(document.settings, availableWidth ?? undefined)} style={style}>
     <div className="page-free-viewport" ref={viewportRef}>
       <div className="page-free-scaled-shell" style={{ width: designWidth * scale, height: designHeight * scale }}>
         <div className="page-free-canvas" style={{ width: designWidth, height: designHeight, transform: `scale(${scale})` }} key={replayKey}>
@@ -205,9 +208,9 @@ export function FreePage({ document, interactive = true, replayKey = 0 }: PageRe
   </div></PagePreviewTheme.Provider>;
 }
 
-export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route, dataSources = [], dataAccess = { scope: 'preview' } }: PageRendererProps) {
+export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route, dataSources = [], dataAccess = { scope: 'preview' }, breakpoint }: PageRendererProps) {
   const content = interactive && (dataSources.length > 0 || document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))
-    ? <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} />
-    : <FreePage document={document} interactive={interactive} replayKey={replayKey} />;
+    ? <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} breakpoint={breakpoint} />
+    : <FreePage document={document} interactive={interactive} replayKey={replayKey} breakpoint={breakpoint} />;
   return <DataRuntimeProvider sources={dataSources} access={dataAccess} route={route}>{content}</DataRuntimeProvider>;
 }

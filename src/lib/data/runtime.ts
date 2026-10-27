@@ -114,8 +114,8 @@ export function createDataStore(sources: DataSource[], access: DataAccess, fetch
     entry.request = requestDataSource(source, { context, access, signal: controller.signal, fetcher, page, pageSize }).then(data => {
       if (entries.get(id) !== entry) return;
       const items = Array.isArray(data) ? data.map(item => item !== null && typeof item === 'object' && !Array.isArray(item) ? item as Record<string, JsonValue> : { value: item as JsonValue }) : [];
-      const pageCount = source.kind === 'static' ? Math.max(1, Math.ceil(items.length / pageSize)) : Math.max(1, page + (items.length >= pageSize ? 1 : 0));
-      const visible = source.kind === 'static' ? items.slice((page - 1) * pageSize, page * pageSize) : items;
+      const pageCount = source.kind !== 'rest' ? Math.max(1, Math.ceil(items.length / pageSize)) : Math.max(1, page + (items.length >= pageSize ? 1 : 0));
+      const visible = source.kind !== 'rest' ? items.slice((page - 1) * pageSize, page * pageSize) : items;
       entry.result = { ...result, status: 'ready', value: data, items: visible, pageCount };
       if (page > pageCount) entry.result.setPage(pageCount);
     }).catch((error: unknown) => {

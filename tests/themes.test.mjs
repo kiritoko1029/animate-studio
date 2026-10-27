@@ -46,6 +46,14 @@ test('independent theme and custom accent override page tokens without leaking t
   assert.equal(pageThemeStyle(page.settings)['--page-accent'], getTheme('tech-blue').accent);
 });
 
+test('legacy pages derive a contrasting selection foreground from the page accent', () => {
+  const page = createDocument(true);
+  const style = pageThemeStyle(page.settings);
+  assert.equal(style['--page-on-accent'], contrastingText(page.settings.accent));
+  assert.equal(pageThemeStyle({ ...page.settings, accent: '#F2C94C' })['--page-on-accent'], '#000000');
+  assert.equal(pageThemeStyle({ ...page.settings, accent: '#171717' })['--page-on-accent'], '#ffffff');
+});
+
 test('all presets provide readable text contrast on their canvas and panel surfaces', () => {
   function luminance(hex) {
     const rgb = [1, 3, 5].map(i => { const n = parseInt(hex.slice(i, i + 2), 16) / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; });

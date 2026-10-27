@@ -22,7 +22,7 @@ function PreviewNotice({ message, onClose, translate }: { message: string; onClo
 const keepText = (message: string) => message;
 
 export type PreviewHandle = { runScript: (id: string) => void; reset: () => void };
-export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string; translate?: (message: string) => string; locale?: string; route?: Record<string, string> }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview', translate = keepText, locale = 'zh-CN', route }, ref) {
+export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocument; debug?: boolean; persistenceScope?: string; translate?: (message: string) => string; locale?: string; route?: Record<string, string>; breakpoint?: import('../lib/responsive').ResponsiveDevice }>(function InteractivePreview({ document, debug = false, persistenceScope = 'preview', translate = keepText, locale = 'zh-CN', route, breakpoint }, ref) {
   const container = useRef<HTMLDivElement>(null);
   const siteNavigation = useSiteNavigation();
   const [state, setState] = useState<Record<string, JsonValue>>({});
@@ -64,7 +64,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
     return () => { activeRuntime.current = null; runtime.dispose(); };
   }, [runtime]);
   return <div className="interactive-preview" ref={container}>
-    <NativeRuntimeContext.Provider value={{ runtime, state }}><RuntimeDataBridge route={route ?? siteNavigation?.params ?? {}} state={state} blocks={document.blocks}/><FreePage key={revision} document={document} /></NativeRuntimeContext.Provider>
+    <NativeRuntimeContext.Provider value={{ runtime, state }}><RuntimeDataBridge route={route ?? siteNavigation?.params ?? {}} state={state} blocks={document.blocks}/><FreePage key={revision} document={document} breakpoint={breakpoint} /></NativeRuntimeContext.Provider>
     {notice !== null && <PreviewNotice translate={translate} message={notice} onClose={() => setNotice(null)} />}
     <div className="runtime-debug">
       <div className="runtime-debug-heading"><StudioButton onClick={() => setExpanded(!expanded)}><Bug size={14} />{translate('运行调试')}<span className="logic-status ready">{translate('运行中')}</span><ChevronDown size={13} /></StudioButton><StudioButton onClick={reset} title={translate('重置运行数据')}><RotateCcw size={13} />{translate('重置')}</StudioButton></div>

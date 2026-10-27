@@ -1,11 +1,15 @@
 import express from 'express';
 import { resolve, dirname, join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { handlePublicPage } from './public-page.ts';
 import { createPageStore } from './store.mjs';
 import { ValidationError, validateSaveRequest } from './validation.mjs';
 import { createNodeDatabase, applyNodeMigrations, newPageId, newShareToken } from './node-database.ts';
 import { createAuthFactory, resolveCapabilities, resolveSessionUser } from './auth-factory.ts';
 import { createPageRepository } from '../db/page-repository.ts';
+import { createMediaRepository } from '../db/media-repository.ts';
+import { createNodeMediaStorage } from './media-storage-node.ts';
 import { createComponentRepository } from '../db/component-repository.ts';
 import { handleAccountApi, toResponsePayload } from './account-api.ts';
 import { createResendSender } from './resend-sender.ts';
@@ -31,6 +35,7 @@ export async function createApp({
     res.set('X-Content-Type-Options', 'nosniff');
     next();
   });
+  app.use('/api/account/sites', express.raw({ type: 'image/*', limit: '5mb' }));
   app.use('/api', express.json({ limit: '512kb', strict: true }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.post('/api/validate', (req, res) => res.json({ page: validateSaveRequest(req.body) }));
@@ -76,6 +81,18 @@ export async function createApp({
 
   let vite;
   if (serveFrontend) {
+    app.get('/p/*splat', async (req, res, next) => {
+      if (!accountStack) return next();
+      try {
+        const request = toWebRequest(req, accountStack.factory.baseURL);
+        let html;
+        if (production) html = await readFile(resolve(projectRoot, 'dist/index.html'), 'utf8');
+        else html = await vite.transformIndexHtml(req.originalUrl, await readFile(resolve(projectRoot, 'index.html'), 'utf8'));
+        const response = await handlePublicPage(request, accountStack.context.repository, html);
+        if (!response) return next();
+        await forwardResponse(response, res);
+      } catch (error) { next(error); }
+    });
     if (production) {
       app.use(express.static(resolve(projectRoot, 'dist')));
       app.get('/{*path}', (_req, res) => res.sendFile(resolve(projectRoot, 'dist/index.html')));
@@ -128,6 +145,7 @@ async function createAccountStack(production, dataDir) {
     const repository = createPageRepository(database.db, database.schema, database.dialect);
     const context = {
       repository,
+      media: { repository: createMediaRepository(database.db, database.schema, database.dialect), storage: createNodeMediaStorage(join(dataDir, 'media')), newId: newPageId },
       components: createComponentRepository(database.db, database.schema, database.dialect),
       newPageId,
       newShareToken,
@@ -159,13 +177,14 @@ function toWebRequest(req, baseURL) {
     else if (Array.isArray(value)) for (const item of value) headers.append(key, item);
   }
   const method = req.method;
-  const body = ['GET', 'HEAD'].includes(method) ? undefined : JSON.stringify(req.body ?? {});
+  const body = ['GET', 'HEAD'].includes(method) ? undefined : Buffer.isBuffer(req.body) ? new Uint8Array(req.body) : JSON.stringify(req.body ?? {});
   return new Request(url, { method, headers, body });
 }
 
 async function sendApiResult(result, res) {
   for (const [key, value] of Object.entries(result.headers ?? {})) res.set(key, value);
   if (result.status === 204) return res.status(204).end();
+  if (result.body instanceof Uint8Array) return res.status(result.status).send(Buffer.from(result.body));
   res.status(result.status).json(result.body);
 }
 

@@ -1,5 +1,7 @@
 import { createDocument, toFreeDocument } from '../src/model.ts';
+import { pageAtWidth } from '../src/lib/responsive.ts';
 import { validateDataSources } from './data-sources.mjs';
+import { validateSeo } from './seo.mjs';
 
 export const siteLimits = { pages: 24, bytes: 2 * 1024 * 1024 };
 const idPattern = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -75,7 +77,7 @@ export function duplicateSitePage(site, id) {
   if (!source) fail('要复制的页面不存在');
   const copy = createSitePage(site, `${source.name} 副本`, source.kind === 'notFound' ? 'page' : source.kind);
   copy.page = { ...structuredClone(source.page), id: copy.id, name: copy.name };
-  copy.layout = [...source.layout]; copy.group = source.group;
+  copy.layout = [...source.layout]; copy.group = source.group; copy.seo = structuredClone(source.seo);
   const index = site.pages.indexOf(source);
   return { site: { ...site, pages: [...site.pages.slice(0, index + 1), copy, ...site.pages.slice(index + 1)] }, id: copy.id };
 }
@@ -155,18 +157,19 @@ function prefixScripts(page, prefix) {
   const rename = action => action.type === 'script' ? { ...action, scriptId: `${prefix}${action.scriptId}` } : action.type === 'condition' ? { ...action, then: action.then.map(rename), else: action.else.map(rename) } : action;
   return { ...page, scripts: (page.scripts ?? []).map(script => ({ ...script, id: `${prefix}${script.id}` })), blocks: page.blocks.map(block => ({ ...block, events: block.events ? Object.fromEntries(Object.entries(block.events).map(([event, actions]) => [event, actions.map(rename)])) : undefined })) };
 }
-export function composeSitePage(site, entry) {
-  const bodyPage = toFreeDocument(entry.page);
-  const regions = entry.layout.map(region => [region, site.sharedLayout[region] ? toFreeDocument(site.sharedLayout[region]) : null]).filter(([, page]) => page);
-  const headerHeight = entry.layout.includes('header') && site.sharedLayout.header ? site.sharedLayout.header.settings.canvasHeight ?? 320 : 0;
-  const footerHeight = entry.layout.includes('footer') && site.sharedLayout.footer ? site.sharedLayout.footer.settings.canvasHeight ?? 320 : 0;
-  const sidebarWidth = entry.layout.includes('sidebar') && site.sharedLayout.sidebar ? site.sharedLayout.sidebar.settings.maxWidth : 0;
-  if (sidebarWidth && bodyPage.settings.maxWidth - sidebarWidth < 320) fail('共享侧栏过宽，正文无法容纳，请减少侧栏宽度');
-  if (sidebarWidth && bodyPage.blocks.some(block => block.frame && block.frame.x + block.frame.width + sidebarWidth > bodyPage.settings.maxWidth - bodyPage.settings.padding)) fail('正文与共享侧栏超出页面宽度，请调整布局或组件位置');
-  const bodyHeight = bodyPage.settings.canvasHeight ?? 1400;
-  const height = headerHeight + bodyHeight + footerHeight;
+export function composeSitePage(site, entry, containerWidth) {
+  const bodyPage = toFreeDocument(pageAtWidth(entry.page, containerWidth));
+  const regions = entry.layout.map(region => [region, site.sharedLayout[region] ? toFreeDocument(pageAtWidth(site.sharedLayout[region], containerWidth)) : null]).filter(([, page]) => page);
+  const headerHeight = regions.find(([region]) => region === 'header')?.[1].settings.canvasHeight ?? 0;
+  const footerHeight = regions.find(([region]) => region === 'footer')?.[1].settings.canvasHeight ?? 0;
+  const sidebarWidth = regions.find(([region]) => region === 'sidebar')?.[1].settings.maxWidth ?? 0;
+  const stackedSidebar = !!sidebarWidth && bodyPage.settings.maxWidth - sidebarWidth < 320;
+  const sidebarHeight = stackedSidebar ? regions.find(([region]) => region === 'sidebar')[1].settings.canvasHeight ?? 1080 : 0;
+  if (sidebarWidth && !stackedSidebar && bodyPage.blocks.some(block => block.frame && block.frame.x + block.frame.width + sidebarWidth > bodyPage.settings.maxWidth - bodyPage.settings.padding)) fail('正文与共享侧栏超出页面宽度，请调整布局或组件位置');
+  const bodyHeight = bodyPage.settings.canvasHeight ?? 1400, bodyOffsetY = headerHeight + sidebarHeight;
+  const height = bodyOffsetY + bodyHeight + footerHeight;
   if (height > 6000) fail('页面与共享布局合并后的画布不能超过 6000 px');
-  const documents = [{ page: bodyPage, offsetX: sidebarWidth, offsetY: headerHeight, prefix: '' }, ...regions.map(([region, page]) => ({ page: prefixScripts(page, `${region}-`), offsetX: 0, offsetY: region === 'header' ? 0 : region === 'sidebar' ? headerHeight : headerHeight + bodyHeight, prefix: `${region}-` }))];
+  const documents = [{ page: bodyPage, offsetX: stackedSidebar ? 0 : sidebarWidth, offsetY: bodyOffsetY, prefix: '' }, ...regions.map(([region, page]) => ({ page: prefixScripts(page, `${region}-`), offsetX: 0, offsetY: region === 'header' ? 0 : region === 'sidebar' ? headerHeight : bodyOffsetY + bodyHeight, prefix: `${region}-` }))];
   const blocks = documents.flatMap(({ page, offsetX, offsetY, prefix }) => page.blocks.map(block => ({ ...block, id: `${prefix}${block.id}`, frame: block.frame ? { ...block.frame, x: block.frame.x + offsetX, y: block.frame.y + offsetY } : undefined })));
   const variables = [...bodyPage.variables ?? []], scripts = [...bodyPage.scripts ?? []];
   const names = new Set(variables.map(variable => variable.name));
@@ -175,7 +178,7 @@ export function composeSitePage(site, entry) {
     names.add(variable.name); variables.push(variable);
   }
   for (const { page } of documents.slice(1)) scripts.push(...page.scripts);
-  return { ...bodyPage, settings: { ...bodyPage.settings, canvasHeight: height }, blocks, variables, scripts };
+  return { ...bodyPage, settings: { ...bodyPage.settings, canvasHeight: height, responsive: undefined }, blocks, variables, scripts };
 }
 export function validateSiteDocument(site, validatePage) {
   record(site, ['version', 'kind', 'id', 'name', 'homePageId', 'pages', 'sharedLayout', 'dataSources'], 'site');
@@ -187,11 +190,12 @@ export function validateSiteDocument(site, validatePage) {
   record(site.sharedLayout, ['header', 'footer', 'sidebar'], 'site.sharedLayout');
   const ids = new Set(), paths = new Set(); let notFound = 0;
   for (const entry of site.pages) {
-    record(entry, ['id', 'name', 'path', 'kind', 'group', 'page', 'layout'], 'site.pages');
+    record(entry, ['id', 'name', 'path', 'kind', 'group', 'seo', 'page', 'layout'], 'site.pages');
     text(entry.id, 100, 'sitePage.id'); text(entry.name, 120, 'sitePage.name');
     if (!idPattern.test(entry.id) || ids.has(entry.id)) fail('站点页面 id 无效或重复'); ids.add(entry.id);
     if (!['page', 'detail', 'notFound'].includes(entry.kind)) fail('页面类型无效');
     if (entry.group !== undefined) text(entry.group, 40, 'sitePage.group', true);
+    if (entry.seo !== undefined) validateSeo(entry.seo);
     const path = normalizeSitePath(entry.path); if (paths.has(path)) fail('站内路径不能重复'); paths.add(path);
     if (entry.kind === 'notFound' && ++notFound > 1) fail('站点最多有一个 404 页面');
     if (entry.id === site.homePageId && path !== '/') fail('首页路径必须为 /');

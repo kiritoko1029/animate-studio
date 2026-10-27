@@ -62,7 +62,7 @@ npm run deploy:cloudflare
 | Variable | `CLOUDFLARE_ACCOUNT_ID` | 目标 Cloudflare Account ID，尤其是 Token 可访问多个账号时 |
 | Variable | `CLOUDFLARE_WORKERS_SUBDOMAIN` | 账户的 Workers 子域，如 `my-team`；没有版本预览地址时用于就绪检查 |
 
-Token 需要目标账号的 **Workers Scripts: Edit**，**D1: Edit**，以及 Void 所需的账号/资源读取权限。按 [Void 的 Cloudflare 指南](https://void.cloud/integrations/cloudflare#deploying-from-ci) 配置，不要将 Token 放在代码或聊天中。
+Token 需要目标账号的 **Workers Scripts: Edit**，**D1: Edit**，**Workers R2 Storage: Edit**，以及 Void 所需的账号/资源读取权限。R2 由 `inference.bindings.storage` 用于站点媒体库；Void 会创建或采用对应桶并写入 lock 文件，不要为同一站点另建手工资源映射。按 [Void 的 Cloudflare 指南](https://void.cloud/integrations/cloudflare#deploying-from-ci) 配置，不要将 Token 放在代码或聊天中。
 
 未设置 Token 时，工作流会完成验证，并在摘要中明确标记“Deployment skipped”。配置后再次手动运行即可发布。建议先在本机完成首次发布并提交 lock 文件，再启用自动发布。
 
@@ -71,6 +71,8 @@ Token 需要目标账号的 **Workers Scripts: Edit**，**D1: Edit**，以及 Vo
 ## 验证与恢复
 
 打开实际发布地址，确认访客编辑可用；登录后保存一个云端页面，在另一个浏览器登录同一账号确认恢复。发布分享后用未登录浏览器打开，并验证关闭分享后原链接失效。`/api/health` 应返回 `{"status":"ok"}`。
+
+公开分享页 `/p/<令牌>` 和静态子页面由 Worker 注入当前已发布快照的 SEO 元信息。可检查 `/p/<令牌>/sitemap.xml` 是否只包含允许收录的静态页面，以及动态详情和 404 是否返回 `noindex`。这些路由复用现有 D1 与前端静态资源，不需要额外的搜索引擎密钥。
 
 ```sh
 npx void connect --platform cloudflare

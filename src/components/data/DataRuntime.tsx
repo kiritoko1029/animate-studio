@@ -38,7 +38,7 @@ function useDataBindings(blocks?: Block[]) {
     if (!store) return;
     for (const id of ids) {
       const source = store.sourceFor(id);
-      if (source && (source.kind === 'static' || (source.method ?? 'GET') === 'GET')) void store.load(id, store.keyFor(id));
+      if (source && (source.kind !== 'rest' || (source.method ?? 'GET') === 'GET')) void store.load(id, store.keyFor(id));
     }
   }, [store, key]);
   return useDataValues();

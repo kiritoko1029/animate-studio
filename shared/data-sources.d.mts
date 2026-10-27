@@ -1,7 +1,9 @@
 import type { JsonValue } from '../src/lib/interactions/types.ts';
 export type DataTemplateContext = { route?: Record<string, JsonValue>; state?: Record<string, JsonValue>; form?: Record<string, JsonValue> };
 export type DataSource = {
-  id: string; name: string; kind: 'static' | 'rest'; mode: 'collection' | 'single';
+  id: string; name: string; kind: 'static' | 'rest' | 'collection'; mode: 'collection' | 'single';
+  fields?: import('./collections.mjs').CollectionField[]; records?: import('./collections.mjs').CollectionRecord[];
+  detailField?: string; detailParameter?: string;
   items?: JsonValue; url?: string; method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
   headers?: Record<string, string>; query?: Record<string, string>; body?: JsonValue;
   responsePath?: string; timeoutMs?: number; pageSize?: number;
