@@ -18,15 +18,23 @@ import { AnimatedButton, AnimatedAccordion, FadeIn, HighlightText } from './anim
 import { defaultFrame, safeUrl, isExtendedComponent, type Block, type BlockProps, type PageDocument } from '../model';
 import { blockThemeStyle, blockPortalThemeStyle, pageThemeStyle, getTheme } from '../lib/themes';
 import { usePageLinks } from '../lib/navigation';
+import { siteMenuPath } from '../lib/site-navigation';
 import { LibraryBlock } from './LibraryBlocks';
 import '../page.css';
 import '../native-catalog.css';
 import { PageBlockTheme, PagePreviewTheme, useSystemScheme, type PageThemeSelection } from './PagePreviewTheme';
 import { BlockRuntimeProvider, NativeRuntimeContext, useBlockValue } from './NativeInteractions';
 import { CustomBlockContent } from './custom/CustomComponentFrame';
+import { DataRuntimeProvider, useDataSource } from './data/DataRuntime';
+import { bindingDataRoot } from '../lib/data/bindings';
+import { RepeaterBlock, DataTableBlock } from './data/RepeaterBlock';
+import { FormBlock } from './data/FormBlock';
+import { ChartBlock } from './data/ChartBlock';
+import './data/data-blocks.css';
+import type { DataSource } from '../../shared/data-sources.mjs';
 
 type BlockRendererProps = { block: Block; settings: PageDocument['settings']; interactive?: boolean; bounded?: boolean; preview?: boolean };
-type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string> };
+type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string>; dataSources?: DataSource[]; dataAccess?: { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string } };
 
 function parseItems(items = '') {
   return items.split('\n').map(line => line.trim()).filter(Boolean).map((line, index) => {
@@ -66,21 +74,30 @@ function NavbarMark({ props }: { props: BlockProps }) {
 }
 
 function BlockContent({ block, settings, interactive, snapshot }: { block: Block; settings: PageDocument['settings']; interactive: boolean; snapshot: boolean }) {
-  const { navigate, safeUrl, isCurrent } = usePageLinks();
+  const { navigate, safeUrl, isCurrent, sitePages } = usePageLinks();
   const domId = useId();
   const p = block.props;
   const [inputValue, setInputValue] = useBlockValue<string>('');
   const [checked, setChecked] = useBlockValue(p.checked ?? false, 'checked');
   const [index, setIndex] = useBlockValue(p.value ?? 0);
+  const dataRoot = bindingDataRoot(block.bindings), dataState = useDataSource(dataRoot);
+  if (dataRoot && dataState.source && dataState.status !== 'ready') return dataState.status === 'error'
+    ? <div className="data-inline-state" role="alert"><span>{dataState.error}</span><button type="button" disabled={!interactive} onClick={dataState.refresh}>重试</button></div>
+    : <div className="data-inline-state" role="status" aria-busy="true">正在读取数据…</div>;
   if (isExtendedComponent(block.type)) return <CatalogBlock block={{...block, type: block.type}} snapshot={snapshot}/>;
   if (block.type === 'custom') return <CustomBlockContent block={block} settings={settings} interactive={interactive}/>;
+  if (block.type === 'repeater') return <RepeaterBlock block={block} settings={settings} interactive={interactive}/>;
+  if (block.type === 'form') return <FormBlock block={block} interactive={interactive}/>;
+  if (block.type === 'chart') return <ChartBlock block={block} interactive={interactive}/>;
+  if (block.type === 'table' && p.sourceId) return <DataTableBlock block={block} interactive={interactive}/>;
   switch (block.type) {
     case 'navbar': {
-      const links = (p.items || '').split(/[,，\n]/).map(item => item.trim()).filter(item => item.split('|')[0].trim());
+      const links = p.navigation === 'site'
+        ? sitePages.filter(entry => entry.kind !== 'notFound').map(entry => ({ label: entry.name, url: siteMenuPath(entry) }))
+        : (p.items || '').split(/[,，\n]/).map(item => item.trim()).filter(item => item.split('|')[0].trim()).map(item => { const [label, url] = item.split('|'); return { label, url }; });
       return <nav className="page-navbar" aria-label="页面导航"><a className="page-brand" href="#" onClick={event => navigate(event, "#")} tabIndex={interactive ? 0 : -1}><NavbarMark key={`${p.brandIcon}:${p.imageUrl}`} props={p} /><span className="page-brand-title">{p.title}</span><span className="page-brand-dot">.</span></a><div className="page-nav-links">{links.map((item, i) => {
-        const [label, url] = item.split('|');
-        const href = safeUrl(url || ['#features', '#about', '#contact'][i % 3]);
-        return <a key={`${item}-${i}`} href={href} aria-current={isCurrent(href) ? 'page' : undefined} onClick={event => navigate(event, href)} tabIndex={interactive ? 0 : -1}>{label}</a>;
+        const href = safeUrl(item.url || ['#features', '#about', '#contact'][i % 3]);
+        return <a key={`${item.label}-${item.url}-${i}`} href={href} aria-current={isCurrent(href) ? 'page' : undefined} onClick={event => navigate(event, href)} tabIndex={interactive ? 0 : -1}>{item.label}</a>;
       })}</div></nav>;
     }
     case 'hero': {
@@ -129,7 +146,7 @@ export function BlockRenderer({ block: savedBlock, settings, interactive = true,
   const style = { textAlign: p.align, fontSize: p.fontSize, '--block-padding': `${p.padding ?? 20}px`, '--block-font-size': p.fontSize ? `${p.fontSize}px` : undefined, '--block-color': p.color, '--block-items': p.align === 'left' ? 'flex-start' : p.align === 'right' ? 'flex-end' : 'center', ...blockThemeStyle(block, settings), ...componentScaleStyle(block) } as CSSProperties;
   const className = `page-block page-block--${block.type}${bounded ? ' page-block--bounded' : ''}`;
   const baseContent = <BlockRuntimeProvider block={block} runtime={runtime}><div className="page-block-content" inert={!enabled} data-interactive={enabled} aria-disabled={!enabled || undefined} onClick={event => {
-    if (enabled && event.currentTarget.contains(event.target as Node)) void runtime?.dispatch(block.id, 'click', runtime.read(block.bindings?.value, p.value));
+    if (enabled && event.currentTarget.contains(event.target as Node) && !(block.type === 'repeater' && (event.target as Element).closest('[data-repeater-item]'))) void runtime?.dispatch(block.id, 'click', runtime.read(block.bindings?.value, p.value));
   }}><PageBlockTheme.Provider value={blockPortalThemeStyle(block, settings)}><AnimateUIProvider {...motionProps<typeof AnimateUIProvider>(block, 'AnimateUIProvider')}><BlockContent block={block} settings={settings} interactive={enabled} snapshot={preview} /></AnimateUIProvider></PageBlockTheme.Provider></div></BlockRuntimeProvider>;
   const content = preview || !p.effect || p.effect === 'none' ? baseContent : <div className="official-effect-boundary" inert={!enabled}><OfficialEffect key={p.effect==='page-transition'?p.effect:`${p.effect}:${JSON.stringify(p.effectOptions ?? {})}`} block={block}>{baseContent}</OfficialEffect></div>;
   if (preview) return <div className={className} data-theme={p.theme??settings.theme} data-page-scheme={getTheme(p.theme??settings.theme, settings.customThemes).scheme} style={style}>{content}</div>;
@@ -188,7 +205,9 @@ export function FreePage({ document, interactive = true, replayKey = 0 }: PageRe
   </div></PagePreviewTheme.Provider>;
 }
 
-export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route }: PageRendererProps) {
-  if (interactive && (document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))) return <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} />;
-  return <FreePage document={document} interactive={interactive} replayKey={replayKey} />;
+export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route, dataSources = [], dataAccess = { scope: 'preview' } }: PageRendererProps) {
+  const content = interactive && (dataSources.length > 0 || document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))
+    ? <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} />
+    : <FreePage document={document} interactive={interactive} replayKey={replayKey} />;
+  return <DataRuntimeProvider sources={dataSources} access={dataAccess} route={route}>{content}</DataRuntimeProvider>;
 }

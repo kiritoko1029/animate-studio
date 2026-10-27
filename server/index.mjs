@@ -9,6 +9,9 @@ import { createPageRepository } from '../db/page-repository.ts';
 import { createComponentRepository } from '../db/component-repository.ts';
 import { handleAccountApi, toResponsePayload } from './account-api.ts';
 import { createResendSender } from './resend-sender.ts';
+import { createDataCredentialRepository } from '../db/data-credential-repository.ts';
+import { lookupNode, fetchNodeData } from './data-query-node.ts';
+import { normalizeAllowedHost } from './data-query.ts';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -18,6 +21,7 @@ export async function createApp({
   production = process.env.NODE_ENV === 'production',
   store = createPageStore({ dataDir }),
   accounts,
+  viteConfig,
 } = {}) {
   const accountStack = accounts === undefined ? await createAccountStack(production, dataDir) : accounts;
   const app = express();
@@ -78,7 +82,7 @@ export async function createApp({
     } else {
       const { createServer } = await import('vite');
       // The runner avoids generated config modules that would retrigger Node's watcher.
-      vite = await createServer({ root: projectRoot, configLoader: 'runner', server: { middlewareMode: true }, appType: 'spa' });
+      vite = await createServer({ root: projectRoot, configLoader: 'runner', server: { ...viteConfig?.server, middlewareMode: true }, appType: 'spa' });
       app.use(vite.middlewares);
     }
   }
@@ -131,6 +135,11 @@ async function createAccountStack(production, dataDir) {
       capabilities: factory.capabilities,
       trustedOrigins: env.STUDIO_TRUSTED_ORIGINS ? env.STUDIO_TRUSTED_ORIGINS.split(',').map(v => v.trim()).filter(Boolean) : undefined,
       resolveUser: request => resolveSessionUser(factory.auth, request),
+      data: {
+        credentials: createDataCredentialRepository(database.db, database.schema.studioDataCredentials, database.dialect),
+        encryptionSecret: env.BETTER_AUTH_SECRET || 'animate-studio-development-secret',
+        query: { lookup: lookupNode, connect: fetchNodeData, allowedHosts: (env.STUDIO_DATA_ALLOWED_HOSTS ?? '').split(',').map(value => value.trim()).filter(Boolean).map(normalizeAllowedHost) },
+      },
     };
     return { factory, context, allowLegacyPageApi: env.STUDIO_ALLOW_LEGACY_PAGE_API === '1', close: () => database.close() };
   } catch (error) {

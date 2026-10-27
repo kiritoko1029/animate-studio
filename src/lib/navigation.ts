@@ -21,5 +21,6 @@ export function usePageLinks() {
   const site = useSiteNavigation();
   const go = useCallback((event: MouseEvent<HTMLElement>, url?: string) => navigate(event, url, site), [site]);
   const href = useCallback((raw?: string) => { const url = safeUrl(raw); return site?.href(url) ?? url; }, [site]);
-  return { navigate: go, safeUrl: href, isCurrent: site?.isCurrent ?? (() => false) };
+  const isCurrent = useCallback((raw?: string) => site?.isCurrent(safeUrl(raw)) ?? false, [site]);
+  return { navigate: go, safeUrl: href, isCurrent, sitePages: site?.pages ?? [], siteName: site?.siteName, currentPageId: site?.currentPageId, currentPath: site?.currentPath, route: site?.route };
 }

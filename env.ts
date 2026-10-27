@@ -10,4 +10,5 @@ export default defineEnv({
   AUTH_GITHUB_CLIENT_SECRET: string().optional(),
   STUDIO_TRUSTED_ORIGINS: string().optional(),
   DATABASE_URL: string().optional(),
+  STUDIO_DATA_ALLOWED_HOSTS: string().optional(),
 });

@@ -10,7 +10,7 @@ export function bindingVariableTypes(block, key) {
   if (key === 'value') return block.type === 'input' ? ['string', 'number'] : ['textarea', 'select', 'combobox', 'inputOtp'].includes(block.type) ? ['string'] : ['number'];
   return ['string', 'number', 'boolean', 'object', 'array'];
 }
-export function eventNames(type) { return ['click', ...(valueTypes.includes(type) || ['checkbox', 'switch', 'toggle', 'iconButton', 'collapsible', 'sidebar'].includes(type) ? ['change'] : [])]; }
+export function eventNames(type) { return ['click', ...(valueTypes.includes(type) || ['chart', 'checkbox', 'switch', 'toggle', 'iconButton', 'collapsible', 'sidebar'].includes(type) ? ['change'] : [])]; }
 export function validateInteractions(page) {
   const fail = message => { throw new Error(message); };
   const plain = value => value && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype;
@@ -54,6 +54,7 @@ export function validateInteractions(page) {
     }
   }
   for (const block of page.blocks) {
+    if (block.props.filterVariable && !variables.some(variable => variable.name === block.props.filterVariable && variable.type === 'string')) fail('图表筛选需要已定义的文本变量');
     if (block.bindings !== undefined) {
       keys(block.bindings, bindingKeys(block), []);
       for (const [key, binding] of Object.entries(block.bindings)) {
@@ -85,7 +86,7 @@ export function variableIsUsed(page, name) {
   function actionUses(action) {
     return action.variable === name || typeof action.expression === 'string' && expressionUses(action.expression) || action.type === 'condition' && [...action.then, ...action.else].some(actionUses);
   }
-  const inBlocks = page.blocks.some(block => Object.values(block.bindings || {}).some(binding => binding.kind === 'variable' ? binding.value === name : expressionUses(binding.value)) || Object.values(block.events || {}).some(actions => actions.some(actionUses)));
+  const inBlocks = page.blocks.some(block => block.props.filterVariable === name || Object.values(block.bindings || {}).some(binding => binding.kind === 'variable' ? binding.value === name : expressionUses(binding.value)) || Object.values(block.events || {}).some(actions => actions.some(actionUses)));
   const inScripts = (page.scripts || []).some(script => new RegExp(`\\b${name}\\b`).test(script.code) || /ctx\.state\s*\[\s*[A-Za-z_$]/.test(script.code));
   return inBlocks || inScripts;
 }

@@ -10,6 +10,7 @@ import { NativeRuntimeContext, type NativeRuntime } from './NativeInteractions';
 import { safeUrl } from '../model';
 import { findPageAnchor } from '../lib/page-anchors';
 import { useSiteNavigation } from '../lib/site-navigation';
+import { RuntimeDataBridge } from './data/DataRuntime';
 import '../interactions.css';
 
 function PreviewNotice({ message, onClose, translate }: { message: string; onClose: () => void; translate: (message: string) => string }) {
@@ -25,6 +26,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
   const container = useRef<HTMLDivElement>(null);
   const siteNavigation = useSiteNavigation();
   const [state, setState] = useState<Record<string, JsonValue>>({});
+  const [, setDataRevision] = useState(0);
   const [logs, setLogs] = useState<RuntimeLog[]>([]);
   const [expanded, setExpanded] = useState(debug);
   const [notice, setNotice] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
   const runtime = useMemo(() => {
     const next = createInteractionRuntime(document, {
     storageKey: variableStorageKey(document, persistenceScope), route: route ?? siteNavigation?.params ?? {},
+    onData: () => setDataRevision(value => value + 1),
     onState: setState,
     onLog: entry => queueMicrotask(() => { if (activeRuntime.current === next) setLogs(items => [...items.slice(-99), entry]); }),
     onNotify: setNotice, onBack: () => siteNavigation?.back(),
@@ -61,7 +64,7 @@ export const InteractivePreview = forwardRef<PreviewHandle, { document: PageDocu
     return () => { activeRuntime.current = null; runtime.dispose(); };
   }, [runtime]);
   return <div className="interactive-preview" ref={container}>
-    <NativeRuntimeContext.Provider value={{ runtime, state }}><FreePage key={revision} document={document} /></NativeRuntimeContext.Provider>
+    <NativeRuntimeContext.Provider value={{ runtime, state }}><RuntimeDataBridge route={route ?? siteNavigation?.params ?? {}} state={state} blocks={document.blocks}/><FreePage key={revision} document={document} /></NativeRuntimeContext.Provider>
     {notice !== null && <PreviewNotice translate={translate} message={notice} onClose={() => setNotice(null)} />}
     <div className="runtime-debug">
       <div className="runtime-debug-heading"><StudioButton onClick={() => setExpanded(!expanded)}><Bug size={14} />{translate('运行调试')}<span className="logic-status ready">{translate('运行中')}</span><ChevronDown size={13} /></StudioButton><StudioButton onClick={reset} title={translate('重置运行数据')}><RotateCcw size={13} />{translate('重置')}</StudioButton></div>

@@ -6,6 +6,8 @@ import { handleAccountApi, toResponsePayload } from './account-api.ts';
 import { createResendSender } from './resend-sender.ts';
 import * as sqliteSchema from '../db/schema.ts';
 import { randomUUID } from 'node:crypto';
+import { createDataCredentialRepository } from '../db/data-credential-repository.ts';
+import { normalizeAllowedHost } from './data-query.ts';
 
 /**
  * Cloudflare-side account API.
@@ -31,6 +33,7 @@ type Env = {
   AUTH_GITHUB_CLIENT_ID?: string;
   AUTH_GITHUB_CLIENT_SECRET?: string;
   STUDIO_TRUSTED_ORIGINS?: string;
+  STUDIO_DATA_ALLOWED_HOSTS?: string;
 };
 
 const json = (body: unknown, status = 200, extra: Record<string, string> = {}) => Response.json(body, {
@@ -79,6 +82,11 @@ export async function handleCloudAccountApi(request: Request, env: Env): Promise
       capabilities: factory.capabilities,
       trustedOrigins: env.STUDIO_TRUSTED_ORIGINS?.split(',').map(v => v.trim()).filter(Boolean),
       resolveUser: req => resolveSessionUser(factory.auth, req),
+      data: {
+        credentials: createDataCredentialRepository(database.db, (database.schema as typeof sqliteSchema).studioDataCredentials, database.provider),
+        encryptionSecret: secret,
+        query: { allowedHosts: (env.STUDIO_DATA_ALLOWED_HOSTS ?? '').split(',').map(value => value.trim()).filter(Boolean).map(normalizeAllowedHost), connect: connection => import('./cloud-data-transport.ts').then(module => module.fetchCloudData(connection)) },
+      },
     }, path);
     if (!result) return json({ error: '未找到 API。' }, 404);
     const payload = toResponsePayload(result);

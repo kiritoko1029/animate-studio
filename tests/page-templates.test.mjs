@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDocument } from '../src/model.ts';
-import { createTaskDocument } from '../src/lib/page-templates.ts';
-import { validatePage } from '../server/validation.mjs';
+import { createTaskDocument, createTaskSiteDocument } from '../src/lib/page-templates.ts';
+import { validatePage, validateSite } from '../server/validation.mjs';
 
 const tasks = ['website', 'dashboard', 'internal'];
 
@@ -14,14 +14,14 @@ function contentShape(page) {
   };
 }
 
-test('all task documents pass strict validation on a 1080p free canvas with unique block IDs', () => {
+test('all task documents pass strict validation on a task-sized free canvas with unique block IDs', () => {
   for (const task of tasks) {
     const page = createTaskDocument(task);
     assert.doesNotThrow(() => validatePage(page), task);
     assert.equal(page.version, 1);
     assert.equal(page.settings.layout, 'free');
     assert.equal(page.settings.maxWidth, 1920);
-    assert.equal(page.settings.canvasHeight, 1080);
+    assert.equal(page.settings.canvasHeight, task === 'dashboard' ? 1220 : 1080);
     assert.match(page.name, /[一-鿿]/);
     assert.ok(page.blocks.length > 0);
     assert.equal(new Set(page.blocks.map(block => block.id)).size, page.blocks.length, task);
@@ -55,7 +55,7 @@ test('website reuses the inspiration template and task templates contain their k
   assert.deepEqual(contentShape(createTaskDocument('website')), contentShape(createDocument()));
 
   const dashboard = createTaskDocument('dashboard');
-  for (const type of ['heading', 'statistic', 'table', 'progress']) {
+  for (const type of ['heading', 'statistic', 'chart', 'table', 'progress']) {
     assert.ok(dashboard.blocks.some(block => block.type === type), `dashboard includes ${type}`);
   }
   assert.ok(dashboard.blocks.some(block => block.type === 'statistic' && block.props.text === '12,840'));
@@ -79,4 +79,21 @@ test('repeated creation never shares page or block IDs', () => {
   assert.equal(new Set(pages.map(page => page.id)).size, pages.length);
   const blockIds = pages.flatMap(page => page.blocks.map(block => block.id));
   assert.equal(new Set(blockIds).size, blockIds.length);
+});
+
+test('dashboard site template shares an editable static source between chart and table', () => {
+  const site = createTaskSiteDocument('dashboard');
+  validateSite(site);
+  const chart = site.pages[0].page.blocks.find(block => block.type === 'chart');
+  const table = site.pages[0].page.blocks.find(block => block.type === 'table');
+  assert.equal(site.dataSources.length, 1);
+  assert.equal(site.dataSources[0].id, 'sales');
+  assert.equal(chart.props.sourceId, 'sales');
+  assert.equal(table.props.sourceId, 'sales');
+  assert.equal(chart.props.categoryField, 'month');
+  assert.deepEqual(chart.props.dataColumns.map(column => column.path), ['visitors', 'target']);
+  assert.deepEqual(table.props.dataColumns.map(column => column.path), ['month', 'visitors', 'target', 'orders']);
+  assert.equal(table.props.items, undefined);
+  assert.ok(site.dataSources[0].items.every(item => ['month', 'visitors', 'target', 'orders'].every(key => Object.hasOwn(item, key))));
+  assert.equal(createTaskSiteDocument('website').dataSources, undefined);
 });

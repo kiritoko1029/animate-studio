@@ -11,17 +11,20 @@ const bundle = await build({ stdin: { contents: `import {createRoot} from 'react
 const until = async (predicate, message) => { const end = Date.now() + 4000; while (!predicate()) { if (Date.now() > end) assert.fail(message); await new Promise(resolve => setTimeout(resolve, 10)); } };
 function siteFixture() {
   const site = createSiteDocument(createDocument(true));
+  site.pages[0].name = '首页'; site.pages[0].page.name = '首页';
   const go = createBlock('button'); Object.assign(go, { id: 'go', props: { ...go.props, label: '查看详情', url: '/products/42' }, frame: { x: 40, y: 40, width: 240, height: 100 } });
   const missing = createBlock('button'); Object.assign(missing, { id: 'missing', props: { ...missing.props, label: '失效链接', url: '/missing' }, frame: { x: 300, y: 40, width: 240, height: 100 } });
   const external = createBlock('button'); Object.assign(external, { id: 'external', props: { ...external.props, label: '外部网站', url: 'https://example.com' }, frame: { x: 560, y: 40, width: 240, height: 100 } });
   site.pages[0].page.blocks = [go, missing, external];
-  const list = createSitePage(site, '产品列表'); list.path = '/products';
+  const list = createSitePage(site, '产品|列表'); list.path = '/products';
   const detail = createSitePage(site, '产品详情', 'detail'); detail.path = '/products/:id';
   const text = createBlock('text'); Object.assign(text, { id: 'route-text', frame: { x: 40, y: 40, width: 600, height: 160 }, bindings: { text: { kind: 'expression', value: 'route.id' } } });
   detail.page.blocks = [text]; site.pages.push(list, detail);
   site.sharedLayout.header = createLayoutDocument('header', site.pages[0].page.settings);
-  site.sharedLayout.header.blocks = [{ ...createBlock('navbar'), id: 'shared-nav', props: { ...createBlock('navbar').props, items: '首页|/,产品|/products' }, frame: { x: 0, y: 0, width: 1920, height: 85 } }];
-  for (const entry of site.pages) entry.layout = ['header'];
+  site.sharedLayout.header.blocks = [{ ...createBlock('navbar'), id: 'shared-nav', props: { ...createBlock('navbar').props, navigation: 'site' }, frame: { x: 0, y: 0, width: 1920, height: 85 } }];
+  site.sharedLayout.sidebar = createLayoutDocument('sidebar', site.pages[0].page.settings);
+  site.sharedLayout.sidebar.blocks = [{ ...createBlock('sidebar'), id: 'site-sidebar', props: { ...createBlock('sidebar').props, navigation: 'site' }, frame: { x: 0, y: 0, width: 292, height: 600 } }];
+  for (const entry of site.pages) entry.layout = ['header', 'sidebar'];
   return { site, detail };
 }
 function fixture(t, mode, path) {
@@ -44,12 +47,14 @@ test('shared site navigation resolves dynamic parameters, history, missing links
   const f = fixture(t, 'share', '/p/token');
   await until(() => f.doc.querySelector('[data-block-id="go"] button'), 'home renders');
   assert.ok(f.doc.querySelector('a[href="/p/token/products"]'), 'shared layout uses the token base path');
+  await until(() => f.doc.querySelector('.native-sidebar-sub a[href="/p/token/products"]'), 'sidebar is generated from the site page tree');
   assert.equal(f.doc.querySelector('.page-nav-links a[aria-current="page"]').textContent, '首页');
   f.click(f.doc.querySelector('[data-block-id="go"] button'));
   await until(() => f.doc.querySelector('.site-preview')?.dataset.sitePage === f.detail.id, 'detail route renders');
   await until(() => f.doc.querySelector('[data-block-id="route-text"]')?.textContent === '42', 'route parameter binds into page content');
   assert.equal(f.win.location.pathname, '/p/token/products/42');
-  assert.equal(f.doc.querySelector('.page-nav-links a[aria-current="page"]').textContent, '产品');
+  assert.equal(f.doc.querySelector('.page-nav-links a[aria-current="page"]').textContent, '产品|列表');
+  assert.equal(f.doc.querySelector('.native-sidebar-sub a[aria-current="page"]').textContent, '产品|列表');
   f.click(f.doc.querySelector('[aria-label="返回上一页"]'));
   await until(() => f.doc.querySelector('.site-preview')?.dataset.sitePage === f.site.homePageId, 'browser back returns home');
   f.click(f.doc.querySelector('[data-block-id="missing"] button'));

@@ -12,7 +12,7 @@ import type { Bindings, Action, Variable, Script } from './lib/interactions/type
 import type { CustomTheme, ThemeId } from './lib/themes';
 export type { SiteDocument, StudioDocument } from '../shared/site-document.mjs';
 
-export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', ...Object.keys(extendedComponents) as ExtendedComponentType[]] as const;
+export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'repeater', 'form', 'chart', ...Object.keys(extendedComponents) as ExtendedComponentType[]] as const;
 /** Built-in library types, created from catalog defaults. */
 export type BuiltinComponentType = typeof componentTypes[number];
 /** `custom` blocks are user-written components created from a definition, never from defaults. */
@@ -28,11 +28,20 @@ export type BlockProps = {
   value?: number; max?: number; checked?: boolean;
   theme?: ThemeId; accent?: string;
   animation?: 'none' | 'fade' | 'slide' | 'scale';
+  navigation?: 'custom' | 'site';
+  sourceId?: string; submitSourceId?: string;
+  dataFields?: Record<string, Partial<Record<'title' | 'text' | 'label' | 'url', string>>>;
+  dataColumns?: { key: string; label: string; path: string; aggregate?: 'sum' | 'count' | 'avg' | 'min' | 'max' }[];
+  chartType?: 'line' | 'area' | 'column' | 'bar' | 'pie'; categoryField?: string;
+  chartColors?: string[]; showLegend?: boolean; showGrid?: boolean; showTooltip?: boolean; showValues?: boolean; innerRadius?: number;
+  filterField?: string; filterVariable?: string;
+  name?: string; required?: boolean; format?: 'text' | 'email' | 'url' | 'number'; minLength?: number; maxLength?: number; error?: string;
+  successUrl?: string; successText?: string; errorText?: string;
   /** `custom` blocks only: the component definition copied into the page. */
   custom?: CustomComponentSnapshot;
 };
 export type BlockFrame = { x: number; y: number; width: number; height: number };
-export type Block = { id: string; type: ComponentType; props: BlockProps; frame?: BlockFrame; bindings?: Bindings; events?: { click?: Action[]; change?: Action[] } };
+export type Block = { id: string; type: ComponentType; props: BlockProps; frame?: BlockFrame; children?: Block[]; bindings?: Bindings; events?: { click?: Action[]; change?: Action[] } };
 export type PageDocument = {
   version: 1; name: string; id?: string;
   settings: { background: string; accent: string; theme?: ThemeId; customThemes?: CustomTheme[]; maxWidth: number; padding: number; layout?: 'flow' | 'free'; canvasHeight?: number };
@@ -69,6 +78,9 @@ export const catalog: {type: BuiltinComponentType; name: string; english: string
   { type: 'breadcrumb', name: '面包屑', english: 'Breadcrumb', group: '布局', description: '展示当前位置与导航层级' },
   { type: 'pagination', name: '分页', english: 'Pagination', group: '交互', description: '切换页码与前后页状态' },
   { type: 'rating', name: '评分', english: 'Rating', group: '交互', description: '交互式五星评分与反馈' },
+  { type: 'repeater', name: '动态列表', english: 'Repeater', group: '数据', description: '连接数据源，重复渲染每条记录' },
+  { type: 'form', name: '数据表单', english: 'Data form', group: '数据', description: '校验并提交创建或更新请求' },
+  { type: 'chart', name: '数据图表', english: 'Data chart', group: '数据', description: '用统一数据源展示趋势、比较与构成' },
   ...Object.entries(extendedComponents).map(([type, entry]) => ({ type: type as ExtendedComponentType, name: entry.name, english: entry.english, group: entry.group, description: entry.description })),
 ];
 const defaults: Record<BuiltinComponentType, BlockProps> = {
@@ -97,6 +109,9 @@ const defaults: Record<BuiltinComponentType, BlockProps> = {
   progress: {label:'项目完成进度',text:'一步一步，让想法成为现实。',value:72,max:100,padding:20},
   statistic: {title:'本月访问量',text:'12,840',label:'+18.6% 较上月',padding:24,radius:16,background:'#f5f7f5',animation:'fade'},
   table: {title:'项目一览',items:'项目名称|负责人|状态\n品牌官网|林晓|进行中\n设计系统|陈默|已完成\n灵感周刊|许宁|计划中',padding:20,radius:10},
+  repeater: {title:'动态列表',sourceId:'books',dataFields:{title:{title:'title'},description:{text:'text'},more:{url:'/details/{{item.id}}'}},padding:20},
+  form: {title:'新建记录',submitSourceId:'',successText:'提交成功',errorText:'提交失败，请检查后重试。',padding:24,radius:12},
+  chart: {title:'访问量趋势',sourceId:'',chartType:'line',categoryField:'category',dataColumns:[{key:'visits',label:'访问量',path:'value',aggregate:'sum'},{key:'target',label:'目标',path:'target',aggregate:'sum'}],showLegend:true,showGrid:true,showTooltip:true,showValues:false,innerRadius:50,padding:20,radius:12},
   timeline: {title:'从灵感到上线',items:'发现灵感|记录想法，找到值得解决的问题。|01\n打磨设计|用细节和交互，让体验更自然。|02\n准备出发|完成检查，把作品带给更多人。|03',padding:24},
   testimonial: {title:'林晓',label:'独立设计师',text:'终于可以把时间花在创意本身。从一个想法到完整页面，比想象中更简单。',padding:24,radius:16,background:'#f5f7f5',animation:'fade'},
   pricing: {title:'创作进阶',variant:'¥99 / 月',text:'为持续生长的好想法，准备更多可能。',items:'无限创意项目\n完整组件与动效\n导出与备份\n优先获得产品更新',label:'选择这个方案',url:'#contact',padding:24,radius:16,background:'#f5f7f5',animation:'fade'},
@@ -104,7 +119,20 @@ const defaults: Record<BuiltinComponentType, BlockProps> = {
   pagination: {label:'作品列表',value:1,max:5,padding:20},
   rating: {label:'这次体验怎么样？',text:'你的反馈，让下一次体验更好。',value:4,padding:20},
 };
-export const createBlock = (type: BuiltinComponentType): Block => ({id:crypto.randomUUID(),type,props:{...defaults[type]}});
+export const createBlock = (type: BuiltinComponentType): Block => {
+  const block: Block = { id: crypto.randomUUID(), type, props: JSON.parse(JSON.stringify(defaults[type])) };
+  if (type === 'repeater') block.children = [
+    { id: 'title', type: 'heading', props: { title: '条目标题', fontSize: 20, padding: 12 } },
+    { id: 'description', type: 'text', props: { text: '条目描述', fontSize: 14, padding: 12 } },
+    { id: 'more', type: 'button', props: { label: '查看详情', url: '/details/example', padding: 12, radius: 8 } },
+  ];
+  if (type === 'form') block.children = [
+    { id: 'title', type: 'input', props: { label: '标题', name: 'title', text: '请输入标题', required: true, maxLength: 120, padding: 8 } },
+    { id: 'description', type: 'textarea', props: { label: '描述', name: 'description', text: '补充说明（选填）', maxLength: 1000, padding: 8 } },
+    { id: 'submit', type: 'button', props: { label: '提交', padding: 8, radius: 8 } },
+  ];
+  return block;
+};
 export const frameSizes: Record<ComponentType, {width:number;height:number}> = {
   ...Object.fromEntries(Object.entries(extendedComponents).map(([type, entry]) => [type, entry.frame])) as Record<ExtendedComponentType, {width:number;height:number}>,
   // hero fits its default copy even when the headline reaches its 58px cap (wide or scaled frames); image fits its caption.
@@ -117,7 +145,7 @@ export const frameSizes: Record<ComponentType, {width:number;height:number}> = {
   radio:{width:400,height:310},slider:{width:360,height:160},avatar:{width:340,height:120},
   progress:{width:380,height:150},statistic:{width:300,height:200},table:{width:560,height:310},
   timeline:{width:440,height:370},testimonial:{width:400,height:280},pricing:{width:360,height:480},
-  breadcrumb:{width:440,height:90},pagination:{width:440,height:150},rating:{width:360,height:180},
+  breadcrumb:{width:440,height:90},pagination:{width:440,height:150},rating:{width:360,height:180},repeater:{width:560,height:820},form:{width:480,height:640},chart:{width:640,height:440},
   custom:{width:360,height:240},
 };
 export function defaultFrame(type: ComponentType, canvasWidth: number, x = 32, y = 32): BlockFrame {

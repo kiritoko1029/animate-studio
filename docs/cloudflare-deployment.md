@@ -44,6 +44,8 @@ npm run deploy:cloudflare
 
 `.env`、`.dev.vars`、`.void/`、`.wrangler/` 和生成的 `.void-wrangler.jsonc` 不纳入 Git；Cloudflare 登录信息不放入仓库。
 
+数据源的受控代理复用账号密钥派生加密密钥，将密文保存在 D1；列表与页面快照只返回凭据引用和允许主机，不返回密钥。Worker 通过 `cloudflare-dns.com` 的 DNS-over-HTTPS 检查代理目标的解析地址，Node 使用系统 DNS；解析服务会看到目标主机名，但不会收到数据凭据。`STUDIO_DATA_ALLOWED_HOSTS` 只用于显式允许本机测试主机，不能作为生产环境的通用内网放行开关。公开读取优先使用浏览器直接请求，无需代理。
+
 ## GitHub Actions 自动发布
 
 工作流位于 [.github/workflows/cloudflare.yml](../.github/workflows/cloudflare.yml)：

@@ -100,13 +100,19 @@ test('quality report resamples after layout and fonts, locates issues, and relea
   win.document.fonts = { ready: new Promise(resolve => { ready = resolve; }) };
   win.eval(bundle.outputFiles[0].text); win.mount(page(block('main')));
   const settle = () => new Promise(resolve => win.requestAnimationFrame(() => win.requestAnimationFrame(resolve)));
-  await settle();
-  assert.match(win.document.querySelector('[data-ai-quality]').textContent, /当前未发现/);
-  scrollHeight = 180; callbacks[0](); await settle();
-  assert.match(win.document.querySelector('[data-ai-quality]').textContent, /内容可能溢出/);
+  const until = async (predicate, message) => {
+    const deadline = Date.now() + 4000;
+    while (!predicate()) {
+      if (Date.now() > deadline) assert.fail(`${message}: ${win.document.querySelector('[data-ai-quality]')?.textContent}`);
+      await new Promise(resolve => win.requestAnimationFrame(resolve));
+    }
+  };
+  await until(() => win.document.querySelector('[data-ai-quality]')?.textContent.includes('当前未发现'), 'initial report settles');
+  scrollHeight = 180; callbacks[0]();
+  await until(() => win.document.querySelector('[data-ai-quality]')?.textContent.includes('内容可能溢出'), 'overflow report settles');
   win.document.querySelector('[data-ai-quality] button').click(); assert.equal(win.revealed, 'main');
-  scrollHeight = 120; ready(); await settle();
-  assert.match(win.document.querySelector('[data-ai-quality]').textContent, /当前未发现/);
+  scrollHeight = 120; ready();
+  await until(() => win.document.querySelector('[data-ai-quality]')?.textContent.includes('当前未发现'), 'font readiness report settles');
   win.unmount();
   assert.ok(observers.every(observer => observer.disconnected));
   callbacks[0](); await settle(); assert.equal(win.document.querySelector('[data-ai-quality]'), null, 'late layout notifications cannot recreate an unmounted report');

@@ -1,5 +1,8 @@
 import type { PageDocument } from '../../model.ts';
 import type { CustomComponentDefinition, CustomComponentFields, CustomComponentSize } from '../../../shared/custom-components.mjs';
+import type { DataSource } from '../../../shared/data-sources.mjs';
+import type { SiteRegion } from '../../../shared/site-document.mjs';
+export type AiPublicDataSource = Omit<DataSource, 'method' | 'transport' | 'credentialId' | 'headers' | 'query' | 'body'> & { method?: 'GET'; transport?: 'direct' };
 
 export type AiProvider = 'openai' | 'anthropic';
 export type AiCreationMode = 'page' | 'component';
@@ -34,13 +37,13 @@ export type AiSession = {
 };
 export type AiChange = { key: string; blockId?: string; kind: 'add' | 'update' | 'remove' | 'page'; summary: string; time: number; frame?: { x: number; y: number; width: number; height: number } };
 export type AiOperation = {
-  v: 1; seq: number; op: 'message' | 'page' | 'add' | 'update' | 'remove' | 'data' | 'ask' | 'done' | 'component' | 'sitePlan' | 'sitePage' | 'siteLayout';
+  v: 1; seq: number; op: 'message' | 'page' | 'add' | 'update' | 'remove' | 'data' | 'ask' | 'done' | 'component' | 'sitePlan' | 'sitePage' | 'siteLayout' | 'dataSource';
   summary?: string; text?: string; id?: string; type?: string;
   props?: Record<string, unknown>; frame?: Record<string, unknown>; settings?: Record<string, unknown>;
   name?: string; bindings?: unknown; events?: unknown; variables?: unknown; scripts?: unknown; questions?: AiQuestion[];
   component?: CustomComponentDefinition; componentRef?: AiComponentRef;
-  page?: PageDocument; pages?: { id: string; name: string; path: string; kind: 'page' | 'detail' | 'notFound'; layout: ('header' | 'footer')[] }[];
-  sharedLayout?: ('header' | 'footer')[]; deletes?: string[]; region?: 'header' | 'footer';
+  page?: PageDocument; pages?: { id: string; name: string; path: string; kind: 'page' | 'detail' | 'notFound'; layout: SiteRegion[] }[];
+  sharedLayout?: SiteRegion[]; deletes?: string[]; region?: SiteRegion; source?: AiPublicDataSource; dataSources?: AiPublicDataSource[];
 };
 /** Thinking text is provider-returned display content; summaries take precedence within each request. */
 export type AiStreamEvent = { type: 'connected' } | { type: 'text'; text: string } | { type: 'thinking'; text?: string; newPart?: boolean; source?: 'summary' | 'reasoning' } | { type: 'usage'; usage: AiUsage } | { type: 'complete' };

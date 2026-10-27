@@ -39,6 +39,10 @@ test('site page operations preserve independent drafts and stable ids', () => {
   assert.equal(next.pages[1].name, '项目列表');
   assert.equal(getActiveDocument(next, site.pages[1].id).name, '项目列表');
   assert.equal(site.pages[1].name, '作品列表', 'updates are immutable');
+  site.sharedLayout.sidebar = createLayoutDocument('sidebar', site.pages[0].page.settings);
+  const sidebar = replaceActiveDocument(site, 'sidebar', { ...site.sharedLayout.sidebar, name: '后台导航' });
+  assert.equal(getActiveDocument(sidebar, 'sidebar').name, '后台导航');
+  assert.equal(getActiveDocument(site, 'sidebar').name, '共享侧栏');
 });
 
 test('routing resolves static paths, dynamic parameters, encoded values and missing routes', () => {
@@ -76,6 +80,19 @@ test('shared layout composition offsets frames and namespaces script and block i
   assert.equal(withFooter.blocks.at(-1).id, 'footer-site-footer');
   assert.equal(withFooter.blocks.at(-1).frame.y, 320 + entry.page.settings.canvasHeight + 16);
   validatePage(withFooter); valid(site);
+  entry.layout = ['header', 'sidebar']; site.sharedLayout.sidebar = createLayoutDocument('sidebar', entry.page.settings);
+  site.sharedLayout.sidebar.blocks = [{ ...createBlock('text'), id: 'side-copy', frame: { x: 0, y: 32, width: 292, height: 160 } }];
+  const withSidebar = composeSitePage(site, entry);
+  assert.equal(withSidebar.blocks[0].frame.x, 48 + 320);
+  assert.equal(withSidebar.blocks.at(-1).frame.y, 320 + 32);
+  assert.equal(withSidebar.blocks.at(-1).id, 'sidebar-side-copy');
+  validatePage(withSidebar); valid(site);
+  site.sharedLayout.sidebar.settings.maxWidth = 800;
+  assert.throws(() => valid(site), /320–640/);
+  site.sharedLayout.sidebar.settings.maxWidth = 320;
+  entry.page.blocks[0].frame.x = 1800;
+  assert.throws(() => composeSitePage(site, entry), /超出页面宽度/);
+  entry.page.blocks[0].frame.x = 48;
   site.sharedLayout.footer.settings.canvasHeight = 1000; entry.page.settings.canvasHeight = 6000;
   assert.throws(() => composeSitePage(site, entry), /6000/);
 });

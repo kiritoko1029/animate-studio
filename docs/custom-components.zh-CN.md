@@ -75,6 +75,7 @@ document.querySelector('.welcome').addEventListener('click', () => {
 | `component.props` | 只读的实例字段：已启用的 `title`、`text`、`label`、`url`、`imageUrl` |
 | `component.onProps(fn)` | 字段或主题变化时调用 `fn(props, theme)`，返回取消监听函数 |
 | `component.theme` | 当前主题颜色、字体与圆角 |
+| `component.route` | 只读 `{ path, pageId, pattern, params }`，用于站点导航选中状态；不包含站点内容或账号信息 |
 | `component.log(...values)` | 向设计器控制台输出日志；也支持 `console.log / warn / error` |
 | `component.openLink(url)` | 请求打开符合页面链接规则的链接 |
 | `data-prop="title"` | 将元素文字与实例字段同步 |
@@ -82,6 +83,31 @@ document.querySelector('.welcome').addEventListener('click', () => {
 | `data-prop-src="imageUrl"` | 将图片地址与实例字段同步 |
 
 CSS 可以使用 `--as-accent`、`--as-on-accent`、`--as-text`、`--as-muted`、`--as-surface`、`--as-panel`、`--as-canvas`、`--as-border`、`--as-radius`、`--as-font`。深色主题的根元素带有 `data-scheme="dark"`。建议用百分比、flex 或 grid 适应组件框的尺寸。
+
+### 自定义后台导航
+
+普通导航直接选择“站点页面（自动同步）”，不必写组件代码。已有自定义侧栏需要迁移时，先建立真实页面并用 `/books`、`/loans` 等路径替换 `#library-*` 锚点，再通过路由设置选中项：
+
+```html
+<a data-page="home" href="/">首页</a>
+<a data-page="books" href="/books">馆藏</a>
+```
+
+```js
+function syncRoute() {
+  const current = component.route?.pageId;
+  document.querySelectorAll('[data-page]').forEach(link => {
+    const active = link.dataset.page === current;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
+component.onProps(syncRoute);
+syncRoute();
+```
+
+路由更新通过消息触发 `onProps`，不会重跑组件，也不会丢失局部输入状态。`component.route` 不含站点内容、账号信息或 `window.site`，原有沙箱、链接和 CSP 限制不变。
 
 ## 保存、恢复与版本
 

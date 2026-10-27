@@ -8,6 +8,7 @@ import type { PageDocument, SiteDocument } from '../src/model';
 import { validateSite } from './validation.mjs';
 import { siteLimits } from '../shared/site-document.mjs';
 import { validateInspectorDisclosures } from '../src/lib/workbench-preferences.ts';
+import { handleDataAccountApi, type DataAccountContext } from './data-account-api.ts';
 
 /**
  * Account API endpoints shared by the Express server and the Cloudflare
@@ -33,6 +34,7 @@ export type AccountApiContext = {
   trustedOrigins?: string[];
   /** The deployment's canonical origin (Better Auth baseURL). */
   canonicalOrigin?: string;
+  data?: Omit<DataAccountContext, 'repository'>;
 };
 
 type ApiResponsePayload = { status: number; body?: unknown; headers?: Record<string, string> };
@@ -100,6 +102,10 @@ export async function handleAccountApi(
 
   const session = await context.resolveUser(request);
   if (!session) return apiError(401, '请先登录后再使用云端页面。');
+  if (path.startsWith('/api/account/data/')) {
+    const data = await handleDataAccountApi(request, { repository, credentials: context.data?.credentials, encryptionSecret: context.data?.encryptionSecret, canonicalOrigin: context.canonicalOrigin, query: context.data?.query }, path, session.id);
+    if (data) return json(data.body, data.status);
+  }
 
   const sitesPrefix = '/api/account/sites';
   if (path === sitesPrefix) {

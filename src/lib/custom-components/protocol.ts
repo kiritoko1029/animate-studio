@@ -57,8 +57,8 @@ export function readFrameMessage(event: { source: unknown; data: unknown }, expe
 }
 
 /** Host-to-frame messages carry only display data: instance fields and theme values. */
-export function updateMessage(channel: string, props: Record<string, string>, theme: Record<string, string>) {
-  return { channel, type: 'update' as const, props: { ...props }, theme: { ...theme } };
+export function updateMessage(channel: string, props: Record<string, string>, theme: Record<string, string>, route?: import('./document').ComponentRoute) {
+  return { channel, type: 'update' as const, props: { ...props }, theme: { ...theme }, ...(route ? { route } : {}) };
 }
 
 /** Allows short bursts but stops a frame from flooding the page runtime. */

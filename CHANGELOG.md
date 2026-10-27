@@ -1,5 +1,37 @@
 # 更新日志 / Changelog
 
+## v2026.10.26.1 — 2026-10-26
+
+### 中文
+
+本次同日修订版把多页面站点扩展为可连接真实数据的低代码应用，并加入统一数据图表。普通用户无需编写脚本，即可完成后台列表、详情、表单和看板；旧页面、锚点、静态表格和导出行为保持兼容。
+
+- 新增站点级静态 JSON 与公开 REST 数据源，支持数组集合、单对象详情、字段推断、响应路径、安全模板、超时和分页。动态列表、数据表格与详情绑定共用加载、空数据、错误和重试状态；共享侧栏可同步站点菜单，自定义组件可读取路由参数。
+- 新增可视化表单字段配置、必填、邮箱、URL、数字和长度校验。POST、PUT、PATCH 每次实际提交前都确认方法和目标主机；生成配置、测试连接、自动保存、发布和导出不会自动写入。失败保留输入，成功后可查看结果并恢复提交前输入，但不自动撤销外部写入。
+- 可选服务端凭据按账号使用 AES-256-GCM 加密保存，页面只保存引用。受控代理仅用于登录属主的已保存站点编辑预览，并校验主机、重定向、私网地址、响应大小与超时；公开分享和导出继续使用公开直连数据。
+- 新增统一 `chart` 数据图表组件，组件总数达到 88。折线、面积、柱状、条形、饼图及环形变体使用原生 SVG，不新增图表库依赖。切换类型保留数据源与字段映射，支持维度、指标和多种聚合方式；静态数据汇总全部有效记录，REST 默认汇总当前页并明确标注。
+- 图表支持点选筛选、再次点选清除、撤销重做及换源后复用筛选变量，不覆盖已有事件。提供等价数据表、真实 SVG 和 2 倍像素 PNG；导出颜色不依赖页面 CSS 变量。手机通过可读的放大视图操作，支持键盘点选和 Esc 焦点恢复，不改变固定画布契约。
+- AI 整站任务可生成后台页面、共享侧栏、公开数据源和看板，继续执行计划确认、平台校验、独立检查点、修订检查和原子提交。已有数据源进入模型上下文前会脱敏；AI 不能添加凭据、代理或外部写入，也不会自动发布。
+
+**升级说明**：`PageDocument` 与 `SiteDocument` 的结构版本保持不变。新增 `studio_data_credential` 的 SQLite、PostgreSQL 和 D1 迁移，Node 启动时应用，Cloudflare 由 Void 部署时应用。REST 图表默认统计当前页，点选筛选作用于已加载数据，不代表服务端全量分析。第二批图表、整页自动响应式重排、CMS、媒体库和发布治理不在本次范围。
+
+**验证**：469 项自动化测试通过，双端类型检查、Node 与 Cloudflare 构建、完整差异格式检查通过。真实 Chrome 验证公开 REST 连接、动态列表与详情、确认后 POST/PUT、共享侧栏、全部图表类型、筛选与撤销、真实 SVG/PNG、HTML 导出刷新、分享深链、键盘操作及 390px 放大视图；深色图表文字对比度为 8.03:1。账号与凭据使用真实 SQLite 和本地可控 REST；分享使用本地快照，Cloudflare socket 使用模拟传输，AI 使用确定性模拟输出。未配置一次性 PostgreSQL 测试库，未调用真实模型、线上账号或远端 D1/Worker；远端部署与迁移由工作流执行。
+
+### English
+
+This same-day maintenance release turns multi-page sites into data-driven low-code applications and adds unified data charts. Users can build admin lists, details, forms, and dashboards without writing scripts, while existing pages, anchors, static tables, and export behavior remain compatible.
+
+- Added site-level static JSON and public REST sources with collection and single-object modes, field inference, response paths, safe templates, timeouts, and pagination. Repeaters, data tables, and detail bindings share loading, empty, error, and retry states. Shared sidebars can follow the site page tree, and custom components can read route parameters.
+- Added visual form fields with required, email, URL, numeric, and length validation. Every actual POST/PUT/PATCH submission requires confirmation of the method and host; generating configuration, testing connections, autosaving, publishing, and exporting never writes automatically. Failed submissions preserve input. Successful submissions expose the response and can restore prior input without reversing external writes.
+- Optional server credentials are encrypted per account with AES-256-GCM, with only references stored in page JSON. The controlled proxy is limited to an owner's saved-site editor preview and validates hosts, redirects, private addresses, response size, and timeouts. Public sharing and exports continue to use direct public reads.
+- Added a unified `chart` component, bringing the catalog to 88 types. Line, area, column, horizontal bar, pie, and donut charts use native SVG without a new chart-library dependency. Switching types preserves source and field mappings, with dimensions, metrics, and multiple aggregations. Static charts aggregate all valid records; REST charts aggregate the current page and disclose that scope.
+- Charts support selection, clearing, undo/redo, and filter-variable reuse after source changes without replacing existing events. Includes an equivalent data table, real SVG, and 2x PNG exports whose colors do not depend on page CSS variables. A readable focus view supports mobile selection, keyboard interaction, and focus restoration on Escape without changing the fixed-canvas contract.
+- AI site tasks can create admin pages, shared sidebars, public data sources, and dashboards while retaining plan confirmation, platform validation, isolated checkpoints, revision checks, and atomic commits. Existing data-source context is redacted before reaching the model. AI cannot add credentials, proxy transports, external writes, or publish automatically.
+
+**Upgrade notes**: `PageDocument` and `SiteDocument` schema versions are unchanged. `studio_data_credential` migrations are included for SQLite, PostgreSQL, and D1, applied by Node at startup and by Void during Cloudflare deployment. REST charts aggregate the current page and selection filters apply to loaded records, not server-side analytics. Second-batch chart types, automatic responsive reflow, CMS, media libraries, and publishing governance are outside this release.
+
+**Validation**: All 469 automated tests passed, along with both type checks, Node and Cloudflare builds, and complete diff-format checks. Real Chrome verified public REST connections, dynamic lists and details, confirmed POST/PUT, shared sidebars, every chart type, selection and undo, real SVG/PNG, HTML refresh after export, shared deep links, keyboard interaction, and a 390px focus view. Dark chart text contrast measured 8.03:1. Account and credential checks used real SQLite and controlled local REST endpoints; sharing used a local snapshot, Cloudflare sockets used simulated transport, and AI used deterministic mock output. No disposable PostgreSQL database was configured, and no live model, online account, or remote D1/Worker was called; remote deployment and migrations are handled by the workflow.
+
 ## v2026.10.26 — 2026-10-26
 
 ### 中文

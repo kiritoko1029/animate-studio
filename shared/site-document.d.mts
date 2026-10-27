@@ -1,8 +1,9 @@
 import type { PageDocument } from '../src/model.ts';
-export type SiteRegion = 'header' | 'footer';
+import type { DataSource } from './data-sources.mjs';
+export type SiteRegion = 'header' | 'footer' | 'sidebar';
 export type SitePageKind = 'page' | 'detail' | 'notFound';
 export type SitePageEntry = { id: string; name: string; path: string; kind: SitePageKind; group?: string; page: PageDocument; layout: SiteRegion[] };
-export type SiteDocument = { version: 1; kind: 'site'; id: string; name: string; homePageId: string; pages: SitePageEntry[]; sharedLayout: Partial<Record<SiteRegion, PageDocument>> };
+export type SiteDocument = { version: 1; kind: 'site'; id: string; name: string; homePageId: string; pages: SitePageEntry[]; sharedLayout: Partial<Record<SiteRegion, PageDocument>>; dataSources?: DataSource[] };
 export type StudioDocument = PageDocument | SiteDocument;
 export type SiteTarget = string;
 export const siteLimits: { pages: number; bytes: number };

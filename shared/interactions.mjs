@@ -4,7 +4,7 @@ export function createInteractionRuntime(config, options = {}) {
   const clone = value => JSON.parse(JSON.stringify(value));
   const variables = new Map((config.variables || []).map(v => [v.name, v]));
   const initial = Object.fromEntries([...variables].map(([name, v]) => [name, clone(v.initial)]));
-  let state = clone(initial), disposed = false, epoch = 0;
+  let state = clone(initial), data = clone(options.data ?? {}), disposed = false, epoch = 0;
   const cancellations = new Set(), reported = new Set();
   const log = (level, message) => { if (!disposed) options.onLog?.({ level, message: String(message).slice(0, 2000), time: Date.now() }); };
   let restored = false, storageWarning = false;
@@ -81,8 +81,8 @@ export function createInteractionRuntime(config, options = {}) {
       let node;
       if (token.value === '(') { node = expression(0); take(')'); }
       else if (['true', 'false', 'null'].includes(token.value)) node = ['literal', { true: true, false: false, null: null }[token.value]];
-      else if (['state', 'event', 'route'].includes(token.value)) node = ['root', token.value];
-      else throw new Error('仅支持 state、event、route、常量和运算符');
+      else if (['state', 'event', 'route', 'data'].includes(token.value)) node = ['root', token.value];
+      else throw new Error('仅支持 state、event、route、data、常量和运算符');
       while (peek() === '.' || peek() === '[') {
         let key;
         if (peek() === '.') { i++; key = tokens[i++]; if (!key || key.kind !== 'symbol' || !/^[A-Za-z_$][\w$]*$/.test(key.value)) throw new Error('属性名无效'); key = ['literal', key.value]; }
@@ -110,7 +110,7 @@ export function createInteractionRuntime(config, options = {}) {
     function visit(node) {
       const [type, a, b, c] = node;
       if (type === 'literal') return a;
-      if (type === 'root') return a === 'state' ? snapshot : a === 'route' ? (options.route ?? {}) : event;
+      if (type === 'root') return a === 'state' ? snapshot : a === 'route' ? (options.route ?? {}) : a === 'data' ? data : event;
       if (type === 'get') { const target = visit(a), key = String(visit(b)); return target != null && !forbidden.has(key) && Object.hasOwn(Object(target), key) ? target[key] : undefined; }
       if (type === 'if') return visit(a) ? visit(b) : visit(c);
       if (type === 'unary') { const value = visit(b); return a === '!' ? !value : a === '-' ? -Number(value) : Number(value); }
@@ -293,7 +293,8 @@ export function createInteractionRuntime(config, options = {}) {
       await actions(block.events?.[name], event);
     } catch (error) { log('error', error.message); }
   }
-  return { getState: () => state, evaluate, validateExpression: parse, read, setState, dispatch, reset, runScript,
+  return { getState: () => state, getData: () => data, evaluate, validateExpression: parse, read, setState, dispatch, reset, runScript,
+    setData(next) { if (disposed) return; data = clone(next ?? {}); options.onData?.(data); },
     activate() { disposed = false; restore(); options.onState?.(state); },
     dispose() { disposed = true; epoch++; for (const cancel of [...cancellations]) cancel(); },
   };

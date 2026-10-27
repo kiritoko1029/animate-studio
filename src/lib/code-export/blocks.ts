@@ -218,6 +218,9 @@ export function createPageTree(document: PageDocument, assets: Assets = {}) {
           const { html } = buildComponentDocument(snapshot, { channel: `export-${block.id}`, nonce: randomToken(), props: instanceProps(block), theme: customComponentTheme(block, document.settings) });
           return h('div', { class: 'custom-component-frame', style: { width: '100%', height: '100%' } }, [h('iframe', { title: snapshot.name, sandbox: customComponentSandbox, srcdoc: html, referrerpolicy: 'no-referrer', style: { display: 'block', width: '100%', height: '100%', border: 0 } })]);
         }
+        case 'repeater': return h('section', { class: 'data-repeater' }, [h('h3', {}, [p.title]), h('div', { class: 'data-repeater-list' }, [h('article', { class: 'data-repeater-item' }, (block.children ?? []).map(child => h('div', { class: 'data-legacy-field' }, [child.props.label ?? child.props.title ?? child.props.text ?? ''])))])]);
+        case 'form': return h('section', { class: 'data-form' }, [h('h3', {}, [p.title]), details(p.text), h('div', { class: 'data-form-fields' }, (block.children ?? []).map(child => h('div', { class: 'data-legacy-field' }, [child.props.label ?? child.props.title ?? child.props.text ?? '']))), h('div', { class: 'data-form-status', role: 'status' }, ['请在支持数据源的导出中使用此表单。'])]);
+        case 'chart': return h('section', { class: 'data-chart' }, [h('h3', {}, [p.title]), h('p', { role: 'status' }, ['请在支持数据源的原生导出中使用此图表。'])]);
         default: { const exhaustive: never = block.type; throw new Error(`不支持导出组件：${exhaustive}`); }
       }
     }

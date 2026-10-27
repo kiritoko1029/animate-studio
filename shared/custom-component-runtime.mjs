@@ -79,6 +79,7 @@ export function customComponentBootstrap(config, jsLine, probeLine) {
   };
   let props = freezeRecord(config.props);
   let theme = freezeRecord(config.theme);
+  let route = config.route ? Object.freeze({ path: String(config.route.path), pageId: String(config.route.pageId), pattern: String(config.route.pattern), params: freezeRecord(config.route.params) }) : undefined;
   const listeners = new Set();
   const themeVariables = { accent: 'accent', onAccent: 'on-accent', text: 'text', muted: 'muted', surface: 'surface', panel: 'panel', canvas: 'canvas', border: 'border', radius: 'radius', font: 'font' };
   function applyTheme() {
@@ -109,6 +110,7 @@ export function customComponentBootstrap(config, jsLine, probeLine) {
   const api = Object.freeze({
     get props() { return props; },
     get theme() { return theme; },
+    get route() { return route; },
     onProps(listener) {
       if (typeof listener !== 'function') throw new TypeError('component.onProps 需要一个函数');
       listeners.add(listener);
@@ -173,6 +175,7 @@ export function customComponentBootstrap(config, jsLine, probeLine) {
     if (data.type === 'update') {
       props = freezeRecord(data.props);
       theme = freezeRecord(data.theme);
+      route = data.route ? Object.freeze({ path: String(data.route.path), pageId: String(data.route.pageId), pattern: String(data.route.pattern), params: freezeRecord(data.route.params) }) : undefined;
       applyTheme(); applyFields(); notify();
     } else if (data.type === 'ping') send('pong');
   });

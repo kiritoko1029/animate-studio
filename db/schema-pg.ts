@@ -106,3 +106,14 @@ export const studioComponentShare = pgTable('studio_component_share', {
   revision: integer('revision').notNull(),
   publishedAt: timestamp('published_at', { withTimezone: false }).notNull().defaultNow(),
 });
+
+export const studioDataCredentials = pgTable('studio_data_credential', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  kind: text('kind').notNull(),
+  allowedHosts: text('allowed_hosts').notNull(),
+  encryptedSecret: text('encrypted_secret').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: false }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: false }).notNull().defaultNow(),
+}, table => [index('studio_data_credential_user_idx').on(table.userId)]);

@@ -19,6 +19,7 @@ export function formatExpressionValue(value: unknown) {
 
 export function expressionEvent(block: Block, variables: Variable[], type: 'click' | 'change'): ExpressionContext['event'] {
   if (type === 'click') return { type, blockId: block.id };
+  if (block.type === 'chart') return { type, blockId: block.id, value: { category: '分类', series: '指标', value: 0 } };
   const checked = ['checkbox', 'switch'].includes(block.type);
   const textual = ['input', 'textarea', 'select'].includes(block.type);
   const fallback = checked ? block.props.checked ?? false : textual ? '' : block.props.value ?? (block.type === 'pagination' ? 1 : 0);

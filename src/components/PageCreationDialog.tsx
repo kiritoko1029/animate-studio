@@ -15,7 +15,7 @@ type PageCreationDialogProps = {
 
 const tasks = [
   { id: 'website', icon: Globe2, title: '制作网站', description: '从完整的品牌主页开始，替换文字和图片就能使用。', action: '创建网站', preview: 'website', sample: false },
-  { id: 'dashboard', icon: ChartNoAxesColumnIncreasing, title: '制作数据看板', description: '用指标、进度和表格整理业务概况。', action: '创建看板', preview: 'dashboard', sample: true },
+  { id: 'dashboard', icon: ChartNoAxesColumnIncreasing, title: '制作数据看板', description: '用指标、图表、表格和进度整理业务概况。', action: '创建看板', preview: 'dashboard', sample: true },
   { id: 'internal', icon: LayoutDashboard, title: '制作内部工具', description: '从搜索、数据表格和常用操作开始搭建管理页。', action: '创建内部工具', preview: 'internal', sample: true },
 ] as const;
 

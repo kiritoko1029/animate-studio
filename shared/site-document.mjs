@@ -1,4 +1,5 @@
 import { createDocument, toFreeDocument } from '../src/model.ts';
+import { validateDataSources } from './data-sources.mjs';
 
 export const siteLimits = { pages: 24, bytes: 2 * 1024 * 1024 };
 const idPattern = /^[a-zA-Z0-9_-]{1,100}$/;
@@ -42,8 +43,8 @@ export function toSiteDocument(document) {
   return createSiteDocument(page);
 }
 export function createLayoutDocument(region, settings) {
-  return { version: 1, id: `shared-${region}`, name: region === 'header' ? '共享页头' : '共享页脚',
-    settings: { ...settings, customThemes: structuredClone(settings.customThemes ?? []), canvasHeight: 320, padding: 0, layout: 'free' }, blocks: [] };
+  return { version: 1, id: `shared-${region}`, name: region === 'header' ? '共享页头' : region === 'footer' ? '共享页脚' : '共享侧栏',
+    settings: { ...settings, ...(region === 'sidebar' ? { maxWidth: 320, canvasHeight: 1080 } : { canvasHeight: 320 }), customThemes: structuredClone(settings.customThemes ?? []), padding: 0, layout: 'free' }, blocks: [] };
 }
 export function createSitePage(site, name = '新页面', kind = 'page') {
   if (site.pages.length >= siteLimits.pages) fail(`每个站点最多包含 ${siteLimits.pages} 个页面`);
@@ -55,11 +56,11 @@ export function createSitePage(site, name = '新页面', kind = 'page') {
   return { id: page.id, name, path, kind, page, layout: [...(site.pages.find(entry => entry.id === site.homePageId)?.layout ?? [])] };
 }
 export function getActiveDocument(site, target) {
-  if (target === 'header' || target === 'footer') return site.sharedLayout[target] ?? null;
+  if (target === 'header' || target === 'footer' || target === 'sidebar') return site.sharedLayout[target] ?? null;
   return site.pages.find(entry => entry.id === target)?.page ?? null;
 }
 export function replaceActiveDocument(site, target, page) {
-  if (target === 'header' || target === 'footer') {
+  if (target === 'header' || target === 'footer' || target === 'sidebar') {
     if (!site.sharedLayout[target]) fail('共享布局不存在');
     return { ...site, sharedLayout: { ...site.sharedLayout, [target]: page } };
   }
@@ -159,11 +160,14 @@ export function composeSitePage(site, entry) {
   const regions = entry.layout.map(region => [region, site.sharedLayout[region] ? toFreeDocument(site.sharedLayout[region]) : null]).filter(([, page]) => page);
   const headerHeight = entry.layout.includes('header') && site.sharedLayout.header ? site.sharedLayout.header.settings.canvasHeight ?? 320 : 0;
   const footerHeight = entry.layout.includes('footer') && site.sharedLayout.footer ? site.sharedLayout.footer.settings.canvasHeight ?? 320 : 0;
+  const sidebarWidth = entry.layout.includes('sidebar') && site.sharedLayout.sidebar ? site.sharedLayout.sidebar.settings.maxWidth : 0;
+  if (sidebarWidth && bodyPage.settings.maxWidth - sidebarWidth < 320) fail('共享侧栏过宽，正文无法容纳，请减少侧栏宽度');
+  if (sidebarWidth && bodyPage.blocks.some(block => block.frame && block.frame.x + block.frame.width + sidebarWidth > bodyPage.settings.maxWidth - bodyPage.settings.padding)) fail('正文与共享侧栏超出页面宽度，请调整布局或组件位置');
   const bodyHeight = bodyPage.settings.canvasHeight ?? 1400;
   const height = headerHeight + bodyHeight + footerHeight;
   if (height > 6000) fail('页面与共享布局合并后的画布不能超过 6000 px');
-  const documents = [{ page: bodyPage, offset: headerHeight, prefix: '' }, ...regions.map(([region, page]) => ({ page: prefixScripts(page, `${region}-`), offset: region === 'header' ? 0 : headerHeight + bodyHeight, prefix: `${region}-` }))];
-  const blocks = documents.flatMap(({ page, offset, prefix }) => page.blocks.map(block => ({ ...block, id: `${prefix}${block.id}`, frame: block.frame ? { ...block.frame, y: block.frame.y + offset } : undefined })));
+  const documents = [{ page: bodyPage, offsetX: sidebarWidth, offsetY: headerHeight, prefix: '' }, ...regions.map(([region, page]) => ({ page: prefixScripts(page, `${region}-`), offsetX: 0, offsetY: region === 'header' ? 0 : region === 'sidebar' ? headerHeight : headerHeight + bodyHeight, prefix: `${region}-` }))];
+  const blocks = documents.flatMap(({ page, offsetX, offsetY, prefix }) => page.blocks.map(block => ({ ...block, id: `${prefix}${block.id}`, frame: block.frame ? { ...block.frame, x: block.frame.x + offsetX, y: block.frame.y + offsetY } : undefined })));
   const variables = [...bodyPage.variables ?? []], scripts = [...bodyPage.scripts ?? []];
   const names = new Set(variables.map(variable => variable.name));
   for (const [, page] of regions) for (const variable of page.variables ?? []) {
@@ -174,12 +178,13 @@ export function composeSitePage(site, entry) {
   return { ...bodyPage, settings: { ...bodyPage.settings, canvasHeight: height }, blocks, variables, scripts };
 }
 export function validateSiteDocument(site, validatePage) {
-  record(site, ['version', 'kind', 'id', 'name', 'homePageId', 'pages', 'sharedLayout'], 'site');
+  record(site, ['version', 'kind', 'id', 'name', 'homePageId', 'pages', 'sharedLayout', 'dataSources'], 'site');
   if (site.version !== 1 || site.kind !== 'site') fail('仅支持版本 1 的站点');
+  if (site.dataSources !== undefined) validateDataSources(site.dataSources);
   text(site.id, 100, 'site.id'); if (!idPattern.test(site.id)) fail('站点 id 无效');
   text(site.name, 120, 'site.name');
   if (!Array.isArray(site.pages) || site.pages.length < 1 || site.pages.length > siteLimits.pages) fail(`站点必须包含 1–${siteLimits.pages} 个页面`);
-  record(site.sharedLayout, ['header', 'footer'], 'site.sharedLayout');
+  record(site.sharedLayout, ['header', 'footer', 'sidebar'], 'site.sharedLayout');
   const ids = new Set(), paths = new Set(); let notFound = 0;
   for (const entry of site.pages) {
     record(entry, ['id', 'name', 'path', 'kind', 'group', 'page', 'layout'], 'site.pages');
@@ -191,16 +196,18 @@ export function validateSiteDocument(site, validatePage) {
     if (entry.kind === 'notFound' && ++notFound > 1) fail('站点最多有一个 404 页面');
     if (entry.id === site.homePageId && path !== '/') fail('首页路径必须为 /');
     if (path === '/' && entry.id !== site.homePageId) fail('只有首页可以使用 / 路径');
-    if (!Array.isArray(entry.layout) || new Set(entry.layout).size !== entry.layout.length || entry.layout.some(region => !['header', 'footer'].includes(region) || !site.sharedLayout[region])) fail('页面共享布局引用无效');
+    if (!Array.isArray(entry.layout) || new Set(entry.layout).size !== entry.layout.length || entry.layout.some(region => !['header', 'footer', 'sidebar'].includes(region) || !site.sharedLayout[region])) fail('页面共享布局引用无效');
+    validatePage(entry.page);
     if (entry.page.id !== entry.id || entry.page.name !== entry.name) fail('页面记录与内容 id、名称必须一致');
-    validatePage(entry.page); composeSitePage(site, entry);
+    composeSitePage(site, entry);
   }
   if (!ids.has(site.homePageId)) fail('站点首页不存在');
   if (site.pages.find(entry => entry.id === site.homePageId)?.kind === 'notFound') fail('404 页面不能设为首页');
-  for (const region of ['header', 'footer']) if (site.sharedLayout[region] !== undefined) {
+  for (const region of ['header', 'footer', 'sidebar']) if (site.sharedLayout[region] !== undefined) {
     const page = site.sharedLayout[region]; validatePage(page);
     if (page.id !== `shared-${region}` || page.settings.layout !== 'free') fail('共享布局标识或画布无效');
-    if ((page.settings.canvasHeight ?? 320) > 1000) fail('共享布局高度不能超过 1000 px');
+    if (region === 'sidebar' && (page.settings.maxWidth < 320 || page.settings.maxWidth > 640)) fail('共享侧栏宽度必须在 320–640 px 之间');
+    if (region !== 'sidebar' && (page.settings.canvasHeight ?? 320) > 1000) fail('共享布局高度不能超过 1000 px');
   }
   if (new TextEncoder().encode(JSON.stringify(site)).byteLength > siteLimits.bytes) fail('站点数据不能超过 2 MiB');
   return site;

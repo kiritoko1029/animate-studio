@@ -306,7 +306,7 @@ test('task templates create editable drafts and the AI entry only opens the assi
   f.click(f.doc.querySelector('.page-creation-task--dashboard'));
   await until(() => f.name()?.value === '运营数据概览 · 示例', 'dashboard draft created');
   await until(() => !f.doc.querySelector('.page-creation-dialog'), 'dialog closes after successful creation');
-  assert.equal(f.doc.querySelectorAll('.free-canvas-frame').length, 9);
+  assert.equal(f.doc.querySelectorAll('.free-canvas-frame').length, 10);
   f.click(f.doc.querySelector('[aria-label="撤销 (⌘Z)"]'));
   await until(() => f.name()?.value === '浏览器草稿', 'template creation preserves draft undo');
   await openCreation();

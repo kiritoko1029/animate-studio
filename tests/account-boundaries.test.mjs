@@ -101,7 +101,7 @@ test('inspector preference migration preserves existing appearance and applies o
   sqlite.prepare('INSERT INTO "user" (id, name, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?)').run('owner', 'Owner', 'owner@migration.test', now, now);
   sqlite.prepare('INSERT INTO user_preference (user_id, studio_theme, updated_at) VALUES (?, ?, ?)').run('owner', 'dark', now);
 
-  assert.deepEqual(await applyNodeMigrations(database), [target]);
+  assert.deepEqual(await applyNodeMigrations(database), [target, 'sqlite-0006-data-credentials.sql']);
   const repository = createPageRepository(database.db, database.schema);
   assert.deepEqual(await repository.getPreferences('owner'), { version: 1, studioTheme: 'dark', inspectorDisclosures: {}, updatedAt: now });
   await repository.setPreferences('owner', { inspectorDisclosures: { 'component:hero:advanced': true } });

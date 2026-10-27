@@ -7,11 +7,13 @@ export type ComponentTheme = {
   canvas: string; border: string; radius: string; font: string; scheme: 'light' | 'dark';
 };
 export type ComponentProps = Partial<Record<CustomFieldKey, string>>;
+export type ComponentRoute = { path: string; pageId: string; pattern: string; params: Record<string, string> };
 export type ComponentDocumentOptions = {
   channel: string;
   nonce: string;
   props: ComponentProps;
   theme: ComponentTheme;
+  route?: ComponentRoute;
   /** Designer previews instrument loops; saved code is always stored untouched. */
   transformScript?: (code: string) => string;
 };
@@ -93,7 +95,7 @@ export function buildComponentDocument(definition: Pick<CustomComponentDefinitio
   const nonce = options.nonce.replace(/[^A-Za-z0-9_-]/g, '');
   const props = Object.fromEntries(Object.entries(options.props).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
   const script = options.transformScript ? options.transformScript(definition.js) : definition.js;
-  const config = { channel: options.channel, html: definition.html, props, theme, loopGuard: Boolean(options.transformScript) };
+  const config = { channel: options.channel, html: definition.html, props, theme, loopGuard: Boolean(options.transformScript), ...(options.route ? { route: options.route } : {}) };
   let probeLine = 0;
   const prefix = (line: number) => `<!doctype html>
 <html lang="zh-CN" data-scheme="${theme.scheme}">

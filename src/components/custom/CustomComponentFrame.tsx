@@ -3,7 +3,7 @@ import { customComponentSandbox, type CustomComponentDefinition } from '../../..
 import { buildComponentDocument, randomToken, sanitizeComponentTheme, type ComponentProps, type ComponentTheme } from '../../lib/custom-components/document';
 import { createRateLimiter, readFrameMessage, updateMessage, type FrameMessage } from '../../lib/custom-components/protocol';
 import { openComponentLink } from '../../lib/custom-components/links';
-import { useSiteNavigation } from '../../lib/site-navigation';
+import { useSiteNavigation, type SiteNavigation } from '../../lib/site-navigation';
 import { customComponentTheme, instanceProps } from '../../lib/custom-components/instances';
 import { NativeRuntimeContext } from '../NativeInteractions';
 import { guardLoops } from '../../lib/custom-components/loop-guard';
@@ -42,17 +42,17 @@ export function CustomComponentFrame({ code, props, theme, title, interactive = 
   const safeTheme = sanitizeComponentTheme(theme);
   const siteNavigation = useSiteNavigation();
   const navigationRef = useRef(siteNavigation); navigationRef.current = siteNavigation;
-  const latest = useRef({ props, theme: safeTheme });
-  latest.current = { props, theme: safeTheme };
+  const latest = useRef<{ props: ComponentProps; theme: ComponentTheme; route?: SiteNavigation['route'] }>({ props, theme: safeTheme });
+  latest.current = { props, theme: safeTheme, route: siteNavigation?.route };
   const callbacks = useRef({ onMessage, onClick, onStatus, interactive, suppressLinks });
   callbacks.current = { onMessage, onClick, onStatus, interactive, suppressLinks };
   const session = useMemo(() => ({ channel: crypto.randomUUID(), nonce: randomToken() }), [code.html, code.css, code.js, runKey, restart, transformScript]);
   // The document is fixed per run; later field and theme changes are posted to it.
-  const srcDoc = useMemo(() => buildComponentDocument(code, { ...session, props: latest.current.props, theme: latest.current.theme, transformScript }).html, [session]);
+  const srcDoc = useMemo(() => buildComponentDocument(code, { ...session, props: latest.current.props, theme: latest.current.theme, transformScript, route: latest.current.route }).html, [session]);
   const ready = useRef(false);
   const post = () => {
     const target = frame.current?.contentWindow;
-    if (target && ready.current) target.postMessage(updateMessage(session.channel, latest.current.props as Record<string, string>, latest.current.theme as unknown as Record<string, string>), '*');
+    if (target && ready.current) target.postMessage(updateMessage(session.channel, latest.current.props as Record<string, string>, latest.current.theme as unknown as Record<string, string>, latest.current.route), '*');
   };
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function CustomComponentFrame({ code, props, theme, title, interactive = 
     return () => { window.removeEventListener('message', receive); window.clearTimeout(timer); ready.current = false; };
   }, [session, readyTimeoutMs]);
 
-  const updateKey = JSON.stringify([props, safeTheme]);
+  const updateKey = JSON.stringify([props, safeTheme, siteNavigation?.route]);
   useEffect(() => { if (status === 'ready') post(); }, [updateKey, status]);
 
   return <div className={`custom-component-frame ${className}`} data-status={status}>

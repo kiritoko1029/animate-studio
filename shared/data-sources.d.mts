@@ -1,0 +1,21 @@
+import type { JsonValue } from '../src/lib/interactions/types.ts';
+export type DataTemplateContext = { route?: Record<string, JsonValue>; state?: Record<string, JsonValue>; form?: Record<string, JsonValue> };
+export type DataSource = {
+  id: string; name: string; kind: 'static' | 'rest'; mode: 'collection' | 'single';
+  items?: JsonValue; url?: string; method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  headers?: Record<string, string>; query?: Record<string, string>; body?: JsonValue;
+  responsePath?: string; timeoutMs?: number; pageSize?: number;
+  transport?: 'direct' | 'proxy'; credentialId?: string;
+};
+export type PreparedDataSource = { value?: JsonValue; url?: string; method?: string; headers?: Record<string, string>; body?: JsonValue };
+export type DataField = { path: string; type: string; sample: JsonValue };
+export const dataSourceLimits: { perSite: number; responseBytes: number; timeoutMs: number; pageSize: number; items: number };
+export function checkDataTemplate(value: string): string;
+export function readDataPath(value: unknown, path?: string): any;
+export function resolveDataTemplate(source: string, context: DataTemplateContext, url?: boolean): any;
+export function resolveDataValue(value: JsonValue, context: DataTemplateContext, url?: boolean): any;
+export function prepareDataSource(source: DataSource, context?: DataTemplateContext): PreparedDataSource;
+export function normalizeDataValue(source: DataSource, value: unknown): any;
+export function validateDataSource(source: unknown): DataSource;
+export function validateDataSources(sources: unknown): DataSource[];
+export function inferDataFields(value: unknown, prefix?: string, depth?: number): DataField[];

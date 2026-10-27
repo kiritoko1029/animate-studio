@@ -1,5 +1,6 @@
 import { createBlock, createDocument } from '../model.ts';
-import type { Block, BlockFrame, BlockProps, BuiltinComponentType, PageDocument } from '../model.ts';
+import type { Block, BlockFrame, BlockProps, BuiltinComponentType, PageDocument, SiteDocument } from '../model.ts';
+import { createSiteDocument } from '../../shared/site-document.mjs';
 
 export type PageTask = 'website' | 'dashboard' | 'internal';
 
@@ -11,19 +12,21 @@ function templateBlock(type: BuiltinComponentType, frame: BlockFrame, props: Blo
 function createDashboardDocument(): PageDocument {
   const page = createDocument(true);
   page.name = '运营数据概览 · 示例';
+  page.settings = { ...page.settings, canvasHeight: 1220 };
   page.blocks = [
     templateBlock('heading', { x: 60, y: 40, width: 1800, height: 100 }, { title: '运营数据概览', fontSize: 34 }),
-    templateBlock('text', { x: 60, y: 150, width: 1800, height: 72 }, { text: '本页使用静态示例数据展示指标、表格与进度，不连接真实业务接口。' }),
-    templateBlock('statistic', { x: 60, y: 250, width: 420, height: 200 }, { title: '本月访问量', text: '12,840', label: '较上月 +18.6%（示例）' }),
-    templateBlock('statistic', { x: 520, y: 250, width: 420, height: 200 }, { title: '本月订单量', text: '1,286', label: '较上月 +8.2%（示例）' }),
-    templateBlock('statistic', { x: 980, y: 250, width: 420, height: 200 }, { title: '访问转化率', text: '4.8%', label: '较上月 +0.6 个百分点（示例）' }),
-    templateBlock('statistic', { x: 1440, y: 250, width: 420, height: 200 }, { title: '用户满意度', text: '96%', label: '最近 30 天（示例）' }),
-    templateBlock('table', { x: 60, y: 490, width: 1120, height: 350 }, {
+    templateBlock('text', { x: 60, y: 150, width: 1800, height: 72 }, { text: '本页使用可编辑的静态示例数据展示指标、图表、表格与进度，不连接真实业务接口。' }),
+    templateBlock('statistic', { x: 60, y: 250, width: 420, height: 200 }, { title: '累计访问量', text: '12,840', label: '1–6 月静态示例' }),
+    templateBlock('statistic', { x: 520, y: 250, width: 420, height: 200 }, { title: '累计订单量', text: '1,286', label: '1–6 月静态示例' }),
+    templateBlock('statistic', { x: 980, y: 250, width: 420, height: 200 }, { title: '访问转化率', text: '4.8%', label: '静态示例指标' }),
+    templateBlock('statistic', { x: 1440, y: 250, width: 420, height: 200 }, { title: '用户满意度', text: '96%', label: '静态示例指标' }),
+    templateBlock('chart', { x: 60, y: 490, width: 1120, height: 460 }, { title: '访问趋势（静态示例）' }),
+    templateBlock('table', { x: 1220, y: 490, width: 640, height: 460 }, {
       title: '项目进展（静态示例）',
       items: '项目名称|负责人|阶段|完成度\n官网改版|林晓|开发中|72%\n数据看板|陈默|设计中|45%\n帮助中心|许宁|已发布|100%',
     }),
-    templateBlock('progress', { x: 1220, y: 490, width: 640, height: 150 }, { label: '官网改版进度', text: '静态示例：已完成 72%', value: 72, max: 100 }),
-    templateBlock('progress', { x: 1220, y: 680, width: 640, height: 150 }, { label: '数据看板进度', text: '静态示例：已完成 45%', value: 45, max: 100 }),
+    templateBlock('progress', { x: 60, y: 990, width: 870, height: 150 }, { label: '官网改版进度', text: '静态示例：已完成 72%', value: 72, max: 100 }),
+    templateBlock('progress', { x: 990, y: 990, width: 870, height: 150 }, { label: '数据看板进度', text: '静态示例：已完成 45%', value: 45, max: 100 }),
   ];
   return page;
 }
@@ -53,4 +56,26 @@ export function createTaskDocument(task: PageTask): PageDocument {
     case 'internal': return createInternalDocument();
     default: throw new Error(`不支持的页面任务：${String(task)}`);
   }
+}
+
+export function createTaskSiteDocument(task: PageTask): SiteDocument {
+  const site = createSiteDocument(createTaskDocument(task));
+  if (task !== 'dashboard') return site;
+  const page = site.pages[0].page;
+  site.pages[0].page = { ...page, blocks: page.blocks.map(block => {
+    if (block.type === 'chart') return { ...block, props: { ...block.props, sourceId: 'sales', categoryField: 'month', dataColumns: [{ key: 'visitors', label: '访问量', path: 'visitors', aggregate: 'sum' }, { key: 'target', label: '目标', path: 'target', aggregate: 'sum' }] } };
+    if (block.type !== 'table') return block;
+    const props = { ...block.props, sourceId: 'sales', title: '月度数据（静态示例）', dataColumns: [{ key: 'month', label: '月份', path: 'month' }, { key: 'visitors', label: '访问量', path: 'visitors' }, { key: 'target', label: '目标', path: 'target' }, { key: 'orders', label: '订单量', path: 'orders' }] };
+    delete props.items;
+    return { ...block, props };
+  }) };
+  site.dataSources = [{ id: 'sales', name: '月度运营数据（示例）', kind: 'static', mode: 'collection', pageSize: 6, items: [
+    { month: '1月', visitors: 1680, target: 1600, orders: 136 },
+    { month: '2月', visitors: 1920, target: 1800, orders: 162 },
+    { month: '3月', visitors: 2140, target: 2000, orders: 188 },
+    { month: '4月', visitors: 2260, target: 2200, orders: 240 },
+    { month: '5月', visitors: 2420, target: 2400, orders: 260 },
+    { month: '6月', visitors: 2420, target: 2600, orders: 300 },
+  ] }];
+  return site;
 }

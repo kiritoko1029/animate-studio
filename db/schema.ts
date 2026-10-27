@@ -111,3 +111,14 @@ export const studioComponentShare = sqliteTable('studio_component_share', {
   revision: integer('revision').notNull(),
   publishedAt: text('published_at').notNull(),
 });
+
+export const studioDataCredentials = sqliteTable('studio_data_credential', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  kind: text('kind').notNull(),
+  allowedHosts: text('allowed_hosts').notNull(),
+  encryptedSecret: text('encrypted_secret').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, table => [index('studio_data_credential_user_idx').on(table.userId)]);
