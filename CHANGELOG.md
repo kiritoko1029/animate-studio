@@ -15,7 +15,7 @@
 
 **升级说明**：页面与站点结构版本保持 `1`。发布历史和媒体库分别新增 0007、0008 SQLite/PostgreSQL/D1 迁移，Node 启动时应用，Cloudflare 由部署工作流应用。内容集合嵌入站点文档；响应式默认关闭，候选布局需逐页审阅，不保证所有艺术排版自动无损转换。
 
-**验证**：522 项自动化测试通过，双端类型检查、Node 与 Cloudflare 串行构建及差异格式检查通过。真实 Chrome 验证集合编辑、公开发布与回滚、SEO、媒体上传与迁移失败重试、320/390/768px 响应式、动态表单和离线 HTML；隔离 D1/R2 验证发布、素材访问与配额。验收使用临时 SQLite、真实本地 OTP、独立浏览器和确定性 AI 输出；未配置一次性 PostgreSQL 测试库，未调用真实模型或在线上账号、远端资源中直接验收。远端部署与迁移由工作流执行。
+**验证**：523 项自动化测试通过，双端类型检查、Node 与 Cloudflare 串行构建及差异格式检查通过。真实 Chrome 验证集合编辑、公开发布与回滚、SEO、媒体上传与迁移失败重试、320/390/768px 响应式、动态表单和离线 HTML；隔离 D1/R2 验证发布、素材访问与配额。验收使用临时 SQLite、真实本地 OTP、独立浏览器和确定性 AI 输出；未配置一次性 PostgreSQL 测试库，未调用真实模型或在线上账号、远端资源中直接验收。远端部署与迁移由工作流执行。
 
 ### English
 
@@ -30,7 +30,7 @@ This release completes content management, site media, responsive layouts, and p
 
 **Upgrade notes**: Page and site schema versions remain `1`. Publish-history and media migrations are included as 0007 and 0008 for SQLite, PostgreSQL, and D1, applied by Node at startup and by the deployment workflow. Collections are embedded in the site document, not a public CMS. Responsive mode is opt-in; candidate layouts require review and do not guarantee lossless conversion of every artistic composition.
 
-**Validation**: All 522 automated tests passed, along with both type checks, serial Node and Cloudflare builds, and diff-format checks. Real Chrome verified collection editing, publishing and rollback, SEO, media uploads and migration retries, 320/390/768px responsive layouts, dynamic forms, and offline HTML. Isolated D1/R2 checks covered publication, asset access, and quotas. Verification used temporary SQLite, local OTP, isolated browsers, and deterministic AI output. No disposable PostgreSQL database was configured, and no live model, online account, or remote resource was directly exercised; deployment and migrations run in the workflow.
+**Validation**: All 523 automated tests passed, along with both type checks, serial Node and Cloudflare builds, and diff-format checks. Real Chrome verified collection editing, publishing and rollback, SEO, media uploads and migration retries, 320/390/768px responsive layouts, dynamic forms, and offline HTML. Isolated D1/R2 checks covered publication, asset access, and quotas. Verification used temporary SQLite, local OTP, isolated browsers, and deterministic AI output. No disposable PostgreSQL database was configured, and no live model, online account, or remote resource was directly exercised; deployment and migrations run in the workflow.
 
 ## v2026.10.26.1 — 2026-10-26
 

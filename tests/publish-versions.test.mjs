@@ -65,3 +65,13 @@ test('D1 concurrent publication cannot allocate duplicate versions', async t => 
   assert.equal((await repository.listVersions('owner', id)).length, 1);
   assert.equal((await repository.findPublished('d1-token')).publishedVersion, 1);
 });
+
+test('D1 publish-version migration allows only the reviewed additive schema and backfill', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const sql = await readFile(new URL('../db/migrations/20261027040735_same_tomorrow_man.sql', import.meta.url), 'utf8');
+  assert.match(sql, /^-- void:allow-destructive/);
+  assert.match(sql, /CREATE TABLE `studio_page_version`/);
+  assert.match(sql, /ALTER TABLE `studio_page_share` ADD `active_version`/);
+  assert.match(sql, /SELECT `page_id` \|\| ':1'/);
+  assert.doesNotMatch(sql, /\bDROP\s+(?:TABLE|TRIGGER|INDEX)\b/i);
+});

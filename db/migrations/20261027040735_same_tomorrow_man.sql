@@ -1,3 +1,5 @@
+-- void:allow-destructive
+-- Reviewed additive migration: adds version history and backfills existing share snapshots without dropping tables or rows.
 CREATE TABLE `studio_page_version` (
 	`id` text PRIMARY KEY NOT NULL,
 	`page_id` text NOT NULL,
