@@ -22,7 +22,7 @@ function booksPage() {
 test('AI accepts public read sources but never secrets, proxy configuration or writes', () => {
   const source = { id: 'books', name: '公开图书', kind: 'rest', mode: 'collection', url: 'https://api.example.com/books', method: 'GET', transport: 'direct' };
   assert.equal(parseAiOperation(record(1, 1, 'dataSource', { source })).source.id, 'books');
-  for (const patch of [{ method: 'POST', body: { title: '{{form.title}}' } }, { credentialId: 'private' }, { transport: 'proxy' }, { headers: { Authorization: 'secret' } }]) {
+  for (const patch of [{ method: 'POST', body: { title: '{{form.title}}' } }, { credentialId: 'private' }, { transport: 'proxy' }, { headers: { Authorization: 'secret' } }, { browserHeaders: ['x-token'] }, { credentials: 'include' }]) {
     assert.throws(() => parseAiOperation(record(1, 1, 'dataSource', { source: { ...source, ...patch } })), /公开|凭据|写入/);
   }
   assert.throws(() => applyAiOperation(createDocument(true), { v: 1, seq: 1, op: 'dataSource', source }), /整站任务/);

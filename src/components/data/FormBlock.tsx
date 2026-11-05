@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import type { Block } from '../../model';
 import type { JsonValue } from '../../lib/interactions/types';
-import { prepareDataSource } from '../../../shared/data-sources.mjs';
+import { isReadDataSource, prepareDataSource } from '../../../shared/data-sources.mjs';
 import { requestDataSource } from '../../lib/data/runtime';
 import { NativeRuntimeContext } from '../NativeInteractions';
 import { useSiteNavigation } from '../../lib/site-navigation';
@@ -34,7 +34,7 @@ export function FormBlock({ block, interactive, confirm = message => window.conf
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy || !interactive) return;
-    if (!source || source.kind !== 'rest' || !['POST', 'PUT', 'PATCH'].includes(source.method ?? 'GET')) { setPhase('error'); setMessage('请先选择 POST、PUT 或 PATCH 的 REST 提交数据源。'); return; }
+    if (!source || source.kind !== 'rest' || isReadDataSource(source) || !['POST', 'PUT', 'PATCH'].includes(source.method ?? 'GET')) { setPhase('error'); setMessage('请先选择 POST、PUT 或 PATCH 的 REST 提交数据源。'); return; }
     const next = Object.fromEntries(fields.map(field => [field.props.name ?? field.id, field.props.format === 'number' && values[field.props.name ?? field.id] !== '' ? Number(values[field.props.name ?? field.id]) : values[field.props.name ?? field.id] ?? '']));
     const nextErrors = Object.fromEntries(fields.map(field => [field.props.name ?? field.id, fieldError(field, next[field.props.name ?? field.id])]).filter(([, message]) => message));
     setErrors(nextErrors);

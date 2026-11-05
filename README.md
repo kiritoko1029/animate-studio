@@ -1,6 +1,6 @@
 # Animate Studio
 
-**Current release: [v2026.10.27](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.10.27)** · [Changelog (中文 / English)](CHANGELOG.md)
+**Current release: [v2026.11.5](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.11.5)** · [Changelog (中文 / English)](CHANGELOG.md)
 
 **A visual page builder with a free-form canvas, interactive scripts, and portable code exports.**
 
@@ -22,7 +22,7 @@ Build a page by placing components on the canvas, editing their properties, and 
 - **Site media library** — upload, search, and reuse PNG/JPEG/WebP/GIF images for blocks, logos, and social previews. Guests use IndexedDB; cloud sites use private file storage or R2. Stable asset references connect blocks, SEO, and published snapshots, while HTML exports embed the images actually used.
 - **Responsive layouts** — keep fixed canvases by default, or opt into reviewable tablet/mobile candidates. Edit frames, page height, and visibility per breakpoint with undo, without duplicating content or interactions. Preview and exports follow the real container width.
 - **Content collections** — create fields and records without editing JSON, including media-backed images. Bind embedded collections to lists, tables, charts, and route-matched details; missing records fail explicitly. Collections travel with the site draft, published versions, rollback, and offline HTML; they are not a public write database.
-- **Data sources and forms** — connect static JSON or public REST APIs, inspect inferred fields, and map them to repeaters, tables, and detail bindings. Loading, empty, error, timeout, and pagination states share one runtime. Forms validate fields and require confirmation before POST/PUT/PATCH writes. Optional server-side credentials are encrypted, scoped to an account, and never embedded in page JSON or exports. [User guide (中文)](docs/user-guide.zh-CN.md).
+- **Data sources and forms** — connect static JSON or REST queries (GET/POST) APIs, inspect inferred fields, and map them to repeaters, tables, and detail bindings. Loading, empty, error, timeout, and pagination states share one runtime. Forms validate fields and require confirmation before POST/PUT/PATCH writes. Optional server-side credentials are encrypted, scoped to an account, and never embedded in page JSON or exports. [User guide (中文)](docs/user-guide.zh-CN.md).
 - **Charts and dashboards** — line, area, column, horizontal bar, pie, and donut charts share the same sources as tables and lists. Switch chart types without remapping, aggregate dimensions and metrics, filter loaded records by selection, inspect the data table, and download real SVG/PNG files. A keyboard-accessible focus view makes charts usable on small screens without changing the fixed-canvas contract.
 - **AI pages, sites, and custom components** — whole-site generation first confirms pages, routes, shared layouts, and public data sources, then applies one undoable result with restorable checkpoints. A floating chat builds and edits pages and reusable HTML/CSS/JavaScript components, with pause/resume and recoverable browser checkpoints. AI can configure public reads but cannot execute writes or publish. Supports OpenAI Responses and Anthropic Messages; model credentials stay in your browser and requests go directly to the selected API (browser CORS support required). [Protocol and recovery design (中文)](docs/ai-generation.md).
 - **Themes** — a monochrome light/dark workbench, eight page presets, independent component themes, and a custom theme designer.
@@ -58,10 +58,10 @@ NODE_ENV=production npm start
 
 ## Build your first page
 
-1. Add a component from the library, then drag and resize it on the canvas.
+1. Open **Page → Start with a goal or template…** and choose a website, dashboard, or internal tool; you can also start with a blank page and add components.
 2. Edit its content, appearance, layout, and theme in the inspector.
-3. Open **Data & scripts / 数据与脚本** above the canvas to define variables, or open **Data sources / 数据源** to connect static JSON or public REST and map fields. Use **Component interactions / 组件联动** to connect properties and events.
-4. Test the result in the preview, then use **Export / 导出** to download code or page JSON.
+3. Open **Data & scripts / 数据与脚本** above the canvas to define variables, or open **Data sources / 数据源** to connect static JSON or REST queries (GET/POST) and map fields. Use **Component interactions / 组件联动** to connect properties and events.
+4. Test the result in the preview, then use the **Page** menu to download HTML, Vue, React, or the complete site JSON.
 
 Open **More (⋯) → Language** in the header to switch between English and Simplified Chinese. New pages, imports and exports are grouped in the **Page** menu. The first visit follows your browser language (Chinese variants use Simplified Chinese; other languages use English), and your choice is remembered in this browser. Language changes preserve page content and undo history. The [detailed user guide](docs/user-guide.zh-CN.md) covers expressions, event actions, scripts, themes, and export integration.
 
@@ -119,6 +119,8 @@ npm run build:cloudflare
 ```
 
 Tests use isolated DOMs, temporary directories, and temporary servers; they do not modify `data/page.json`. Both builds share `dist/`, so run the appropriate build before starting its production preview.
+
+See the [platform roadmap](docs/low-code-platform-roadmap.zh-CN.md), [M0 acceptance record and user-study task cards](docs/m0-acceptance.zh-CN.md), and [document contracts and capability registry proposal](docs/platform-foundations.zh-CN.md) (Chinese). The acceptance record includes a disposable local test environment; real-user validation remains pending.
 
 | Path | Purpose |
 | --- | --- |

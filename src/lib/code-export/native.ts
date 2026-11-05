@@ -1,12 +1,16 @@
-import type { StudioDocument } from '../../model';
-import type { CodeExport, Format } from './generate';
+import type { StudioDocument } from '../../model.ts';
+import type { CodeExport, Format } from './generate.ts';
 import { escapeHtml, js } from './nodes.ts';
 import { renderSeoHead, resolveSeo } from '../../../shared/seo.mjs';
+import { exportWorkspaceCode, hasWorkspace } from './workspace-export.ts';
 
 type NativeBundle = { code:string; css:string };
 
 /** Downloads carry the exact React renderer used by the canvas, with no CDN dependency. */
 export function generateNativeCode(page: StudioDocument, format: Format, bundle: NativeBundle, assets: Record<string,string> = {}): CodeExport {
+  if (hasWorkspace(page)) {
+    return exportWorkspaceCode(page, format);
+  }
   const document = page;
   const code = bundle.code.replace(/<\/script/gi,'<\\/script');
   const css = bundle.css.replace(/<\/style/gi,'<\\/style');

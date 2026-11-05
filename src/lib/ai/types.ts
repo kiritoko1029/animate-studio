@@ -1,8 +1,8 @@
-import type { PageDocument } from '../../model.ts';
+import type { PageDocument, WorkspaceFramework } from '../../model.ts';
 import type { CustomComponentDefinition, CustomComponentFields, CustomComponentSize } from '../../../shared/custom-components.mjs';
 import type { DataSource } from '../../../shared/data-sources.mjs';
 import type { SiteRegion, SitePageEntry } from '../../../shared/site-document.mjs';
-export type AiPublicDataSource = Omit<DataSource, 'method' | 'transport' | 'credentialId' | 'headers' | 'query' | 'body'> & { method?: 'GET'; transport?: 'direct' };
+export type AiPublicDataSource = Omit<DataSource, 'method' | 'transport' | 'credentialId' | 'headers' | 'browserHeaders' | 'credentials' | 'query' | 'body'> & { method?: 'GET'; transport?: 'direct' };
 
 export type AiProvider = 'openai' | 'anthropic';
 export type AiCreationMode = 'page' | 'component';
@@ -37,19 +37,30 @@ export type AiSession = {
 };
 export type AiChange = { key: string; blockId?: string; kind: 'add' | 'update' | 'remove' | 'page'; summary: string; time: number; frame?: { x: number; y: number; width: number; height: number } };
 export type AiOperation = {
-  v: 1; seq: number; op: 'message' | 'page' | 'add' | 'update' | 'remove' | 'data' | 'ask' | 'done' | 'component' | 'sitePlan' | 'sitePage' | 'siteLayout' | 'dataSource';
+  v: 1; seq: number; op: 'message' | 'page' | 'add' | 'update' | 'remove' | 'data' | 'ask' | 'done' | 'component' | 'sitePlan' | 'sitePage' | 'siteLayout' | 'dataSource' | 'workspaceInit' | 'writeFile' | 'deleteFile' | 'patchFile' | 'useAnimateUi' | 'runTool';
   summary?: string; text?: string; id?: string; type?: string;
   props?: Record<string, unknown>; frame?: Record<string, unknown>; settings?: Record<string, unknown>;
   name?: string; bindings?: unknown; events?: unknown; variables?: unknown; scripts?: unknown; questions?: AiQuestion[];
   component?: CustomComponentDefinition; componentRef?: AiComponentRef;
   page?: PageDocument; pages?: { id: string; name: string; path: string; kind: 'page' | 'detail' | 'notFound'; seo?: SitePageEntry['seo']; layout: SiteRegion[] }[];
   sharedLayout?: SiteRegion[]; deletes?: string[]; region?: SiteRegion; source?: AiPublicDataSource; dataSources?: AiPublicDataSource[];
+  framework?: WorkspaceFramework; entry?: string; path?: string; content?: string;
+  search?: string; replace?: string; components?: string[];
+  tool?: 'animateUi' | 'codeCheck' | 'testRunner' | 'themeTokens' | 'responsiveFix' | 'mockStore';
+  args?: Record<string, unknown>;
 };
 /** Thinking text is provider-returned display content; summaries take precedence within each request. */
 export type AiStreamEvent = { type: 'connected' } | { type: 'text'; text: string } | { type: 'thinking'; text?: string; newPart?: boolean; source?: 'summary' | 'reasoning' } | { type: 'usage'; usage: AiUsage } | { type: 'complete' };
+export type AiStreamingFile = {
+  path: string;
+  content: string;
+  summary?: string;
+};
 export type AiProgress = {
   phase: 'connecting' | 'waiting' | 'thinking' | 'generating' | 'continuing';
   round: number; startedAt: number; endedAt?: number; changes: number; detail: string; reasoning: string;
   /** Per request: when it was sent, when headers arrived and when the first page record was produced. */
   requestedAt?: number; connectedAt?: number; firstOutputAt?: number;
+  /** Live in-progress file when AI is streaming a workspace writeFile operation. */
+  streamingFile?: AiStreamingFile | null;
 };

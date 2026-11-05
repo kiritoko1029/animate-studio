@@ -13,6 +13,8 @@ export const isExtendedComponent = (type: string): type is ExtendedComponentType
 import type { Bindings, Action, Variable, Script } from './lib/interactions/types';
 import type { CustomTheme, ThemeId } from './lib/themes';
 export type { SiteDocument, StudioDocument } from '../shared/site-document.mjs';
+import { createDefaultWorkspace, type WorkspaceSpec, type WorkspaceFramework, type WorkspaceFile, type WorkspaceCompiledBundle } from '../shared/workspace.mjs';
+export { createDefaultWorkspace, type WorkspaceSpec, type WorkspaceFramework, type WorkspaceFile, type WorkspaceCompiledBundle };
 
 export const componentTypes = ['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'repeater', 'form', 'chart', ...Object.keys(extendedComponents) as ExtendedComponentType[]] as const;
 /** Built-in library types, created from catalog defaults. */
@@ -48,6 +50,7 @@ export type PageDocument = {
   version: 1; name: string; id?: string;
   settings: { background: string; accent: string; theme?: ThemeId; customThemes?: CustomTheme[]; maxWidth: number; padding: number; layout?: 'flow' | 'free'; canvasHeight?: number; responsive?: import('./lib/responsive.ts').ResponsiveSettings };
   blocks: Block[]; variables?: Variable[]; scripts?: Script[];
+  workspace?: WorkspaceSpec;
 };
 export const catalog: {type: BuiltinComponentType; name: string; english: string; group: string; description: string}[] = [
   { type: 'navbar', name: '导航栏', english: 'Navigation', group: '布局', description: '品牌与页面导航' },
@@ -178,6 +181,12 @@ export function createDocument(blank = false): PageDocument {
   const types:BuiltinComponentType[]=['navbar','hero','card','card','accordion','footer'];
   const frames:BlockFrame[]=[{x:0,y:0,width:1920,height:85},{x:480,y:100,width:960,height:460},{x:40,y:580,width:440,height:260},{x:520,y:580,width:440,height:260},{x:1040,y:580,width:800,height:370},{x:0,y:970,width:1920,height:110}];
   return {version:1,id:crypto.randomUUID(),name:blank?'未命名页面':'灵感，从这里开始',settings:{background:'#ffffff',accent:'#408668',maxWidth:defaultCanvasSize.width,padding:0,layout:'free',canvasHeight:defaultCanvasSize.height},blocks:blank?[]:types.map((type,i)=>{const block=createBlock(type);return {...block,frame:frames[i],props:i===3?{...block.props,title:'每一个细节，都有回应',text:'从轻盈的过渡到自然的反馈，让页面拥有自己的节奏。',background:'#f3f3ec'}:block.props};})};
+}
+export function createWorkspaceDocument(framework: WorkspaceFramework = 'react', name = '智绘产品工作台'): PageDocument {
+  const doc = createDocument(true);
+  doc.name = name;
+  doc.workspace = createDefaultWorkspace(framework, name);
+  return doc;
 }
 export const blockName = (type: ComponentType) => type==='custom' ? '自定义组件' : catalog.find(c=>c.type===type)?.name ?? type;
 /** Display name of a placed block; custom instances show their component name. */

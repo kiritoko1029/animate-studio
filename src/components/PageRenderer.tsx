@@ -33,6 +33,7 @@ import { ChartBlock } from './data/ChartBlock';
 import './data/data-blocks.css';
 import type { DataSource } from '../../shared/data-sources.mjs';
 import { pageAtWidth, responsiveDevice } from '../lib/responsive';
+import { WorkspacePreview } from './workspace/WorkspacePreview';
 
 type BlockRendererProps = { block: Block; settings: PageDocument['settings']; interactive?: boolean; bounded?: boolean; preview?: boolean };
 type PageRendererProps = { document: PageDocument; interactive?: boolean; replayKey?: number; persistenceScope?: string; route?: Record<string, string>; dataSources?: DataSource[]; dataAccess?: { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string }; breakpoint?: import('../lib/responsive').ResponsiveDevice };
@@ -209,6 +210,9 @@ export function FreePage({ document, interactive = true, replayKey = 0, breakpoi
 }
 
 export function PageRenderer({ document, interactive = true, replayKey = 0, persistenceScope, route, dataSources = [], dataAccess = { scope: 'preview' }, breakpoint }: PageRendererProps) {
+  if (document.workspace) {
+    return <DataRuntimeProvider sources={dataSources} access={dataAccess} route={route}><WorkspacePreview key={replayKey} workspace={document.workspace} title={document.name} interactive={interactive} /></DataRuntimeProvider>;
+  }
   const content = interactive && (dataSources.length > 0 || document.variables?.length || document.scripts?.length || document.blocks.some(block => block.props.effect && block.props.effect !== 'none' || Object.keys(block.bindings ?? {}).length || Object.values(block.events ?? {}).some(actions => actions.length)))
     ? <InteractivePreview key={replayKey} document={document} persistenceScope={persistenceScope} route={route} breakpoint={breakpoint} />
     : <FreePage document={document} interactive={interactive} replayKey={replayKey} breakpoint={breakpoint} />;

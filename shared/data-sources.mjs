@@ -1,6 +1,17 @@
 import { prepareCollection, validateCollectionSource } from './collections.mjs';
 
 export const dataSourceLimits = { perSite: 20, responseBytes: 1024 * 1024, timeoutMs: 15000, pageSize: 100, items: 500 };
+// Legacy POST/PUT/PATCH sources remain writes unless explicitly declared queries.
+export function isReadDataSource(source) {
+  return source.kind !== 'rest' || (source.operation ?? ((source.method ?? 'GET') === 'GET' ? 'read' : 'write')) === 'read';
+}
+export const isSensitiveDataHeader = name => /(?:token|secret|password|credential|authorization|api[-_]?key|cookie)/i.test(name);
+export const isBrowserManagedDataHeader = name => /^(?:cookie2?|origin|referer|host|connection|content-length|user-agent|accept-charset|accept-encoding|access-control-request-headers|access-control-request-method|date|dnt|expect|keep-alive|permissions-policy|te|trailer|transfer-encoding|upgrade|via)$|^(?:proxy-|sec-)/i.test(name);
+export function validateDataHeaderName(name, transport = 'direct') {
+  if (typeof name !== 'string' || !name || name.length > 100 || !/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name) || ['__proto__', 'prototype', 'constructor'].includes(name)) throw new Error('请求头名称无效');
+  if (isBrowserManagedDataHeader(name) && !(transport === 'proxy' && /^(?:cookie|origin|referer|user-agent)$/i.test(name))) throw new Error(transport === 'proxy' ? '此请求头由服务端传输层管理，不能手动填写。' : '此请求头由浏览器管理；Cookie 请使用“携带浏览器 Cookie”，不能手动填写。');
+  return name;
+}
 const roots = ['route', 'state', 'form'];
 const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
 const idPattern = /^[A-Za-z][A-Za-z0-9_-]{0,39}$/;
@@ -34,7 +45,8 @@ function checkMap(value, label, query = false) {
     text(item, 2000, `${label}.${key}`, true);
     checkTemplate(item);
     if (/[\u0000-\u0020\u007f\\]/u.test(key)) fail(`${label} 名称无效`);
-    if (!query && (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(key) || /(?:token|secret|password|credential|authorization|api[-_]?key|cookie)/i.test(key))) fail('认证信息请使用服务端凭据，不能保存在页面或请求头中');
+    if (!query && (!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(key) || isSensitiveDataHeader(key))) fail('认证信息请使用当前标签页请求头或服务端凭据，不能保存在页面或请求头中');
+    if (!query && /[\u0000-\u001f\u007f]/.test(item)) fail('请求头值不能包含控制字符');
     if (query && /(?:token|secret|password|credential|authorization|api[-_]?key)/i.test(key)) fail('密钥或令牌不能保存在 URL 查询中，请使用服务端凭据');
   }
 }
@@ -106,7 +118,7 @@ export function normalizeDataValue(source, value) {
   return value;
 }
 export function validateDataSource(source) {
-  record(source, ['id', 'name', 'kind', 'mode', 'items', 'url', 'method', 'headers', 'query', 'body', 'responsePath', 'timeoutMs', 'pageSize', 'transport', 'credentialId', 'fields', 'records', 'detailField', 'detailParameter'], 'dataSource');
+  record(source, ['id', 'name', 'kind', 'mode', 'items', 'url', 'method', 'operation', 'headers', 'browserHeaders', 'credentials', 'query', 'body', 'responsePath', 'timeoutMs', 'pageSize', 'transport', 'credentialId', 'fields', 'records', 'detailField', 'detailParameter'], 'dataSource');
   if (!idPattern.test(source.id)) fail('数据源 id 必须以字母开头，且最长 40 字符');
   text(source.name, 80, 'dataSource.name');
   if (!['static', 'rest', 'collection'].includes(source.kind)) fail('数据源类型无效');
@@ -115,6 +127,7 @@ export function validateDataSource(source) {
   if (source.timeoutMs !== undefined && (!Number.isInteger(source.timeoutMs) || source.timeoutMs < 100 || source.timeoutMs > dataSourceLimits.timeoutMs)) fail('请求超时必须在 100–15000 毫秒之间');
   if (source.pageSize !== undefined && (!Number.isInteger(source.pageSize) || source.pageSize < 1 || source.pageSize > dataSourceLimits.pageSize)) fail('每页条数必须在 1–100 之间');
   if (source.transport !== undefined && !['direct', 'proxy'].includes(source.transport)) fail('数据请求方式无效');
+  if (source.kind !== 'rest' && ['operation', 'browserHeaders', 'credentials'].some(key => source[key] !== undefined)) fail('仅 REST 数据源支持请求用途、浏览器请求头和 Cookie 设置');
   if (source.kind === 'static') {
     if (source.url !== undefined || source.method !== undefined && source.method !== 'GET' || source.body !== undefined || source.headers !== undefined || source.query !== undefined || source.transport === 'proxy' || source.credentialId !== undefined) fail('静态数据不需要请求地址、请求头或凭据');
     checkJson(source.items ?? []);
@@ -131,7 +144,22 @@ export function validateDataSource(source) {
     if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password || parsed.hash) fail('请求地址必须使用 HTTP(S)，且不能包含用户信息或片段');
     for (const key of parsed.searchParams.keys()) if (/(?:token|secret|password|credential|authorization|api[-_]?key)/i.test(key)) fail('密钥或令牌不能保存在 URL 查询中，请使用服务端凭据');
     if (!['GET', 'POST', 'PUT', 'PATCH'].includes(source.method ?? 'GET')) fail('请求方法仅支持 GET、POST、PUT 或 PATCH');
-    if (source.method === 'GET' && source.body !== undefined) fail('GET 请求不能携带请求体');
+    if (source.operation !== undefined && !['read', 'write'].includes(source.operation)) fail('请求用途无效');
+    if (isReadDataSource(source) && !['GET', 'POST'].includes(source.method ?? 'GET')) fail('查询数据源只支持 GET 或 POST');
+    if (!isReadDataSource(source) && (source.method ?? 'GET') === 'GET') fail('提交数据源需要 POST、PUT 或 PATCH');
+    if ((source.method ?? 'GET') === 'GET' && source.body !== undefined) fail('GET 请求不能携带请求体');
+    if (source.credentials !== undefined && !['omit', 'same-origin', 'include'].includes(source.credentials)) fail('浏览器 Cookie 设置无效');
+    if (source.credentials !== undefined && (source.transport === 'proxy' || source.credentialId)) fail('浏览器 Cookie 携带选项仅支持浏览器直接请求；转发可显式填写 Cookie 请求头');
+    if (source.browserHeaders !== undefined) {
+      if (!Array.isArray(source.browserHeaders) || !source.browserHeaders.length || source.browserHeaders.length + Object.keys(source.headers ?? {}).length > 20) fail('请求头最多 20 项');
+      const names = new Set(Object.keys(source.headers ?? {}).map(name => name.toLowerCase()));
+      for (const name of source.browserHeaders) {
+        validateDataHeaderName(name, source.transport === 'proxy' || source.credentialId ? 'proxy' : 'direct');
+        if (names.has(name.toLowerCase())) fail('请求头名称不能重复（不区分大小写）');
+        names.add(name.toLowerCase());
+      }
+      if (/^https?:\/\/[^/]*\{\{/i.test(source.url)) fail('使用当前标签页请求头时，接口主机不能使用动态参数');
+    }
     checkMap(source.headers, '请求头'); checkMap(source.query, '查询参数', true);
     if (source.body !== undefined) {
       if (!plain(source.body) || JSON.stringify(source.body).length > 50000) fail('请求体必须是小于 50000 字符的对象');

@@ -10,6 +10,7 @@ import { validateSiteDocument } from '../shared/site-document.mjs';
 import { readDataPath } from '../shared/data-sources.mjs';
 import { validateResponsive } from '../src/lib/responsive.ts';
 import { parseMediaReference } from '../shared/media.mjs';
+import { validateWorkspace } from '../shared/workspace.mjs';
 const themeIds = Object.keys(themes);
 const componentTypes = new Set(['navbar', 'hero', 'heading', 'text', 'button', 'card', 'image', 'input', 'accordion', 'tabs', 'switch', 'alert', 'badge', 'separator', 'footer', 'textarea', 'select', 'checkbox', 'radio', 'slider', 'avatar', 'progress', 'statistic', 'table', 'timeline', 'testimonial', 'pricing', 'breadcrumb', 'pagination', 'rating', 'repeater', 'form', 'chart', 'custom', ...Object.keys(extendedComponents)]);
 const stringLimits = { title: 300, text: 10000, label: 300, url: 2048, imageUrl: 2048, items: 20000, variant: 300, name: 40, error: 500, successUrl: 2048, successText: 500, errorText: 500, categoryField: 500, filterField: 500, filterVariable: 40 };
@@ -102,7 +103,7 @@ function safeUrl(value, image = false) {
 }
 
 export function validatePage(page) {
-  record(page, ['version', 'name', 'id', 'settings', 'blocks', 'variables', 'scripts'], 'page');
+  record(page, ['version', 'name', 'id', 'settings', 'blocks', 'variables', 'scripts', 'workspace'], 'page');
   required(page, ['version', 'name', 'settings', 'blocks'], 'page');
   if (page.version !== 1) fail('仅支持版本 1 的页面');
   if (Object.hasOwn(page, 'id') && (typeof page.id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(page.id))) fail('页面 id 无效');
@@ -211,6 +212,9 @@ export function validatePage(page) {
   }
   try { validateInteractions(page); } catch (error) { fail(error.message); }
   try { validateResponsive(page); } catch (error) { fail(error.message); }
+  if (Object.hasOwn(page, 'workspace') && page.workspace !== undefined) {
+    try { validateWorkspace(page.workspace, 'page.workspace'); } catch (error) { fail(error.message, error.path ?? 'page.workspace'); }
+  }
   return page;
 }
 

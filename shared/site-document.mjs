@@ -178,7 +178,7 @@ export function composeSitePage(site, entry, containerWidth) {
     names.add(variable.name); variables.push(variable);
   }
   for (const { page } of documents.slice(1)) scripts.push(...page.scripts);
-  return { ...bodyPage, settings: { ...bodyPage.settings, canvasHeight: height, responsive: undefined }, blocks, variables, scripts };
+  return { ...bodyPage, settings: { ...bodyPage.settings, canvasHeight: height, responsive: undefined }, blocks, variables, scripts, ...(bodyPage.workspace ? { workspace: bodyPage.workspace } : {}) };
 }
 export function validateSiteDocument(site, validatePage) {
   record(site, ['version', 'kind', 'id', 'name', 'homePageId', 'pages', 'sharedLayout', 'dataSources'], 'site');

@@ -1,5 +1,39 @@
 # 更新日志 / Changelog
 
+## v2026.11.5 — 2026-11-05
+
+### 中文
+
+本次版本将平台升级为「自由画布 + 多文件代码工作区（Workspace）」双轨架构，并增强 REST 数据源请求头与 POST 查询能力。用户与 AI 可在锁定运行底座上编写多文件 React / Vue / HTML 应用、直接调用 Animate UI 官方动效组件，并导出无 `<iframe>` 包装的原生前端代码。
+
+- 新增多文件代码工作区（`PageDocument.workspace`），内置锁定版本底座（React 19 + Lucide、Vue 3.5 SFC、原生 HTML/ESM）与服务端实时预置编译器（`/api/workspace/compile`），支持最多 32 个文件、单文件 120 KB 与总计 500 KB 安全校验。
+- 工作区内置 `animate-ui` 虚拟模块与 15 个核心动效组件（`GradientText`、`ShimmeringText`、`TypingText`、`CountingNumber`、`SlidingNumber`、`RippleButton`、`LiquidButton`、`FlipButton`、`StarsBackground`、`BubbleBackground`、`GradientBackground`、`HexagonBackground`、`AnimateCard`、`AnimateTabs`、`AnimateAccordion`、`AnimateModal`、`CodeBlock`），支持直接 `import { ... } from 'animate-ui'`。
+- 代码编辑器与 Unified Diff 对比视图统一接入 Animate UI 官方 `CodeBlock`（Shiki `one-light` / `one-dark-pro` 语法高亮）；文件切换默认保持在「代码编辑」，AI 生成代码时左侧实时流式展示 Diff 变更；每次创建、手动保存、AI 写入或回滚自动生成 Git 提交历史（`workspace.git`）。
+- 顶栏「页面」菜单升级为「新建」菜单（支持新建空白画布页、React/Vue/HTML 多文件代码工作区及管理站点页面），左侧组件栏与工作区文件树均支持一键收起与展开。
+- 新增专供 AI 内部调用的工作区工具集与上下文注入（`workspaceToolkit`、`useAnimateUi`、`patchFile`、`runTool`：`animateUi` / `inspectAnimateUi` / `codeCheck` / `testRunner` / `searchCode` / `themeTokens` / `responsiveFix` / `mockStore`），并在 AI 完成输出前自动执行编译与静态代码检测自愈循环。
+- 预览与公开分享页（`/p/:token`）对工作区页面采用 1:1 真实视口自适应渲染（不再做固定画布等比缩放），HTML / React (`.jsx`) / Vue 3 SFC (`.vue`) 导出直接输出真实原生源码与锁定 `package.json` 工程结构，彻底移除 `<iframe srcDoc>` 包装。
+- REST 数据源支持显式声明 `operation: "read"` 的 POST 查询、键值请求头编辑器、当前标签页内存认证头及受控代理转发（包含 `Cookie`、`Origin`、`Referer`、`User-Agent` 及跨源重定向防护）。
+
+**升级说明**：`PageDocument` 与 `SiteDocument` 版本号保持 `1`，无需新增数据库迁移。既有自由画布页面保持原有缩放与导出契约；启用 `page.workspace` 的多文件工作区页面使用 1:1 响应式渲染与原生代码导出。
+
+**验证**：543 项自动化测试全部通过，双端 TypeScript 类型检查（`tsconfig.json` 与 `tsconfig.cloudflare.json`）及 Node / Cloudflare 构建通过。真实浏览器与 JSDOM 验证 React / Vue / HTML 多文件编译、Animate UI 动效组件交互、Git 版本回滚、Shiki 代码编辑与 Diff 高亮、1440px / 768px / 390px 1:1 响应式分享页及无 `<iframe>` 原生导出。
+
+### English
+
+This release upgrades Animate Studio to a hybrid Free-Canvas + Multi-File Code Workspace architecture and expands REST data sources with POST read queries and header management. Users and AI can build multi-file React, Vue, and HTML applications on a locked runtime base, import official Animate UI components directly, and export native frontend code without `<iframe>` wrappers.
+
+- Added multi-file code workspaces (`PageDocument.workspace`) with locked runtime bases (React 19 + Lucide, Vue 3.5 SFC, and native HTML/ESM) and a pre-built compiler (`/api/workspace/compile`), enforcing safe path allowlists and limits of 32 files, 120 KB per file, and 500 KB total.
+- Built in the `animate-ui` virtual module and 15 official animated components (`GradientText`, `ShimmeringText`, `TypingText`, `CountingNumber`, `SlidingNumber`, `RippleButton`, `LiquidButton`, `FlipButton`, `StarsBackground`, `BubbleBackground`, `GradientBackground`, `HexagonBackground`, `AnimateCard`, `AnimateTabs`, `AnimateAccordion`, `AnimateModal`, `CodeBlock`) for direct `import { ... } from 'animate-ui'` usage inside workspaces.
+- Unified syntax highlighting across the code editor and Unified Diff viewer using Animate UI's `CodeBlock` (Shiki `one-light` / `one-dark-pro`). File switching stays in code edit mode by default, AI file streaming renders live diffs in real time, and workspace edits automatically record Git commit history (`workspace.git`) with one-click rollback.
+- Upgraded the header "Page" menu to a "New" menu (creating blank canvas pages, React/Vue/HTML code workspaces, or managing site pages) and added collapse/expand toggles for both the left component sidebar and the workspace file tree.
+- Added an internal AI workspace toolkit and context injection (`workspaceToolkit`, `useAnimateUi`, `patchFile`, `runTool`: `animateUi` / `inspectAnimateUi` / `codeCheck` / `testRunner` / `searchCode` / `themeTokens` / `responsiveFix` / `mockStore`) with an automatic post-generation compile and static-check self-healing loop.
+- Preview and public share pages (`/p/:token`) render workspace pages at 1:1 responsive viewport scale without fixed-canvas CSS scaling. HTML, React (`.jsx`), and Vue 3 SFC (`.vue`) exports emit native source code and locked `package.json` project dictionaries without `<iframe srcDoc>` wrappers.
+- Extended REST data sources with explicit `operation: "read"` POST queries, a key-value request header editor, tab-scoped browser authentication headers, and controlled proxy forwarding with cross-origin redirect protection.
+
+**Upgrade notes**: `PageDocument` and `SiteDocument` schema versions remain `1` with no new database migrations required. Existing free-canvas pages preserve their uniform scaling and export behavior; pages with `page.workspace` use 1:1 responsive rendering and native code exports.
+
+**Validation**: All 543 automated tests passed, along with both TypeScript checks (`tsconfig.json` and `tsconfig.cloudflare.json`) and Node/Cloudflare builds. Real browser and JSDOM checks verified multi-file React/Vue/HTML compilation, Animate UI component interactions, Git commit rollback, Shiki editor/diff highlighting, 1440px/768px/390px 1:1 responsive shared pages, and iframe-free native exports.
+
 ## v2026.10.27 — 2026-10-27
 
 ### 中文

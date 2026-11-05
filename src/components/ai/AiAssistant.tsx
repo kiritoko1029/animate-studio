@@ -27,6 +27,7 @@ export type AiAssistantProps = {
   getPage: () => PageDocument;
   onCommit: (page: PageDocument, change: AiChange, runId: string) => void;
   onRunningChange: (running: boolean) => void;
+  onProgressChange?: (progress: AiProgress | null) => void;
   onRestorePage: (page: PageDocument) => void;
   onOpenLocal: (page: PageDocument) => Promise<void>;
   onOpenCloud: (id: string) => Promise<void>;
@@ -85,13 +86,13 @@ export function AiAssistant(props: AiAssistantProps) {
     commit: (page, change, runId) => latest.current.onCommit(page, change, runId),
     checkpoint: saveRecord, onSession: showRecord,
     onRunning: value => {
-      if (value) { setInput(''); setAnswers({}); setProgress(null); } else setProgress(current => current ? { ...current, endedAt: Date.now() } : null);
+      if (value) { setInput(''); setAnswers({}); setProgress(null); latest.current.onProgressChange?.(null); } else setProgress(current => { const next = current ? { ...current, endedAt: Date.now(), streamingFile: null } : null; latest.current.onProgressChange?.(next); return next; });
       // A question needs an answer before work continues, so surface it even if the chat was collapsed.
       if (!value && records.current[0]?.id === latest.current.page.id && records.current[0].status === 'waiting') setOpen(true);
       if (!value) reconcileRecovery(latest.current.getPage());
       setRunning(value); latest.current.onRunningChange(value);
     },
-    onProgress: setProgress,
+    onProgress: value => { setProgress(value); latest.current.onProgressChange?.(value); },
     // requestAnimationFrame never fires in a hidden tab, which would stall generation until the tab is shown again.
     yieldFrame: () => new Promise<void>(resolve => {
       if (document.hidden) { resolve(); return; }

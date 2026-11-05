@@ -182,7 +182,7 @@ async function main() {
   await page.until(`document.querySelector('#logic-tab-sources')`, 'source tabs mounted');
   await page.click('#logic-tab-sources');
   await page.until(`document.querySelector('.data-source-manager')`, 'data source manager mounted');
-  await page.clickText('公开 REST', '.data-source-actions button');
+  await page.clickText('REST 接口', '.data-source-actions button');
   await page.fill('[aria-label="接口地址"]', `${origin}/api/sales`);
   await page.clickText('测试并连接', '.data-source-actions button');
   await page.until(`document.querySelector('.data-source-success')?.textContent.includes('连接成功') && document.querySelector('.data-source-fields')?.textContent.includes('orders')`, 'REST test and field inference');

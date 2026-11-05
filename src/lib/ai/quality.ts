@@ -1,7 +1,8 @@
 import { defaultFrame, extendedCatalog, isExtendedComponent, type Block, type BlockFrame, type PageDocument } from '../../model.ts';
 import { pageAnchorNames } from '../page-anchors.ts';
+import { validateWorkspaceModules } from '../workspace/compiler-client.ts';
 
-export type AiQualityIssue = { kind: 'bounds' | 'overlap' | 'link' | 'overflow' | 'contrast'; blockIds: string[]; detail?: string };
+export type AiQualityIssue = { kind: 'bounds' | 'overlap' | 'link' | 'overflow' | 'contrast' | 'compile'; blockIds: string[]; detail?: string };
 export type AiQualityReport = { issues: AiQualityIssue[]; measured: boolean };
 type Color = { r: number; g: number; b: number; a: number };
 
@@ -74,6 +75,11 @@ export function inspectAiPage(page: PageDocument, surface?: HTMLElement | null):
     const hash = url?.trim();
     if (hash?.startsWith('#') && hash.length > 1 && !anchors.has(hash.slice(1))) add({ kind: 'link', blockIds: [blockId], detail: hash });
   };
+  if (page.workspace) {
+    for (const err of validateWorkspaceModules(page.workspace)) {
+      add({ kind: 'compile', blockIds: [err.file], detail: `${err.file}${err.line ? `:${err.line}` : ''} ${err.message}` });
+    }
+  }
   let nextY = 32;
   const positioned = page.blocks.map(block => {
     const frame = block.frame ?? defaultFrame(block.type, page.settings.maxWidth, 32, nextY);
@@ -102,7 +108,11 @@ export function inspectAiPage(page: PageDocument, surface?: HTMLElement | null):
   const cache = new Map<Element, CSSStyleDeclaration>();
   const style = (node: Element) => { let value = cache.get(node); if (!value) { value = win.getComputedStyle(node); cache.set(node, value); } return value; };
   const frames = new Map(Array.from(surface.querySelectorAll<HTMLElement>('[data-block-id]')).map(node => [node.dataset.blockId, node]));
-  let measured = page.blocks.length === 0, remainingText = 5000;
+  const wsPreview = surface.querySelector<HTMLElement>('[data-workspace-preview]');
+  let measured = page.blocks.length === 0 || Boolean(wsPreview), remainingText = 5000;
+  if (wsPreview && wsPreview.scrollWidth > wsPreview.clientWidth + 2) {
+    add({ kind: 'overflow', blockIds: [page.workspace?.entry ?? 'workspace'] });
+  }
   for (let i = 0; i < positioned.length; i++) {
     const { block, frame: bounds } = positioned[i], frame = frames.get(block.id), content = frame?.querySelector<HTMLElement>('.page-block');
     if (!frame || !content || !content.clientWidth || !content.clientHeight || !visible(content, surface, style)) continue;

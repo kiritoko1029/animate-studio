@@ -80,7 +80,7 @@ Cloudflare 默认使用 D1。高级部署也可提供 `HYPERDRIVE.connectionStri
 
 公开 REST 和静态 JSON 可直接用于预览、分享与导出，不要求账号。需要服务端凭据或受控代理时，先在 **数据源 → 请求与凭据（高级）** 中创建 Bearer Token 或 API Key，并限制允许访问的主机。密钥使用从 `BETTER_AUTH_SECRET` 派生的 AES-256-GCM 密钥加密后存入 `studio_data_credential`，页面只保存凭据 ID；列表、分享、导出和模型上下文都不返回密钥明文。更换账号密钥后旧数据凭据无法解密，需要重新创建。
 
-`POST /api/account/data/query` 只接受当前账号已保存站点的 `pageId`、`sourceId` 和运行参数，不能传入任意 URL 或覆盖凭据。服务端逐跳检查重定向、允许主机、DNS、环回和私网地址，实际连接使用已校验的地址，原主机名仅用于 HTTP Host 与 TLS 校验，避免校验后重新解析。请求体与响应上限均为 1 MiB，总超时上限 15 秒，并按实例限制每个账号的数据查询频率。本地测试主机只有显式列入 `STUDIO_DATA_ALLOWED_HOSTS` 才允许访问。私有读取只在登录后的编辑预览中可用；分享和导出会明确提示改用公开接口，不能调用账号私有接口。
+`POST /api/account/data/query` 只接受当前账号已保存站点的 `pageId`、`sourceId` 和运行参数，不能传入任意 URL 或覆盖凭据。数据源可用 `browserHeaders` 声明临时请求头名称，值通过每次请求的 `requestHeaders` 传递，不入库；`requestHeaderTarget` 必须与已保存的源地址完全一致，仅作为修订前提，不作为代理目标。服务端拒绝未声明、重复、缺失或含控制字符的值，单项最多 4096 字符、合计最多 16 KiB；认证头不能覆盖已关联的凭据，也不能随跨来源重定向转发。显式 Cookie 与用户访问工作台的会话 Cookie 分开处理，不自动复制后者。服务端逐跳检查重定向、允许主机、DNS、环回和私网地址，实际连接使用已校验的地址，原主机名仅用于 HTTP Host 与 TLS 校验，避免校验后重新解析。请求体与响应上限均为 1 MiB，总超时上限 15 秒，并按实例限制每个账号的数据查询频率。本地测试主机只有显式列入 `STUDIO_DATA_ALLOWED_HOSTS` 才允许访问。私有读取只在登录后的编辑预览中可用；分享和导出会明确提示改用公开接口，不能调用账号私有接口。
 
 `POST /api/account/data/credentials` 创建凭据，`GET` 只返回元数据，`DELETE /api/account/data/credentials/:id` 按账号删除。迁移为 Node 的 `0006-data-credentials` 与生成的 D1 迁移，只新增表，不重建账号、页面或分享数据。表单写入还必须由用户确认方法和主机；AI、测试连接、自动保存、发布和导出不会自动执行写入。
 

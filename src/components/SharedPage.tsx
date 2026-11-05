@@ -21,5 +21,6 @@ export function SharedPage({ token }: { token: string }) {
   }, [token, retry]);
   if (!page) return <main className="shared-page-status">{error ? <><AlertCircle size={28}/><h1>{t("无法打开页面")}</h1><p role="alert">{translateMessage(error)}</p><StudioButton className="secondary-button" onClick={() => setRetry(value => value + 1)}>{t("重新加载")}</StudioButton></> : <><LoaderCircle size={24} className="spin"/><p>{t("正在打开页面…")}</p></>}</main>;
   const home = 'settings' in page ? page : page.pages.find(entry => entry.id === page.homePageId)?.page;
-  return <MediaProvider siteId={page.id ?? `shared-${token}`} document={page} sharedToken={token}><main className="shared-page" style={{ background: home?.settings.background }}><div className="shared-page-content" style={{ maxWidth: home?.settings.maxWidth }}><SitePreview document={page} mode="share" basePath={`/p/${token}`} persistenceScope={`shared:${token}`}/></div></main></MediaProvider>;
+  const isWorkspace = Boolean(home?.workspace);
+  return <MediaProvider siteId={page.id ?? `shared-${token}`} document={page} sharedToken={token}><main className={`shared-page${isWorkspace ? ' shared-page--workspace' : ''}`} style={{ background: home?.settings.background }}><div className={`shared-page-content${isWorkspace ? ' shared-page-content--workspace' : ''}`} style={isWorkspace ? undefined : { maxWidth: home?.settings.maxWidth }}><SitePreview document={page} mode="share" basePath={`/p/${token}`} persistenceScope={`shared:${token}`}/></div></main></MediaProvider>;
 }

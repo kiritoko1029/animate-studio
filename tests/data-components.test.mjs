@@ -135,3 +135,13 @@ test('content collections render real list, image, table, chart and route detail
   assert.equal(f.doc.querySelectorAll('[data-chart-mark]').length, 2);
   assert.match(f.doc.querySelector('.chart-meta').textContent, /全部 2 条集合记录/);
 });
+
+test('POST query sources drive detail bindings and data tables without submitting forms', async t => {
+  const f = fixture(t), { page, block } = dataPage('text');
+  block.bindings = { text: { kind: 'expression', value: 'data.coil.title' } };
+  const source = { id: 'coil', name: '钢卷查询', kind: 'rest', mode: 'single', operation: 'read', method: 'POST', url: 'https://coil.example.test/query', body: { planCoils: ['001'] } };
+  f.win.fetch = async (url, init) => { f.calls.push({ url, init }); return Response.json({ title: '钢卷 001' }); };
+  f.mount(page, [source]);
+  await until(() => f.doc.querySelector('.page-paragraph')?.textContent === '钢卷 001', 'POST query reaches a normal text binding');
+  assert.equal(f.calls.length, 1); assert.equal(f.calls[0].init.method, 'POST');
+});

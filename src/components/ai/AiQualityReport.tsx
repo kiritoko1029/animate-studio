@@ -13,6 +13,7 @@ function describe(issue: AiQualityIssue) {
     case 'link': return t('页内链接没有目标：{0}', { 0: issue.detail });
     case 'overflow': return t('内容可能溢出组件边框');
     case 'contrast': return t('文字对比度可能不足（实测 / 建议：{0}）', { 0: issue.detail });
+    case 'compile': return t('工作区模块引用问题：{0}', { 0: issue.detail });
   }
 }
 

@@ -2,10 +2,54 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StringStream } from '@codemirror/language';
-import { keymap } from '@codemirror/view';
-import { Prec } from '@codemirror/state';
+import { Decoration, type DecorationSet, ViewPlugin, type ViewUpdate, keymap } from '@codemirror/view';
+import { Prec, RangeSetBuilder } from '@codemirror/state';
 import { tags } from '@lezer/highlight';
 import type { CodePanel } from '../../lib/custom-components/hints';
+import { highlightCodeLine } from '../../lib/workspace/git-diff';
+
+function buildLineHighlightDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  let lastLineFrom = -1;
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from;
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos);
+      if (line.from > lastLineFrom) {
+        lastLineFrom = line.from;
+        const tokens = highlightCodeLine(line.text);
+        let offset = line.from;
+        for (const tok of tokens) {
+          const len = tok.text.length;
+          if (len > 0 && tok.kind !== 'plain') {
+            builder.add(offset, offset + len, Decoration.mark({ class: `hl-${tok.kind}` }));
+          }
+          offset += len;
+        }
+      }
+      if (line.to >= to) break;
+      pos = line.to + 1;
+    }
+  }
+  return builder.finish();
+}
+
+const lineSyntaxHighlightPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = buildLineHighlightDecorations(view);
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = buildLineHighlightDecorations(update.view);
+      }
+    }
+  },
+  {
+    decorations: instance => instance.decorations,
+  },
+);
 
 /** Small stream highlighters: enough to read markup and styles, no extra packages. */
 type HtmlState = { inTag: boolean; inComment: boolean };
@@ -59,13 +103,14 @@ const cssLanguage = StreamLanguage.define<CssState>({
 });
 
 const highlighting = HighlightStyle.define([
-  { tag: [tags.keyword, tags.modifier, tags.tagName], color: 'var(--studio-950)', fontWeight: '700' },
-  { tag: [tags.string, tags.regexp, tags.attributeValue], color: 'var(--studio-600)' },
-  { tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'var(--studio-950)' },
-  { tag: tags.comment, color: 'var(--studio-500)', fontStyle: 'italic' },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--studio-950)', fontWeight: '600' },
-  { tag: [tags.propertyName, tags.attributeName, tags.definition(tags.variableName)], color: 'var(--studio-600)' },
-  { tag: [tags.operator, tags.punctuation, tags.bracket], color: 'var(--studio-600)' },
+  { tag: [tags.keyword, tags.modifier, tags.controlKeyword, tags.operatorKeyword, tags.moduleKeyword], color: 'var(--syntax-keyword, #7c3aed)', fontWeight: '650' },
+  { tag: [tags.tagName, tags.typeName, tags.className, tags.namespace], color: 'var(--syntax-type, #0891b2)', fontWeight: '600' },
+  { tag: [tags.string, tags.regexp, tags.attributeValue, tags.special(tags.string)], color: 'var(--syntax-string, #059669)' },
+  { tag: [tags.number, tags.bool, tags.null, tags.atom, tags.unit], color: 'var(--syntax-number, #d97706)', fontWeight: '500' },
+  { tag: tags.comment, color: 'var(--syntax-comment, #64748b)', fontStyle: 'italic' },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: 'var(--syntax-function, #2563eb)', fontWeight: '600' },
+  { tag: [tags.propertyName, tags.attributeName, tags.definition(tags.variableName)], color: 'var(--syntax-attr, #0284c7)' },
+  { tag: [tags.operator, tags.punctuation, tags.bracket], color: 'var(--syntax-operator, #475569)' },
 ]);
 const editorTheme = EditorView.theme({
   '&': { height: '100%', minHeight: '0', fontSize: '13px', backgroundColor: 'var(--studio-0)', color: 'var(--studio-950)' },
@@ -76,11 +121,19 @@ const editorTheme = EditorView.theme({
   '.cm-cursor': { borderLeftColor: 'var(--studio-950)' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': { backgroundColor: 'var(--studio-200)' },
   '.cm-content': { padding: '12px 0' },
+  '.cm-content .hl-keyword, .cm-content .hl-keyword *': { color: 'var(--syntax-keyword, #7c3aed) !important', fontWeight: '650' },
+  '.cm-content .hl-string, .cm-content .hl-string *': { color: 'var(--syntax-string, #059669) !important' },
+  '.cm-content .hl-number, .cm-content .hl-number *': { color: 'var(--syntax-number, #d97706) !important', fontWeight: '500' },
+  '.cm-content .hl-comment, .cm-content .hl-comment *': { color: 'var(--syntax-comment, #64748b) !important', fontStyle: 'italic' },
+  '.cm-content .hl-function, .cm-content .hl-function *': { color: 'var(--syntax-function, #2563eb) !important', fontWeight: '600' },
+  '.cm-content .hl-type, .cm-content .hl-type *, .cm-content .hl-tag, .cm-content .hl-tag *': { color: 'var(--syntax-type, #0891b2) !important', fontWeight: '600' },
+  '.cm-content .hl-attr, .cm-content .hl-attr *': { color: 'var(--syntax-attr, #0284c7) !important' },
+  '.cm-content .hl-operator, .cm-content .hl-operator *': { color: 'var(--syntax-operator, #475569) !important' },
   '&.cm-focused': { outline: 'none' },
   '.cm-tooltip': { border: '1px solid var(--studio-200)', borderRadius: '6px', backgroundColor: 'var(--studio-0)', color: 'var(--studio-950)' },
   '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--studio-100)', color: 'var(--studio-950)' },
 });
-const languages = { html: htmlLanguage, css: cssLanguage, js: javascript().language };
+const languages = { html: htmlLanguage, css: cssLanguage, js: javascript({ jsx: true, typescript: true }).language };
 const labels: Record<CodePanel, string> = { html: 'HTML 代码编辑器', css: 'CSS 代码编辑器', js: 'JavaScript 代码编辑器' };
 
 export type CodePanelHandle = { reveal: (line: number) => void; focus: () => void };
@@ -112,10 +165,10 @@ export const CodePanelEditor = forwardRef<CodePanelHandle, { panel: CodePanel; v
           { key: 'Mod-Enter', run: () => { handlers.current.onRun(); return true; } },
           { key: 'Mod-s', preventDefault: true, run: () => { handlers.current.onSave(); return true; } },
         ])),
-        basicSetup, panel === 'js' ? javascript() : languages[panel], EditorView.lineWrapping,
+        basicSetup, panel === 'js' ? javascript({ jsx: true, typescript: true }) : languages[panel], EditorView.lineWrapping,
         EditorView.contentAttributes.of({ 'aria-label': labels[panel] }),
         EditorView.updateListener.of(update => { if (update.docChanged) handlers.current.onChange(update.state.doc.toString()); }),
-        syntaxHighlighting(highlighting), editorTheme,
+        syntaxHighlighting(highlighting), lineSyntaxHighlightPlugin, editorTheme,
       ],
     });
     view.current = editor;

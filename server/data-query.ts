@@ -1,5 +1,5 @@
 import { isIP } from 'node:net';
-import { normalizeDataValue, prepareDataSource, readDataPath, validateDataSource, type DataSource, type DataTemplateContext } from '../shared/data-sources.mjs';
+import { isReadDataSource, normalizeDataValue, prepareDataSource, readDataPath, validateDataHeaderName, validateDataSource, type DataSource, type DataTemplateContext } from '../shared/data-sources.mjs';
 import { readBoundedJson } from '../src/lib/data/runtime.ts';
 import type { DataCredentialRecord } from '../db/data-credential-repository.ts';
 import { decryptDataCredential } from './data-credential-crypto.ts';
@@ -65,15 +65,39 @@ async function dnsJson(hostname: string, fetcher: typeof fetch, timeoutMs: numbe
 }
 export type DataQueryOptions = {
   source: DataSource; context?: DataTemplateContext; origin: string; credential?: DataCredentialRecord | null; encryptionSecret?: string;
+  requestHeaders?: unknown;
   fetcher?: typeof fetch; lookup?: (hostname: string) => Promise<{ address: string }[]>; allowedHosts?: string[]; confirmed?: { method: string; host: string }; connect?: (connection: DataConnection) => Promise<Response>;
 };
+function transientHeaders(source: DataSource, input: unknown): Record<string, string> {
+  if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || Object.getPrototypeOf(input) !== Object.prototype)) throw new DataQueryError(400, '临时请求头必须是对象。');
+  const declared = new Set((source.browserHeaders ?? []).map(name => name.toLowerCase()));
+  const headers: Record<string, string> = {};
+  let size = 0;
+  for (const [name, value] of Object.entries(input ?? {})) {
+    try { validateDataHeaderName(name, 'proxy'); } catch { throw new DataQueryError(400, '转发请求头名称无效或由传输层管理。'); }
+    const normalized = name.toLowerCase();
+    if (!declared.has(normalized) || Object.hasOwn(headers, normalized)) throw new DataQueryError(400, '临时请求头必须与已保存的数据源声明一致，且不能重复。');
+    if (typeof value !== 'string' || !value || value.length > 4096 || /[\u0000-\u001f\u007f]/.test(value)) throw new DataQueryError(400, '临时请求头值为空、过长或包含控制字符。');
+    size += new TextEncoder().encode(name + value).byteLength;
+    if (size > 16384) throw new DataQueryError(400, '临时请求头总大小不能超过 16 KiB。');
+    headers[normalized] = value;
+  }
+  if ([...declared].some(name => !Object.hasOwn(headers, name))) throw new DataQueryError(400, '请填写数据源声明的全部当前标签页请求头。');
+  return headers;
+}
 export async function executeDataQuery(options: DataQueryOptions): Promise<unknown> {
   const source = validateDataSource(options.source);
+  const temporaryHeaders = transientHeaders(source, options.requestHeaders);
+  for (const name of Object.keys(source.headers ?? {})) {
+    try { validateDataHeaderName(name, 'proxy'); } catch { throw new DataQueryError(400, '转发请求头名称无效或由传输层管理。'); }
+  }
+  const credentialHeader = options.credential?.kind === 'api-key' ? 'x-api-key' : 'authorization';
+  if (options.credential && Object.hasOwn(temporaryHeaders, credentialHeader)) throw new DataQueryError(400, '认证请求头与关联凭据重复，请只保留一种配置。');
   const prepared = prepareDataSource(source, options.context);
   if (prepared.url === undefined) throw new DataQueryError(400, '静态数据不需要服务端代理。');
   if (!['GET', 'POST', 'PUT', 'PATCH'].includes(prepared.method ?? 'GET')) throw new DataQueryError(400, '数据请求方法无效。');
   let target = new URL(prepared.url, options.origin);
-  if (prepared.method !== 'GET' && (!options.confirmed || options.confirmed.method !== prepared.method || options.confirmed.host !== target.host)) throw new DataQueryError(400, '写入请求需要用户在表单中明确确认方法与主机。');
+  if (!isReadDataSource(source) && (!options.confirmed || options.confirmed.method !== prepared.method || options.confirmed.host !== target.host)) throw new DataQueryError(400, '写入请求需要用户在表单中明确确认方法与主机。');
   const secret = options.credential ? decryptDataCredential(options.credential.encryptedSecret, options.encryptionSecret ?? '') : null;
   const fetcher = options.fetcher ?? fetch;
   const allowedLocal = options.allowedHosts ?? [];
@@ -111,7 +135,8 @@ export async function executeDataQuery(options: DataQueryOptions): Promise<unkno
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), remaining());
     let response: Response;
     try {
-      const headers = new Headers({ Accept: 'application/json', ...prepared.headers, ...(prepared.body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(secret ? options.credential!.kind === 'api-key' ? { 'X-Api-Key': secret } : { Authorization: `Bearer ${secret}` } : {}) });
+      const headers = new Headers({ Accept: 'application/json', ...prepared.headers, ...temporaryHeaders, ...(secret ? options.credential!.kind === 'api-key' ? { 'X-Api-Key': secret } : { Authorization: `Bearer ${secret}` } : {}) });
+      if (prepared.body !== undefined && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
       if (options.connect) headers.set('Host', target.host);
       const init = { method: prepared.method, headers, ...(requestBody === undefined ? {} : { body: requestBody }), signal: controller.signal, redirect: 'manual' as const };
       response = options.connect && addresses ? await options.connect({ url: target, init, addresses }) : await fetcher(target, init);
@@ -119,7 +144,9 @@ export async function executeDataQuery(options: DataQueryOptions): Promise<unkno
       if ([301, 302, 303, 307, 308].includes(response.status)) {
         const location = response.headers.get('location');
         if (!location || redirects === 3) throw new DataQueryError(502, '数据接口重定向次数过多或地址无效。');
-        target = new URL(location, target);
+        const next = new URL(location, target);
+        if (Object.keys(temporaryHeaders).length && next.origin !== target.origin) throw new DataQueryError(403, '带临时认证头的转发不能跳转到其他来源。');
+        target = next;
         if (response.status === 303 || (response.status === 301 || response.status === 302) && prepared.method === 'POST') throw new DataQueryError(400, '写入接口不能通过重定向改变请求方法。');
         continue;
       }

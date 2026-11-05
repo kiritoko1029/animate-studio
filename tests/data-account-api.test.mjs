@@ -28,7 +28,7 @@ async function fixture(t) {
   const upstream = createServer(async (req, res) => {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : null;
-    calls.push({ method: req.method, url: req.url, authorization: req.headers.authorization, body });
+    calls.push({ method: req.method, url: req.url, authorization: req.headers.authorization, token: req.headers['x-token'], cookie: req.headers.cookie, origin: req.headers.origin, referer: req.headers.referer, agent: req.headers['user-agent'], body });
     res.setHeader('Content-Type', 'application/json');
     if (req.url === '/redirect-private') { res.writeHead(302, { Location: 'http://127.0.0.1:1/private' }); res.end(); return; }
     if (req.url === '/slow') { await new Promise(resolve => setTimeout(resolve, 250)); res.end('[]'); return; }
@@ -122,4 +122,44 @@ test('redirects, SSRF, DNS rebinding, and timeouts are rejected or bounded', asy
   for (let i = 1; i < 60; i++) assert.equal(checkDataRateLimit('data-rate-test', 1001), true);
   assert.equal(checkDataRateLimit('data-rate-test', 1002), false);
   assert.equal(checkDataRateLimit('data-rate-test', 62000), true);
+});
+
+test('saved POST queries can read through the controlled proxy without weakening legacy write confirmation', async () => {
+  const source = { id: 'coils', name: '钢卷查询', kind: 'rest', mode: 'collection', method: 'POST', operation: 'read', url: 'https://coil.example.test/query', transport: 'proxy', body: { planCoils: ['001'] }, headers: { 'content-type': 'application/json;charset=UTF-8' }, responsePath: 'items' };
+  const requests = [];
+  const options = { source, origin: 'https://studio.test', lookup: async () => [{ address: '93.184.216.34' }], connect: async connection => { requests.push(connection); return Response.json({ items: [{ id: '001' }] }); } };
+  assert.deepEqual(await executeDataQuery(options), [{ id: '001' }]);
+  assert.equal(requests[0].init.method, 'POST');
+  assert.equal(new Headers(requests[0].init.headers).get('content-type'), 'application/json;charset=UTF-8');
+  assert.deepEqual(JSON.parse(requests[0].init.body), { planCoils: ['001'] });
+  await assert.rejects(executeDataQuery({ ...options, source: { ...source, operation: undefined } }), /明确确认/);
+  assert.equal(requests.length, 1);
+});
+
+test('owned proxy sources forward transient x-token and Cookie without saving them or accepting overrides', async t => {
+  const f = await fixture(t);
+  f.site.dataSources[0].browserHeaders = ['x-token', 'Cookie'];
+  f.site.dataSources[0].headers = { Origin: 'https://business.example', Referer: 'https://business.example/app', 'User-Agent': 'FixtureClient/1' };
+  assert.equal((await f.repository.saveSite('owner', f.record.id, f.site, f.record.savedAt)).status, 'saved');
+  const input = { pageId: f.record.id, sourceId: 'books', requestHeaderTarget: f.site.dataSources[0].url, requestHeaders: { 'x-token': 'forward-test-secret', Cookie: 'JSESSIONID=forward-test-session' } };
+  const response = await f.call('/api/account/data/query', input);
+  assert.equal(response.status, 200); assert.deepEqual(response.body.value, f.books);
+  assert.equal(f.calls[0].token, 'forward-test-secret'); assert.equal(f.calls[0].cookie, 'JSESSIONID=forward-test-session');
+  assert.equal(f.calls[0].origin, 'https://business.example'); assert.equal(f.calls[0].referer, 'https://business.example/app'); assert.equal(f.calls[0].agent, 'FixtureClient/1');
+  const saved = JSON.stringify(await f.repository.findOwned('owner', f.record.id));
+  assert.equal(saved.includes('forward-test-secret'), false); assert.equal(saved.includes('forward-test-session'), false);
+  assert.equal((await f.call('/api/account/data/query', input, 'other')).status, 404);
+  assert.equal((await f.call('/api/account/data/query', { ...input, requestHeaderTarget: 'https://other.example/query' })).status, 409);
+  for (const requestHeaders of [undefined, {}, { ...input.requestHeaders, Host: 'other.example' }, { ...input.requestHeaders, 'X-Extra': 'value' }, { ...input.requestHeaders, 'X-Token': 'duplicate' }, { ...input.requestHeaders, Cookie: 'bad\r\ninjected: yes' }]) assert.equal((await f.call('/api/account/data/query', { ...input, requestHeaders })).status, 400);
+  assert.equal(f.calls.length, 1, 'invalid header requests never reach the upstream');
+});
+
+test('forwarded temporary credentials cannot follow cross-origin redirects or shadow stored credentials', async () => {
+  const source = { id: 'temp', name: '临时认证', kind: 'rest', mode: 'single', url: 'https://business.example/query', transport: 'proxy', browserHeaders: ['x-token'] };
+  const calls = [];
+  const options = { source, origin: 'https://studio.test', requestHeaders: { 'x-token': 'redirect-secret' }, lookup: async () => [{ address: '93.184.216.34' }], connect: async connection => { calls.push(connection); return new Response(null, { status: 307, headers: { Location: 'https://other.example/collect' } }); } };
+  await assert.rejects(executeDataQuery(options), error => error.status === 403 && /其他来源/.test(error.message));
+  assert.equal(calls.length, 1);
+  await assert.rejects(executeDataQuery({ ...options, source: { ...source, browserHeaders: ['Authorization'] }, requestHeaders: { Authorization: 'Bearer temporary' }, credential: { kind: 'bearer' } }), /关联凭据重复/);
+  assert.equal(calls.length, 1);
 });

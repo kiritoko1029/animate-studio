@@ -4,7 +4,7 @@ import { fitPanelWidths, panelMinimums, panelStorageKey, panelWidthLimit, readPa
 
 type ResizeGesture = { side: PanelSide; pointerId: number; startX: number; initial: PanelWidths; previous: Partial<PanelWidths>; capture: HTMLElement };
 
-export function ResizableStudioLayout({ inspectorOpen, disabled = false, inert = false, children }: { inspectorOpen: boolean; disabled?: boolean; inert?: boolean; children: ReactNode }) {
+export function ResizableStudioLayout({ inspectorOpen, sidebarOpen = true, disabled = false, inert = false, children }: { inspectorOpen: boolean; sidebarOpen?: boolean; disabled?: boolean; inert?: boolean; children: ReactNode }) {
   const element = useRef<HTMLDivElement>(null), gesture = useRef<ResizeGesture | null>(null);
   const [width, setWidth] = useState(window.innerWidth);
   const [preferences, setPreferences] = useState<Partial<PanelWidths>>(() => {
@@ -41,8 +41,8 @@ export function ResizableStudioLayout({ inspectorOpen, disabled = false, inert =
     return () => { window.removeEventListener('keydown', escape, true); window.removeEventListener('blur', cancel); };
   }, []);
   useEffect(() => {
-    if (disabled || width <= 600 || resizing === 'right' && (!inspectorOpen || width <= 800)) finish(true);
-  }, [disabled, width, inspectorOpen]);
+    if (disabled || width <= 600 || resizing === 'left' && !sidebarOpen || resizing === 'right' && (!inspectorOpen || width <= 800)) finish(true);
+  }, [disabled, width, inspectorOpen, sidebarOpen]);
   const change = (side: PanelSide, value: number, initial = widths) => {
     setPreferences({ ...initial, [side]: Math.max(panelMinimums[side], Math.min(panelWidthLimit(side, initial, width, inspectorOpen), Math.round(value))) });
   };
@@ -55,9 +55,9 @@ export function ResizableStudioLayout({ inspectorOpen, disabled = false, inert =
     gesture.current = { side, pointerId: event.pointerId, startX: event.clientX, initial: widths, previous: preferences, capture: event.currentTarget };
     setResizing(side);
   };
-  return <div ref={element} inert={inert} className={`studio-body ${inspectorOpen ? 'with-inspector' : ''} ${resizing ? 'studio-body--resizing' : ''}`} style={{ '--studio-left-width': `${widths.left}px`, '--studio-right-width': `${widths.right}px` } as CSSProperties}>
+  return <div ref={element} inert={inert} className={`studio-body ${inspectorOpen ? 'with-inspector' : ''} ${!sidebarOpen ? 'without-sidebar' : ''} ${resizing ? 'studio-body--resizing' : ''}`} style={{ '--studio-left-width': `${widths.left}px`, '--studio-right-width': `${widths.right}px` } as CSSProperties}>
     {children}
-    {(['left', 'right'] as const).filter(side => side === 'left' ? width > 600 : inspectorOpen && width > 800).map(side => <div key={side}
+    {(['left', 'right'] as const).filter(side => side === 'left' ? sidebarOpen && width > 600 : inspectorOpen && width > 800).map(side => <div key={side}
       className={`studio-panel-resizer studio-panel-resizer--${side}${resizing === side ? ' is-resizing' : ''}`}
       role="separator" tabIndex={disabled ? -1 : 0} aria-label={side === 'left' ? t("调整组件库宽度") : t("调整属性面板宽度")} aria-orientation="vertical"
       aria-controls={side === 'left' ? 'component-sidebar-panel' : 'inspector-sidebar-panel'} aria-disabled={disabled}

@@ -85,3 +85,91 @@ test('interaction expressions expose read-only data roots alongside route and st
   assert.throws(() => runtime.validateExpression('data.book.title = "x"'), /表达式/);
   assert.throws(() => runtime.validateExpression('unknown.title'), /仅支持/);
 });
+
+test('POST queries preserve nested JSON and custom content type across direct preview and export', async () => {
+  const source = { ...detail, id: 'coils', mode: 'collection', url: 'http://10.0.0.8/query', method: 'POST', operation: 'read', responsePath: 'items', headers: { 'content-type': 'application/json;charset=UTF-8', 'X-Plant': 'A' }, credentials: 'include', body: { planCoils: '{{state.coils}}', __sys__: { status: 0 }, __blocks__: {} } };
+  validateDataSource(source);
+  const calls = [];
+  for (const scope of ['editor', 'share', 'export']) {
+    const result = await requestDataSource(source, { access: { scope }, context: { state: { coils: ['001', '002'] } }, fetcher: async (url, init) => { calls.push({ url, init }); return Response.json({ items: books }); } });
+    assert.deepEqual(result, books);
+  }
+  for (const { url, init } of calls) {
+    assert.equal(url, source.url); assert.equal(init.method, 'POST'); assert.equal(init.credentials, 'include');
+    assert.equal(init.headers['content-type'], 'application/json;charset=UTF-8');
+    assert.equal(init.headers['x-plant'], 'A');
+    assert.deepEqual(JSON.parse(init.body), { planCoils: ['001', '002'], __sys__: { status: 0 }, __blocks__: {} });
+  }
+  await assert.rejects(requestDataSource(source, { allowWrite: true }), /用于提交/);
+  await assert.rejects(requestDataSource({ ...source, operation: undefined }), /用户提交表单/);
+  assert.throws(() => validateDataSource({ ...source, method: 'PUT' }), /查询数据源/);
+  assert.throws(() => validateDataSource({ ...detail, method: 'GET', operation: 'write' }), /提交数据源/);
+});
+
+test('tab-only headers are scoped to owner/site/source/URL and never enter persisted sources', async () => {
+  const { browserHeaderScope, getBrowserHeaders, setBrowserHeaders } = await import('../src/lib/data/browser-headers.ts');
+  const { compileHeaderRows } = await import('../src/lib/data/header-fields.ts');
+  const compiled = compileHeaderRows([{ id: 'one', name: 'x-token', value: 'test-tab-secret', local: false }, { id: 'two', name: 'Content-Type', value: 'application/json;charset=UTF-8', local: false }]);
+  const source = { ...detail, url: 'https://coil.example.test/query', browserHeaders: compiled.browserHeaders, headers: compiled.headers };
+  validateDataSource(source);
+  const scope = browserHeaderScope('test-site', 'owner');
+  setBrowserHeaders(scope, source, compiled.values);
+  assert.equal(JSON.stringify(source).includes('test-tab-secret'), false);
+  let calls = 0;
+  const fetcher = async (_url, init) => { calls++; assert.equal(init.headers['x-token'], 'test-tab-secret'); assert.equal(init.redirect, 'error'); return Response.json(books[0]); };
+  await requestDataSource(source, { access: { scope: 'editor', browserScope: scope }, fetcher });
+  for (const access of [{ scope: 'export', browserScope: scope }, { scope: 'share', browserScope: scope }, { scope: 'editor', browserScope: browserHeaderScope('test-site', 'other') }, { scope: 'editor', browserScope: browserHeaderScope('another-site', 'owner') }]) await assert.rejects(requestDataSource(source, { access, fetcher }), /标签页/);
+  await assert.rejects(requestDataSource({ ...source, url: 'https://other.example.test/query' }, { access: { scope: 'editor', browserScope: scope }, fetcher }), /标签页/);
+  assert.equal(calls, 1);
+  assert.deepEqual(getBrowserHeaders(scope, { ...source, id: 'different' }), {});
+  setBrowserHeaders(scope, { ...source, browserHeaders: undefined }, {});
+  await assert.rejects(requestDataSource(source, { access: { scope: 'editor', browserScope: scope }, fetcher }), /标签页/);
+});
+
+test('header rows reject browser-managed fields, duplicate names and unsafe values without persisting auth', async () => {
+  const { compileHeaderRows } = await import('../src/lib/data/header-fields.ts');
+  const row = (name, value = 'test') => ({ id: name, name, value, local: false });
+  for (const name of ['Cookie', 'Origin', 'Referer', 'Connection', 'Sec-Fetch-Site']) assert.throws(() => compileHeaderRows([row(name)]), /浏览器管理/);
+  assert.throws(() => compileHeaderRows([row('Accept'), row('accept')]), /重复/);
+  assert.throws(() => compileHeaderRows([row('X-Plant', 'a\r\nb')]), /控制字符/);
+  validateDataSource({ ...detail, browserHeaders: ['x-token', 'Cookie'], transport: 'proxy' });
+  assert.throws(() => validateDataSource({ ...detail, credentials: 'include', transport: 'proxy' }), /仅支持浏览器/);
+  assert.throws(() => validateDataSource({ ...detail, browserHeaders: ['Cookie'] }), /浏览器管理/);
+  assert.throws(() => validateDataSource({ ...detail, browserHeaders: ['x-token'], url: 'https://{{state.host}}/query' }), /主机不能/);
+  assert.throws(() => validateDataSource({ ...collection, operation: 'read' }), /仅 REST/);
+});
+
+test('changing tab headers refreshes only subscribed matching sources and stops after disposal', async () => {
+  const { setBrowserHeaders } = await import('../src/lib/data/browser-headers.ts');
+  const source = { ...detail, url: 'https://coil.example.test/refresh', browserHeaders: ['x-token'] };
+  const scope = 'refresh-test'; let calls = 0;
+  setBrowserHeaders(scope, source, { 'x-token': 'first' });
+  const store = createDataStore([source], { scope: 'editor', browserScope: scope }, async () => { calls++; return Response.json(books[0]); });
+  const unsubscribe = store.subscribe(() => {});
+  await store.load(source.id, store.keyFor(source.id));
+  setBrowserHeaders('another-scope', source, { 'x-token': 'ignored' });
+  assert.equal(calls, 1);
+  setBrowserHeaders(scope, source, { 'x-token': 'second' });
+  await store.load(source.id, store.keyFor(source.id));
+  assert.equal(calls, 2);
+  unsubscribe(); store.dispose();
+  setBrowserHeaders(scope, source, { 'x-token': 'third' });
+  assert.equal(calls, 2);
+});
+
+test('forwarding includes declared tab headers and their saved target without persisting values', async () => {
+  const { setBrowserHeaders } = await import('../src/lib/data/browser-headers.ts');
+  const { compileHeaderRows } = await import('../src/lib/data/header-fields.ts');
+  const rows = compileHeaderRows([{ id: 'a', name: 'x-token', value: 'forward-token', local: false }, { id: 'b', name: 'Cookie', value: 'JSESSIONID=fixture-session', local: false }, { id: 'c', name: 'Origin', value: 'https://business.example', local: false }], 'proxy');
+  const source = { ...detail, url: 'https://business.example/query', method: 'POST', operation: 'read', transport: 'proxy', body: { ids: ['001'] }, headers: rows.headers, browserHeaders: rows.browserHeaders };
+  validateDataSource(source); setBrowserHeaders('forward-scope', source, rows.values);
+  const calls = [];
+  await requestDataSource(source, { access: { scope: 'editor', pageId: 'saved-site', browserScope: 'forward-scope' }, fetcher: async (url, init) => { calls.push({ url, init }); return Response.json({ value: { id: '001' } }); } });
+  assert.equal(calls[0].url, '/api/account/data/query');
+  const body = JSON.parse(calls[0].init.body);
+  assert.deepEqual(body.requestHeaders, { 'x-token': 'forward-token', Cookie: 'JSESSIONID=fixture-session' });
+  assert.equal(body.requestHeaderTarget, source.url);
+  assert.equal(JSON.stringify(source).includes('forward-token'), false);
+  assert.equal(JSON.stringify(source).includes('fixture-session'), false);
+  for (const name of ['Host', 'Content-Length', 'Connection', 'Sec-Fetch-Site']) assert.throws(() => compileHeaderRows([{ id: name, name, value: 'bad', local: true }], 'proxy'), /传输层管理/);
+});

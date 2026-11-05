@@ -1,7 +1,8 @@
-import { dataSourceLimits, normalizeDataValue, prepareDataSource, readDataPath, type DataSource, type DataTemplateContext } from '../../../shared/data-sources.mjs';
+import { dataSourceLimits, isReadDataSource, normalizeDataValue, prepareDataSource, readDataPath, type DataSource, type DataTemplateContext } from '../../../shared/data-sources.mjs';
+import { getBrowserHeaders, subscribeBrowserHeaders } from './browser-headers.ts';
 import type { JsonValue } from '../interactions/types';
 
-export type DataAccess = { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string };
+export type DataAccess = { scope: 'editor' | 'share' | 'export' | 'preview'; pageId?: string; browserScope?: string };
 const currentOrigin = () => (globalThis as unknown as { location?: { href: string } }).location?.href ?? 'http://studio.local';
 export type DataRequestOptions = { context?: DataTemplateContext; access?: DataAccess; signal?: AbortSignal; fetcher?: typeof fetch; page?: number; pageSize?: number };
 export class DataRequestError extends Error {
@@ -37,13 +38,22 @@ export function dataValueAt(source: DataSource, value: unknown, resolved = false
 }
 export async function requestDataSource(source: DataSource, options: DataRequestOptions & { allowWrite?: boolean } = {}): Promise<JsonValue> {
   const method = source.method ?? 'GET';
-  if (!options.allowWrite && source.kind === 'rest' && method !== 'GET') throw new DataRequestError('写入数据源只能在用户提交表单并确认后执行。', 'unavailable');
-  if (options.allowWrite && (source.kind !== 'rest' || !['POST', 'PUT', 'PATCH'].includes(method))) throw new DataRequestError('请选择 POST、PUT 或 PATCH 数据源作为提交目标。', 'unavailable');
+  if (!options.allowWrite && !isReadDataSource(source)) throw new DataRequestError('写入数据源只能在用户提交表单并确认后执行。', 'unavailable');
+  if (options.allowWrite && (source.kind !== 'rest' || isReadDataSource(source) || !['POST', 'PUT', 'PATCH'].includes(method))) throw new DataRequestError('请选择用于提交的 POST、PUT 或 PATCH 数据源。', 'unavailable');
   if (source.transport === 'proxy' || source.credentialId) {
     if (!options.access || options.access.scope !== 'editor' || !options.access.pageId) throw new DataRequestError('私有数据仅在登录后的编辑预览中可用，请使用公开接口进行分享或导出。', 'unavailable');
   }
   const prepared = prepareDataSource(source, options.context);
   if ('value' in prepared) return dataValueAt(source, prepared.value);
+  const localHeaders: Record<string, string> = {};
+  if (source.browserHeaders?.length) {
+    if (!options.access?.browserScope || !['editor', 'preview'].includes(options.access.scope)) throw new DataRequestError('此数据源需要当前标签页的认证请求头；认证值不会随分享或导出提供。', 'unavailable');
+    const saved = getBrowserHeaders(options.access.browserScope, source);
+    for (const name of source.browserHeaders) {
+      if (!saved[name]) throw new DataRequestError('请在数据源的请求头设置中填写当前标签页认证值，再重试。', 'unavailable');
+      localHeaders[name] = saved[name];
+    }
+  }
   if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) throw new DataRequestError('当前处于离线状态，请恢复网络后重试。', 'offline');
   const controller = new AbortController();
   const abort = () => controller.abort(options.signal?.reason);
@@ -53,7 +63,7 @@ export async function requestDataSource(source: DataSource, options: DataRequest
   try {
     let response: Response;
     if (source.transport === 'proxy' || source.credentialId) {
-      response = await fetcher('/api/account/data/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pageId: options.access!.pageId, sourceId: source.id, route: options.context?.route ?? {}, state: options.context?.state ?? {}, form: options.context?.form ?? {}, ...(options.allowWrite ? { confirmed: { method, host: new URL(prepared.url!, currentOrigin()).host } } : {}) }), signal: controller.signal });
+      response = await fetcher('/api/account/data/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pageId: options.access!.pageId, sourceId: source.id, route: options.context?.route ?? {}, state: options.context?.state ?? {}, form: options.context?.form ?? {}, ...(source.browserHeaders?.length ? { requestHeaders: localHeaders, requestHeaderTarget: source.url } : {}), ...(options.allowWrite ? { confirmed: { method, host: new URL(prepared.url!, currentOrigin()).host } } : {}) }), signal: controller.signal });
       const result = await readBoundedJson(response) as { value?: unknown; error?: string };
       if (!response.ok) throw new DataRequestError(typeof result?.error === 'string' ? result.error : `请求失败（${response.status}）`, response.status === 408 || response.status === 504 ? 'timeout' : 'http', response.status);
       return dataValueAt(source, result?.value, true);
@@ -65,7 +75,10 @@ export async function requestDataSource(source: DataSource, options: DataRequest
       if (!target.searchParams.has('pageSize')) target.searchParams.set('pageSize', String(options.pageSize));
       url = url.startsWith('/') ? `${target.pathname}${target.search}` : target.href;
     }
-    response = await fetcher(url, { method, headers: { Accept: 'application/json', ...prepared.headers, ...(prepared.body === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(prepared.body === undefined ? {} : { body: JSON.stringify(prepared.body) }), signal: controller.signal });
+    const headers = Object.fromEntries(Object.entries({ Accept: 'application/json', ...prepared.headers, ...localHeaders }).map(([name, value]) => [name.toLowerCase(), value]));
+    if (prepared.body !== undefined && !Object.hasOwn(headers, 'content-type')) headers['content-type'] = 'application/json';
+    const init = { method, headers, credentials: source.credentials ?? 'same-origin', ...(source.browserHeaders?.length ? { redirect: 'error' as const } : {}), ...(prepared.body === undefined ? {} : { body: JSON.stringify(prepared.body) }), signal: controller.signal };
+    response = await fetcher(url, init);
     if (!response.ok) throw new DataRequestError(`接口返回 HTTP ${response.status}，请检查接口或稍后重试。`, 'http', response.status);
     return dataValueAt(source, await readBoundedJson(response));
   } catch (error) {
@@ -75,7 +88,7 @@ export async function requestDataSource(source: DataSource, options: DataRequest
       if (reason instanceof DataRequestError) throw reason;
       throw new DataRequestError('请求已取消。', 'cancelled');
     }
-    throw new DataRequestError('请求失败，请检查网络、接口地址和 CORS 设置。', 'offline');
+    throw new DataRequestError('请求失败，请检查网络、接口地址、CORS、Cookie 策略和 HTTPS/HTTP 限制；认证请求不跟随重定向。', 'offline');
   } finally {
     globalThis.clearTimeout(timeout); options.signal?.removeEventListener('abort', abort);
   }
@@ -124,6 +137,7 @@ export function createDataStore(sources: DataSource[], access: DataAccess, fetch
     }).finally(() => { if (entries.get(id) === entry) { entry.controller = undefined; emit(); } });
     return entry.request;
   };
+  let unsubscribeHeaders: (() => void) | undefined;
   return {
     sources, access,
     setContext(next: DataTemplateContext) { context = next; },
@@ -138,9 +152,16 @@ export function createDataStore(sources: DataSource[], access: DataAccess, fetch
     values() { return Object.fromEntries(sources.map(source => [source.id, entries.get(source.id)?.result.value ?? value(source)])); },
     load,
     refreshAll() { for (const id of entries.keys()) void load(id, keyFor(id), entries.get(id)?.result.page ?? 1, true); },
-    subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      unsubscribeHeaders ??= subscribeBrowserHeaders((scope, changed) => {
+        const source = sourceFor(changed.id), entry = entries.get(changed.id);
+        if (scope === access.browserScope && source?.url === changed.url && source?.browserHeaders?.length && entry && isReadDataSource(source)) void load(changed.id, keyFor(changed.id), entry.result.page, true);
+      });
+      return () => { listeners.delete(listener); if (!listeners.size) { unsubscribeHeaders?.(); unsubscribeHeaders = undefined; } };
+    },
     getRevision() { return revision; },
-    dispose() { for (const entry of entries.values()) entry.controller?.abort(); entries.clear(); listeners.clear(); },
+    dispose() { unsubscribeHeaders?.(); unsubscribeHeaders = undefined; for (const entry of entries.values()) entry.controller?.abort(); entries.clear(); listeners.clear(); },
   };
 }
 export type DataStore = ReturnType<typeof createDataStore>;

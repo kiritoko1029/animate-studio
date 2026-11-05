@@ -16,6 +16,7 @@ import { createResendSender } from './resend-sender.ts';
 import { createDataCredentialRepository } from '../db/data-credential-repository.ts';
 import { lookupNode, fetchNodeData } from './data-query-node.ts';
 import { normalizeAllowedHost } from './data-query.ts';
+import { compileWorkspace } from './workspace-compiler.ts';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -39,6 +40,14 @@ export async function createApp({
   app.use('/api', express.json({ limit: '512kb', strict: true }));
   app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
   app.post('/api/validate', (req, res) => res.json({ page: validateSaveRequest(req.body) }));
+  app.post('/api/workspace/compile', async (req, res) => {
+    try {
+      const result = await compileWorkspace(req.body?.workspace);
+      res.status(result.ok ? 200 : 422).json(result);
+    } catch (error) {
+      res.status(400).json({ ok: false, errors: [{ file: 'workspace', message: error instanceof Error ? error.message : '工作区校验失败' }], warnings: [] });
+    }
+  });
   // The legacy single-page endpoints stay for local development and the guest
   // editor migration path. In internet-facing production they only serve the
   // in-process guest store, never the shared data/page.json file.

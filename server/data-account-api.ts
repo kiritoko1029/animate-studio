@@ -11,7 +11,7 @@ export type DataAccountContext = {
   credentials?: ReturnType<typeof createDataCredentialRepository>;
   encryptionSecret?: string;
   canonicalOrigin?: string;
-  query?: Omit<DataQueryOptions, 'source' | 'context' | 'origin' | 'credential' | 'encryptionSecret' | 'confirmed'>;
+  query?: Omit<DataQueryOptions, 'source' | 'context' | 'origin' | 'credential' | 'encryptionSecret' | 'confirmed' | 'requestHeaders'>;
 };
 type Result = { status: number; body?: unknown };
 const result = (status: number, body?: unknown): Result => ({ status, ...(body === undefined ? {} : { body }) });
@@ -34,7 +34,7 @@ export async function handleDataAccountApi(request: Request, context: DataAccoun
     const input = await body(request);
     if (isResult(input)) return input;
     try {
-      record(input, ['pageId', 'sourceId', 'route', 'state', 'form', 'confirmed']);
+      record(input, ['pageId', 'sourceId', 'route', 'state', 'form', 'confirmed', 'requestHeaders', 'requestHeaderTarget']);
       if (!isValidId(input.pageId) || typeof input.sourceId !== 'string' || !/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(input.sourceId)) return error(400, '数据源标识无效。');
       for (const key of ['route', 'state', 'form']) if (input[key] !== undefined) {
         if (!plain(input[key])) return error(400, `${key} 必须是普通对象。`);
@@ -45,6 +45,8 @@ export async function handleDataAccountApi(request: Request, context: DataAccoun
       const source = page.page.dataSources?.find(item => item.id === input.sourceId);
       if (!source) return error(404, '数据源不存在，请先保存当前站点。');
       if (source.kind !== 'rest' || source.transport !== 'proxy' && !source.credentialId) return error(400, '公开接口请使用浏览器直接请求。');
+      // This is a precondition, never a caller-controlled forwarding URL.
+      if ((input.requestHeaders !== undefined || source.browserHeaders?.length) && input.requestHeaderTarget !== source.url) return error(409, '请求头目标与已保存的数据源不一致，请先保存数据源后重试。');
       const credential = source.credentialId ? await context.credentials?.findOwned(userId, source.credentialId) : null;
       if (source.credentialId && !credential) return error(404, '凭据不存在，请重新关联凭据。');
       if (credential && !context.encryptionSecret) return error(503, '服务端未配置数据凭据密钥。');
@@ -54,7 +56,7 @@ export async function handleDataAccountApi(request: Request, context: DataAccoun
         if (typeof confirmed.method !== 'string' || typeof confirmed.host !== 'string') return error(400, '写入确认无效。');
       }
       const dataContext: DataTemplateContext = { route: input.route as DataTemplateContext['route'], state: input.state as DataTemplateContext['state'], form: input.form as DataTemplateContext['form'] };
-      const value = await executeDataQuery({ ...context.query, source, context: dataContext, origin: context.canonicalOrigin ?? new URL(request.url).origin, credential, encryptionSecret: context.encryptionSecret, confirmed: confirmed as { method: string; host: string } | undefined });
+      const value = await executeDataQuery({ ...context.query, source, context: dataContext, origin: context.canonicalOrigin ?? new URL(request.url).origin, credential, encryptionSecret: context.encryptionSecret, requestHeaders: input.requestHeaders, confirmed: confirmed as { method: string; host: string } | undefined });
       return result(200, { value });
     } catch (cause) {
       if (cause instanceof DataQueryError) return error(cause.status, cause.message);

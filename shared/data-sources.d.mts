@@ -5,6 +5,9 @@ export type DataSource = {
   fields?: import('./collections.mjs').CollectionField[]; records?: import('./collections.mjs').CollectionRecord[];
   detailField?: string; detailParameter?: string;
   items?: JsonValue; url?: string; method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  operation?: 'read' | 'write';
+  /** Names only; values stay in tab memory and may accompany an owned proxy query. */
+  browserHeaders?: string[]; credentials?: 'omit' | 'same-origin' | 'include';
   headers?: Record<string, string>; query?: Record<string, string>; body?: JsonValue;
   responsePath?: string; timeoutMs?: number; pageSize?: number;
   transport?: 'direct' | 'proxy'; credentialId?: string;
@@ -12,6 +15,10 @@ export type DataSource = {
 export type PreparedDataSource = { value?: JsonValue; url?: string; method?: string; headers?: Record<string, string>; body?: JsonValue };
 export type DataField = { path: string; type: string; sample: JsonValue };
 export const dataSourceLimits: { perSite: number; responseBytes: number; timeoutMs: number; pageSize: number; items: number };
+export function isReadDataSource(source: DataSource): boolean;
+export function isSensitiveDataHeader(name: string): boolean;
+export function isBrowserManagedDataHeader(name: string): boolean;
+export function validateDataHeaderName(name: string, transport?: 'direct' | 'proxy'): string;
 export function checkDataTemplate(value: string): string;
 export function readDataPath(value: unknown, path?: string): any;
 export function resolveDataTemplate(source: string, context: DataTemplateContext, url?: boolean): any;

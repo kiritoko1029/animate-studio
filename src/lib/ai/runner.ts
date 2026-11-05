@@ -1,6 +1,8 @@
-import type { PageDocument } from '../../model.ts';
+import type { PageDocument, WorkspaceSpec } from '../../model.ts';
 import type { CustomComponentSnapshot } from '../../../shared/custom-components.mjs';
 import { resetCustomInstance } from '../custom-components/instances.ts';
+import { compileWorkspaceClient, type WorkspaceCompileResult } from '../workspace/compiler-client.ts';
+import { runWorkspaceCodeCheck } from '../workspace/tools.ts';
 import { streamAi, safeAiError } from './client.ts';
 import { applyAiOperation, AiOperationDecoder, buildAiContext, snapshotAiPage } from './protocol.ts';
 import { withAiVersion } from './storage.ts';
@@ -28,6 +30,7 @@ export type AiRunnerOptions = {
   onProgress?: (progress: AiProgress) => void;
   stream?: typeof streamAi;
   yieldFrame?: () => Promise<void>;
+  compileWorkspace?: (workspace: WorkspaceSpec, options?: { signal?: AbortSignal }) => Promise<WorkspaceCompileResult>;
 };
 
 /** Snapshot the page a run produced, so its result survives undo and later edits. */
@@ -67,7 +70,7 @@ export class AiRunner {
     let next: AiSession = { ...session, page, mode, selectedBlockIds, task: resume ? session.task : task, status: 'running', error: '', updatedAt: now,
       messages: resume ? session.messages : [...session.messages, { id: crypto.randomUUID(), role: 'user', text: display, time: now }] };
     // The page before this run stays restorable once undo history is gone; an empty page needs no copy.
-    if (page.blocks.length) next = withAiVersion(next, { runId: id, kind: 'before', time: now, label: next.task, page });
+    if (page.blocks.length || page.workspace) next = withAiVersion(next, { runId: id, kind: 'before', time: now, label: next.task, page });
     const run: Run = { id, owner: this.options.getOwner(), target: this.options.getTarget?.() ?? page.id!, controller: new AbortController(), session: next, startKey: JSON.stringify(page) };
     // Capture the user's selection once: highlighting generated blocks must not redirect a later round.
     const context = buildAiContext(page, { ...next, error: resume ? session.error : '' }, locale, resume, selectedBlockIds, contextOptions);
@@ -93,7 +96,7 @@ export class AiRunner {
     const apply = async (op: Parameters<typeof applyAiOperation>[1]) => {
       guard();
       let before = this.options.getPage();
-      if (mode === 'component' && (op.op === 'add' || op.op === 'data' || ['update', 'remove'].includes(op.op) && before.blocks.find(block => block.id === op.id)?.type !== 'custom')) throw new AiContinuationError('组件创作只能创建和修改自定义组件，请使用 component 操作。');
+      if (mode === 'component' && (op.op === 'add' || op.op === 'data' || ['workspaceInit', 'writeFile', 'deleteFile', 'patchFile', 'useAnimateUi', 'runTool'].includes(op.op) || ['update', 'remove'].includes(op.op) && before.blocks.find(block => block.id === op.id)?.type !== 'custom')) throw new AiContinuationError('组件创作只能创建和修改自定义组件，请使用 component 操作。');
       if (mode === 'component' && op.op === 'update' && ['props', 'bindings', 'events'].some(key => Object.hasOwn(op, key))) throw new AiContinuationError('组件创作中的字段、样式和交互请通过 component 操作写入完整组件定义。');
       let resolved: CustomComponentSnapshot | undefined;
       if (op.op === 'component' && op.componentRef) {
@@ -167,6 +170,8 @@ export class AiRunner {
             if (event.type === 'text') {
               if (progress.phase !== 'generating') report({ phase: 'generating', firstOutputAt: progress.firstOutputAt ?? Date.now() });
               for (const op of decode(decoder, event.text)) await consume(op);
+              const streamingFile = decoder.peekStreamingWorkspaceWrite();
+              if (streamingFile || progress.streamingFile) report({ streamingFile });
             }
             if (event.type === 'complete') providerComplete = true;
             if (event.type === 'thinking') {
@@ -195,6 +200,39 @@ export class AiRunner {
         if (continuation instanceof AiOutputLimitError) {
           try { for (const op of decode(decoder)) await consume(op); continuation = null; }
           catch (error) { if (!(error instanceof AiContinuationError)) throw error; continuation = error; }
+        }
+        if (!continuation && decoder.terminal === 'done') {
+          const latestPage = this.options.getPage();
+          if (latestPage.workspace) {
+            const checkReport = runWorkspaceCodeCheck(latestPage.workspace);
+            const compiler = this.options.compileWorkspace ?? compileWorkspaceClient;
+            const compiledResult = await compiler(latestPage.workspace, { signal: run.controller.signal });
+            guard();
+            if (!compiledResult.ok) {
+              const details = compiledResult.errors
+                .map(err => `${err.file}${err.line ? `:${err.line}${err.column ? `:${err.column}` : ''}` : ''} — ${err.message}`)
+                .join('\n');
+              continuation = new AiContinuationError(`工作区编译校验失败，请修复以下文件错误后重新完成任务：\n${details}`);
+            } else if (!checkReport.ok) {
+              const details = checkReport.errors
+                .map(item => `${item.file}${item.line ? `:${item.line}` : ''} [${item.rule}] — ${item.message}`)
+                .join('\n');
+              continuation = new AiContinuationError(`工作区代码静态检测发现严重错误，请修复后重新完成任务：\n${details}`);
+            } else {
+              const withCompiled: PageDocument = {
+                ...latestPage,
+                workspace: { ...latestPage.workspace, compiled: compiledResult.compiled },
+              };
+              if (new TextEncoder().encode(JSON.stringify(withCompiled)).byteLength <= 500 * 1024) {
+                const seq = ++operationIndex;
+                let updated: AiSession = { ...run.session, page: withCompiled, updatedAt: Date.now() };
+                updated = this.options.checkpoint(updated, run.owner) ?? updated;
+                run.session = updated;
+                this.options.commit(withCompiled, { kind: 'page', summary: '完成工作区构建校验', key: `${run.id}:${seq}`, time: Date.now() }, run.id);
+                this.options.onSession(updated, run.owner);
+              }
+            }
+          }
         }
         if (!continuation) {
           if (terminalOperation) await apply(terminalOperation);

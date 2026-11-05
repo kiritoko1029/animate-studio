@@ -11,7 +11,7 @@ import { installMatchMedia } from './helpers/media-query.mjs';
 import { installWebAnimations } from './helpers/web-animations.mjs';
 
 const bundle = await build({
-  stdin: { contents: `import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {MotionConfig} from 'motion/react';import {AnimateUIProvider} from '@animate-ui/react/provider';import {MediaContext} from './src/lib/media/context';import {CollectionManager} from './src/components/CollectionManager';import {DataSourceManager} from './src/components/DataSourceManager';import {AccountProvider} from './src/components/AccountProvider';import {initializeLocale} from './src/i18n';initializeLocale();const root=createRoot(document.getElementById('root'));window.perform=fn=>flushSync(fn);window.unmount=()=>flushSync(()=>root.unmount());window.mount=(site,kind)=>{site=window.JSON.parse(JSON.stringify(site));window.current=site;window.changes=[];window.perform(()=>root.render(<MotionConfig reducedMotion="always"><AnimateUIProvider reducedMotion="always"><AccountProvider><MediaContext.Provider value={window.media}>{kind==='collections'?<CollectionManager site={window.current} onChange={next=>{window.changes.push(next);window.current=next;}}/>:<DataSourceManager site={window.current} onChange={next=>{window.changes.push(next);window.current=next;}}/>}</MediaContext.Provider></AccountProvider></AnimateUIProvider></MotionConfig>));};`, loader: 'jsx', resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
+  stdin: { contents: `import {createRoot} from 'react-dom/client';import {flushSync} from 'react-dom';import {MotionConfig} from 'motion/react';import {AnimateUIProvider} from '@animate-ui/react/provider';import {MediaContext} from './src/lib/media/context';import {CollectionManager} from './src/components/CollectionManager';import {DataSourceManager} from './src/components/DataSourceManager';import {AccountProvider} from './src/components/AccountProvider';import {initializeLocale} from './src/i18n';initializeLocale();const root=createRoot(document.getElementById('root'));window.perform=fn=>flushSync(fn);window.unmount=()=>flushSync(()=>root.unmount());window.mount=(site,kind)=>{site=window.JSON.parse(JSON.stringify(site));window.current=site;window.changes=[];window.perform(()=>root.render(<MotionConfig reducedMotion="always"><AnimateUIProvider reducedMotion="always"><AccountProvider><MediaContext.Provider value={window.media}>{kind==='collections'?<CollectionManager site={window.current} onChange={next=>{window.changes.push(next);window.current=next;}}/>:<DataSourceManager site={window.current} dataPageId={window.dataPageId} onChange={next=>{window.changes.push(next);window.current=next;}}/>}</MediaContext.Provider></AccountProvider></AnimateUIProvider></MotionConfig>));};`, loader: 'jsx', resolveDir: fileURLToPath(new URL('../', import.meta.url)) },
   bundle: true, write: false, format: 'iife', jsx: 'automatic', loader: { '.css': 'empty' }, logLevel: 'silent',
   plugins: [{ name: 'raw', setup(build) { build.onResolve({ filter: /\?raw$/ }, args => ({ path: resolve(args.resolveDir, args.path.slice(0, -4)), namespace: 'raw' })); build.onLoad({ filter: /.*/, namespace: 'raw' }, async args => ({ contents: await readFile(args.path, 'utf8'), loader: 'text', resolveDir: dirname(args.path) })); } }],
 });
@@ -110,4 +110,107 @@ test('legacy data source editing and removal preserve content collections', asyn
   f.click(f.button('删除并解除绑定'));
   await f.until(() => f.win.changes.length === 2, 'legacy source removed');
   assert.deepEqual([...f.win.current.dataSources].map(source => source.id), ['articles']);
+});
+
+test('REST editor tests POST queries with tab-only token headers and saves no token values', async t => {
+  const f = fixture(t, false); f.win.mount(f.site, 'sources');
+  const originalFetch = f.win.fetch, calls = [];
+  f.win.fetch = async (url, init = {}) => {
+    if (!String(url).startsWith('http://10.0.0.8/')) return originalFetch(url, init);
+    calls.push({ url, init }); return Response.json({ items: [{ coilNo: '001' }] });
+  };
+  const select = (name, value) => f.win.perform(() => { const element = f.field(name); element.value = value; element.dispatchEvent(new f.win.Event('change', { bubbles: true })); });
+  f.click(f.button('REST 接口')); f.input('数据源名称', '钢卷信息'); f.input('接口地址', 'http://10.0.0.8/query');
+  select('请求方法', 'POST');
+  assert.equal(f.field('请求用途').value, 'read');
+  f.input('请求体 JSON', '{"planCoils":["001"],"__sys__":{"status":0},"__blocks__":{}}');
+  f.win.perform(() => f.field('请求体 JSON').dispatchEvent(new f.win.FocusEvent('focusout', { bubbles: true })));
+  f.input('响应路径', 'items'); select('浏览器 Cookie', 'include');
+  f.click(f.button('添加请求头')); f.input('请求头名称 1', 'Content-Type'); f.input('请求头值 1', 'application/json;charset=UTF-8');
+  f.click(f.button('添加请求头')); f.input('请求头名称 2', 'x-token'); f.input('请求头值 2', 'test-manager-secret');
+  assert.equal(f.field('请求头值 2').type, 'password');
+  assert.equal(calls.length, 0);
+  f.click(f.button('测试并连接'));
+  await f.until(() => f.document.querySelector('.data-source-success')?.textContent.includes('1 条'), 'POST query test reports one record');
+  assert.equal(calls.length, 1); assert.equal(calls[0].init.method, 'POST'); assert.equal(calls[0].init.credentials, 'include');
+  assert.equal(calls[0].init.headers['x-token'], 'test-manager-secret'); assert.equal(calls[0].init.headers['content-type'], 'application/json;charset=UTF-8');
+  assert.deepEqual(JSON.parse(calls[0].init.body).planCoils, ['001']);
+  f.click(f.button('保存数据源'));
+  const source = f.win.current.dataSources.find(source => source.name === '钢卷信息');
+  assert.equal(source.operation, 'read'); assert.deepEqual(Array.from(source.browserHeaders), ['x-token']);
+  assert.equal(JSON.stringify(f.win.current).includes('test-manager-secret'), false);
+  assert.equal(f.win.localStorage.length, 1, 'only the existing locale preference is stored');
+  f.input('接口地址', 'http://10.0.0.9/query'); assert.equal(f.field('请求头值 2').value, '', 'changing the target clears the draft auth value');
+});
+
+test('REST editor keeps old POST sources as writes and blocks invalid body or browser-managed headers', async t => {
+  const f = fixture(t, false);
+  f.site.dataSources = [{ id: 'write', name: '旧提交', kind: 'rest', mode: 'single', method: 'POST', url: 'https://api.example.test/items', body: {} }];
+  f.win.mount(f.site, 'sources');
+  assert.equal(f.field('请求用途').value, 'write');
+  f.click(f.button('测试并连接'));
+  await f.until(() => f.document.querySelector('[role="alert"]')?.textContent.includes('提交用途'), 'legacy write is not executed as a test query');
+  f.input('请求体 JSON', '{broken'); f.win.perform(() => f.field('请求体 JSON').dispatchEvent(new f.win.FocusEvent('focusout', { bubbles: true })));
+  assert.equal(f.button('保存数据源').disabled, true); assert.equal(f.button('测试并连接').disabled, true);
+  f.input('请求体 JSON', '{}'); f.win.perform(() => f.field('请求体 JSON').dispatchEvent(new f.win.FocusEvent('focusout', { bubbles: true })));
+  f.click(f.button('添加请求头')); f.input('请求头名称 1', 'Cookie'); f.input('请求头值 1', 'test');
+  assert.equal(f.button('保存数据源').disabled, true);
+  assert.ok(f.document.querySelector('[role="alert"]').textContent.includes('浏览器管理'));
+});
+
+test('transport radio selection persists and routes tests through either browser or server', async t => {
+  const f = fixture(t, false);
+  f.site.dataSources = [{ id: 'coils', name: '钢卷', kind: 'rest', mode: 'collection', method: 'POST', operation: 'read', url: 'https://coils.example.test/query', responsePath: 'items', body: { planCoils: ['001'] }, headers: { Accept: 'application/json' } }];
+  f.win.dataPageId = 'cloud-site';
+  const fallback = f.win.fetch, calls = [];
+  f.win.fetch = async (url, init = {}) => {
+    if (url === '/api/account/data/query') { calls.push({ url, init }); return Response.json({ value: [{ coilNo: 'forwarded' }] }); }
+    if (url === 'https://coils.example.test/query') { calls.push({ url, init }); return Response.json({ items: [{ coilNo: 'direct' }] }); }
+    return fallback(url, init);
+  };
+  f.win.mount(f.site, 'sources');
+  assert.equal(f.field('透传').checked, true);
+  assert.equal(f.field('转发').checked, false);
+  assert.ok(f.document.querySelector('[aria-label="浏览器 Cookie"]'));
+  f.click(f.field('转发'));
+  assert.equal(f.field('透传').checked, false);
+  assert.equal(f.document.querySelector('[aria-label="浏览器 Cookie"]'), null);
+  f.click(f.button('保存数据源'));
+  assert.equal(f.win.current.dataSources[0].transport, 'proxy');
+  f.click(f.button('测试并连接'));
+  await f.until(() => calls.length === 1 && f.document.querySelector('.data-source-success')?.textContent.includes('连接成功'), 'forwarding test completes');
+  assert.equal(calls[0].url, '/api/account/data/query');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { pageId: 'cloud-site', sourceId: 'coils', route: { id: 'example' }, state: {}, form: {} });
+  f.click(f.field('透传')); f.click(f.button('保存数据源')); f.click(f.button('测试并连接'));
+  await f.until(() => calls.length === 2 && f.document.querySelector('.data-source-success')?.textContent.includes('连接成功'), 'direct test completes');
+  assert.equal(f.win.current.dataSources[0].transport, 'direct');
+  assert.equal(calls[1].url, 'https://coils.example.test/query');
+  assert.deepEqual(JSON.parse(calls[1].init.body), { planCoils: ['001'] });
+  assert.equal(calls[1].init.headers.accept, 'application/json');
+  const saved = JSON.parse(JSON.stringify(f.win.current));
+  saved.dataSources[0].transport = undefined; saved.dataSources[0].credentialId = 'saved-credential';
+  const restored = fixture(t, false); restored.win.mount(saved, 'sources');
+  assert.equal(restored.field('转发').checked, true, 'legacy credential sources reflect their actual proxy route');
+  restored.click(restored.field('透传')); restored.click(restored.button('保存数据源'));
+  assert.equal(restored.win.current.dataSources[0].credentialId, undefined);
+});
+
+test('forwarding accepts authentication and Cookie rows and switching to direct explains browser restrictions', async t => {
+  const f = fixture(t, false); f.win.dataPageId = 'saved-site';
+  f.site.dataSources = [{ id: 'coils', name: '钢卷', kind: 'rest', mode: 'collection', method: 'POST', operation: 'read', url: 'https://coils.example/query', body: {}, transport: 'proxy' }];
+  const fallback = f.win.fetch, calls = [];
+  f.win.fetch = async (url, init = {}) => { if (url !== '/api/account/data/query') return fallback(url, init); calls.push(JSON.parse(init.body)); return Response.json({ value: [{ id: '001' }] }); };
+  f.win.mount(f.site, 'sources');
+  f.click(f.button('添加请求头')); f.input('请求头名称 1', 'x-token'); f.input('请求头值 1', 'ui-forward-secret');
+  f.click(f.button('添加请求头')); f.input('请求头名称 2', 'Cookie'); f.input('请求头值 2', 'JSESSIONID=ui-fixture');
+  assert.equal(f.button('保存数据源').disabled, false);
+  assert.equal(f.document.querySelector('.data-source-error'), null);
+  f.click(f.button('保存数据源')); f.click(f.button('测试并连接'));
+  await f.until(() => f.document.querySelector('.data-source-success')?.textContent.includes('连接成功'), 'temporary headers are usable in forwarding');
+  assert.deepEqual(calls[0].requestHeaders, { 'x-token': 'ui-forward-secret', Cookie: 'JSESSIONID=ui-fixture' });
+  assert.equal(JSON.stringify(f.win.current).includes('ui-forward-secret'), false);
+  f.click(f.field('透传'));
+  assert.equal(f.button('保存数据源').disabled, true);
+  assert.match(f.document.querySelector('.data-source-error').textContent, /浏览器管理/);
+  assert.equal(f.field('请求头值 2').value, 'JSESSIONID=ui-fixture', 'switching transport never discards the draft value');
 });

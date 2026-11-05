@@ -10,6 +10,16 @@ import { normalizeSitePath } from '../../../shared/site-document.mjs';
 import { validateDataSource, validateDataSources } from '../../../shared/data-sources.mjs';
 import { validateSeo } from '../../../shared/seo.mjs';
 import { collectMediaReferences } from '../../../shared/media.mjs';
+import { commitWorkspaceGit, createDefaultWorkspace, isSafeWorkspacePath, validateWorkspace, workspaceLimits } from '../../../shared/workspace.mjs';
+import { compileWorkspaceFallbackSync } from '../workspace/compiler-client.ts';
+import {
+  applyWorkspacePatch,
+  executeWorkspaceTool,
+  runWorkspaceCodeCheck,
+  runWorkspaceTestSuite,
+  type WorkspaceToolName,
+} from '../workspace/tools.ts';
+import { ANIMATE_UI_WORKSPACE_COMPONENTS, scaffoldAnimateUiIntoWorkspace } from '../workspace/animate-ui-kit.ts';
 import { normalizeAiPageDocument } from './page-normalization.ts';
 
 const allowed: Record<AiOperation['op'], string[]> = {
@@ -20,6 +30,12 @@ const allowed: Record<AiOperation['op'], string[]> = {
   component: ['id', 'component', 'componentRef', 'frame', 'summary'],
   sitePlan: ['name', 'summary', 'pages', 'sharedLayout', 'deletes', 'dataSources'],
   sitePage: ['id', 'page', 'summary'], siteLayout: ['region', 'page', 'summary'], dataSource: ['source', 'summary'],
+  workspaceInit: ['framework', 'entry', 'summary'],
+  writeFile: ['path', 'content', 'summary'],
+  deleteFile: ['path', 'summary'],
+  patchFile: ['path', 'search', 'replace', 'summary'],
+  useAnimateUi: ['components', 'summary'],
+  runTool: ['tool', 'args', 'summary'],
 };
 /** Match save/export serialization: editor controls clear optional fields with undefined. */
 export function snapshotAiPage(page: PageDocument): PageDocument {
@@ -100,7 +116,7 @@ export function parseAiOperation(raw: string): AiOperation {
     if (op.page.id !== op.id) throw new Error('AI 页面内容与目标 id 不一致。');
   }
   if (op.op === 'dataSource') {
-    if (!op.source || typeof op.source !== 'object' || Array.isArray(op.source) || (op.source.method ?? 'GET') !== 'GET' || (op.source.transport ?? 'direct') !== 'direct' || ['credentialId', 'headers', 'query', 'body'].some(key => Object.hasOwn(op.source!, key))) throw new Error('AI 只能创建内容集合、公开静态数据或浏览器直接读取的 GET 数据源，不能配置凭据或写入。');
+    if (!op.source || typeof op.source !== 'object' || Array.isArray(op.source) || (op.source.method ?? 'GET') !== 'GET' || (op.source.transport ?? 'direct') !== 'direct' || ['credentialId', 'headers', 'browserHeaders', 'credentials', 'query', 'body'].some(key => Object.hasOwn(op.source!, key))) throw new Error('AI 只能创建内容集合、公开静态数据或浏览器直接读取的 GET 数据源，不能配置凭据或写入。');
     validateDataSource(op.source);
   }
   if (op.op === 'siteLayout') {
@@ -109,6 +125,36 @@ export function parseAiOperation(raw: string): AiOperation {
       op.page = normalizeAiPageDocument(op.page, op.region!);
       validatePage(op.page);
       if (op.page.id !== `shared-${op.region}`) throw new Error('AI 共享布局 id 无效。');
+    }
+  }
+  if (op.op === 'workspaceInit') {
+    if (!['react', 'vue', 'html'].includes(op.framework ?? '')) throw new Error('AI 工作区框架无效，仅支持 react、vue 或 html。');
+    if (op.entry !== undefined && (typeof op.entry !== 'string' || !isSafeWorkspacePath(op.entry))) throw new Error('AI 工作区入口路径无效。');
+  }
+  if (op.op === 'writeFile') {
+    if (typeof op.path !== 'string' || !isSafeWorkspacePath(op.path)) throw new Error('AI 工作区文件路径无效。');
+    if (typeof op.content !== 'string' || op.content.length > workspaceLimits.maxFileChars) throw new Error('AI 工作区文件内容无效或超出大小限制。');
+  }
+  if (op.op === 'deleteFile') {
+    if (typeof op.path !== 'string' || !isSafeWorkspacePath(op.path)) throw new Error('AI 工作区删除路径无效。');
+  }
+  if (op.op === 'patchFile') {
+    if (typeof op.path !== 'string' || !isSafeWorkspacePath(op.path)) throw new Error('AI 工作区补丁路径无效。');
+    if (typeof op.search !== 'string' || !op.search || op.search.length > workspaceLimits.maxFileChars) throw new Error('AI 工作区补丁 search 片段无效。');
+    if (typeof op.replace !== 'string' || op.replace.length > workspaceLimits.maxFileChars) throw new Error('AI 工作区补丁 replace 片段无效。');
+  }
+  if (op.op === 'useAnimateUi') {
+    if (op.components !== undefined && (!Array.isArray(op.components) || op.components.length > 32 || op.components.some(id => typeof id !== 'string' || !id.trim() || id.length > 60))) {
+      throw new Error('AI Animate UI 组件列表格式无效。');
+    }
+  }
+  if (op.op === 'runTool') {
+    const validTools: WorkspaceToolName[] = ['animateUi', 'inspectAnimateUi', 'codeCheck', 'testRunner', 'searchCode', 'themeTokens', 'responsiveFix', 'mockStore'];
+    if (typeof op.tool !== 'string' || !validTools.includes(op.tool as WorkspaceToolName)) {
+      throw new Error('AI 调用了不支持的工作区工具。');
+    }
+    if (op.args !== undefined && (!op.args || typeof op.args !== 'object' || Array.isArray(op.args))) {
+      throw new Error('AI 工具参数必须是对象。');
     }
   }
   return op;
@@ -136,6 +182,47 @@ export class AiOperationDecoder {
     const op = this.parse(this.buffer.trim()); this.buffer = '';
     if (op) yield op;
     if (!this.finished) throw new AiContinuationError('AI 尚未完成当前任务，将继续生成剩余内容。');
+  }
+  /** Extracts in-flight workspace writeFile path and partial content while the JSONL line is still streaming. */
+  peekStreamingWorkspaceWrite(): { path: string; content: string; summary?: string } | null {
+    const buf = this.buffer;
+    if (!buf || !/"op"\s*:\s*"writeFile"/.test(buf)) return null;
+    const pathMatch = /"path"\s*:\s*"([^"\\]+)"/.exec(buf);
+    if (!pathMatch || !isSafeWorkspacePath(pathMatch[1])) return null;
+    const summaryMatch = /"summary"\s*:\s*"([^"\\]*)"/.exec(buf);
+    const contentKey = /"content"\s*:\s*"/.exec(buf);
+    if (!contentKey) {
+      return { path: pathMatch[1], content: '', ...(summaryMatch ? { summary: summaryMatch[1] } : {}) };
+    }
+    let out = '';
+    let i = contentKey.index + contentKey[0].length;
+    while (i < buf.length) {
+      const ch = buf[i];
+      if (ch === '"') break;
+      if (ch === '\\') {
+        if (i + 1 >= buf.length) break;
+        const next = buf[i + 1];
+        if (next === 'n') { out += '\n'; i += 2; continue; }
+        if (next === 'r') { out += '\r'; i += 2; continue; }
+        if (next === 't') { out += '\t'; i += 2; continue; }
+        if (next === '"' || next === '\\' || next === '/') { out += next; i += 2; continue; }
+        if (next === 'u') {
+          if (i + 5 >= buf.length) break;
+          const hex = buf.slice(i + 2, i + 6);
+          if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+            out += String.fromCharCode(parseInt(hex, 16));
+            i += 6;
+            continue;
+          }
+        }
+        out += next;
+        i += 2;
+        continue;
+      }
+      out += ch;
+      i++;
+    }
+    return { path: pathMatch[1], content: out, ...(summaryMatch ? { summary: summaryMatch[1] } : {}) };
   }
   private parse(line: string): AiOperation | null {
     // Markdown fences or a stray sentence cannot be operations; failing on them would cost a whole new request.
@@ -275,6 +362,78 @@ export function applyAiOperation(page: PageDocument, op: AiOperation, resolvedCo
     throw new Error('站点数据源必须在整站任务中创建，当前页面未被修改。');
   } else if (op.op === 'data') {
     next = { ...page, ...(op.variables === undefined ? {} : { variables: op.variables }), ...(op.scripts === undefined ? {} : { scripts: op.scripts }) } as PageDocument;
+  } else if (op.op === 'workspaceInit') {
+    const fw = op.framework!;
+    const defaultWs = createDefaultWorkspace(fw);
+    const entry = op.entry ?? defaultWs.entry;
+    const existingFiles = page.workspace?.framework === fw ? page.workspace.files : {};
+    const mergedFiles = {
+      ...defaultWs.files,
+      ...existingFiles,
+      ...(Object.hasOwn(defaultWs.files, entry) || Object.hasOwn(existingFiles, entry) ? {} : { [entry]: { content: defaultWs.files[defaultWs.entry]?.content ?? '' } }),
+    };
+    const validatedWs = validateWorkspace({ version: 1, runtimeVersion: '2026.1', framework: fw, entry, files: mergedFiles, ...(page.workspace?.git ? { git: page.workspace.git } : {}) });
+    const committedWs = commitWorkspaceGit(validatedWs, {
+      author: 'AI',
+      message: `feat(ai): ${op.summary || `初始化 ${fw.toUpperCase()} 多文件工作区`}`,
+      baselineFiles: page.workspace?.files ?? {},
+    });
+    const fallback = fw === 'html' ? compileWorkspaceFallbackSync(committedWs) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...committedWs, compiled: fallback.compiled } : committedWs };
+    kind = 'page';
+  } else if (op.op === 'writeFile') {
+    const inferredFramework = op.path!.endsWith('.vue') ? 'vue' : op.path!.endsWith('.html') ? 'html' : 'react';
+    const baseWs = page.workspace ?? createDefaultWorkspace(inferredFramework);
+    const nextFiles = { ...baseWs.files, [op.path!]: { content: op.content! } };
+    const entry = Object.hasOwn(nextFiles, baseWs.entry) ? baseWs.entry : op.path!;
+    const validatedWs = validateWorkspace({ version: 1, runtimeVersion: baseWs.runtimeVersion ?? '2026.1', framework: baseWs.framework, entry, files: nextFiles, ...(baseWs.git ? { git: baseWs.git } : {}) });
+    const committedWs = commitWorkspaceGit(validatedWs, {
+      author: 'AI',
+      message: `feat(ai): ${op.summary || `更新 ${op.path}`}`,
+      baselineFiles: baseWs.files,
+    });
+    const fallback = baseWs.framework === 'html' ? compileWorkspaceFallbackSync(committedWs) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...committedWs, compiled: fallback.compiled } : committedWs };
+    kind = 'update';
+  } else if (op.op === 'deleteFile') {
+    if (!page.workspace || !Object.hasOwn(page.workspace.files, op.path!)) throw new Error('AI 要删除的工作区文件不存在。');
+    if (page.workspace.entry === op.path) throw new Error('不能删除工作区入口文件。');
+    const nextFiles = { ...page.workspace.files };
+    delete nextFiles[op.path!];
+    const validatedWs = validateWorkspace({ version: 1, runtimeVersion: page.workspace.runtimeVersion ?? '2026.1', framework: page.workspace.framework, entry: page.workspace.entry, files: nextFiles, ...(page.workspace.git ? { git: page.workspace.git } : {}) });
+    const committedWs = commitWorkspaceGit(validatedWs, {
+      author: 'AI',
+      message: `chore(ai): ${op.summary || `删除 ${op.path}`}`,
+      baselineFiles: page.workspace.files,
+    });
+    const fallback = page.workspace.framework === 'html' ? compileWorkspaceFallbackSync(committedWs) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...committedWs, compiled: fallback.compiled } : committedWs };
+    kind = 'remove';
+  } else if (op.op === 'patchFile') {
+    const baseWs = page.workspace ?? createDefaultWorkspace('react');
+    const patchedWs = applyWorkspacePatch(baseWs, { path: op.path!, search: op.search!, replace: op.replace!, summary: op.summary }, 'AI');
+    const fallback = baseWs.framework === 'html' ? compileWorkspaceFallbackSync(patchedWs) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...patchedWs, compiled: fallback.compiled } : patchedWs };
+    kind = 'update';
+  } else if (op.op === 'useAnimateUi') {
+    const baseWs = page.workspace ?? createDefaultWorkspace('react');
+    const result = scaffoldAnimateUiIntoWorkspace(baseWs, op.components, 'AI');
+    const fallback = baseWs.framework === 'html' ? compileWorkspaceFallbackSync(result.workspace) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...result.workspace, compiled: fallback.compiled } : result.workspace };
+    kind = 'update';
+  } else if (op.op === 'runTool') {
+    const baseWs = page.workspace ?? createDefaultWorkspace('react');
+    const toolRes = executeWorkspaceTool(baseWs, op.tool as WorkspaceToolName, op.args ?? {}, 'AI');
+    const fallback = baseWs.framework === 'html' ? compileWorkspaceFallbackSync(toolRes.workspace) : null;
+    next = { ...page, workspace: fallback?.ok ? { ...toolRes.workspace, compiled: fallback.compiled } : toolRes.workspace };
+    if (toolRes.codeCheck && !toolRes.codeCheck.ok) {
+      warnings.push(`代码检测发现问题：${toolRes.codeCheck.errors.map(i => `${i.file}:${i.line ?? 1} ${i.message}`).join('；')}`);
+    } else if (toolRes.details?.length) {
+      warnings.push(`${toolRes.summary}\n${toolRes.details.slice(0, 12).join('\n')}`);
+    } else {
+      warnings.push(toolRes.summary);
+    }
+    kind = 'update';
   }
   validatePage(next);
   if (next.settings.layout !== 'free') throw new Error('AI 页面必须使用自由画布布局。');
@@ -288,8 +447,16 @@ export function applyAiOperation(page: PageDocument, op: AiOperation, resolvedCo
   if (new TextEncoder().encode(JSON.stringify(next)).byteLength > 500 * 1024) throw new Error('AI 页面超过可保存大小，已保留之前的修改。');
   const existingAssets = new Set(collectMediaReferences(page));
   if (collectMediaReferences(next).some(id => !existingAssets.has(id))) throw new Error('AI 不能新增或伪造媒体素材，请先在媒体库上传并选择。');
-  const summary = op.summary || ({ add: '新增组件', update: '修改组件', remove: '删除组件', page: '更新页面设置' })[kind];
-  return { page: next, change: JSON.stringify(next) === JSON.stringify(page) ? null : { blockId: op.id, kind, summary, frame }, ...(warnings.length ? { warnings } : {}) };
+  const summary = op.summary || (
+    op.op === 'workspaceInit' ? '初始化代码工作区' :
+    op.op === 'writeFile' ? `写入文件 ${op.path}` :
+    op.op === 'patchFile' ? `局部更新文件 ${op.path}` :
+    op.op === 'useAnimateUi' ? `挂载 Animate UI 动效组件 (${(op.components ?? []).join(', ') || '全部'})` :
+    op.op === 'runTool' ? `执行工作区工具 ${op.tool}` :
+    op.op === 'deleteFile' ? `删除文件 ${op.path}` :
+    ({ add: '新增组件', update: '修改组件', remove: '删除组件', page: '更新页面设置' })[kind]
+  );
+  return { page: next, change: JSON.stringify(next) === JSON.stringify(page) ? null : { blockId: op.id ?? op.path ?? op.tool, kind, summary, frame }, ...(warnings.length ? { warnings } : {}) };
 }
 
 const builtinGuide: Record<string, string> = {
@@ -337,7 +504,15 @@ Operations:
 {"v":1,"seq":5,"op":"remove","id":"unused-block","summary":"Remove obsolete block"}
 {"v":1,"seq":6,"op":"data","variables":[],"scripts":[],"summary":"Set page data"}
 {"v":1,"seq":7,"op":"component","id":"custom-action","component":{"name":"Interactive action","html":"<button data-prop='label'></button>","css":"button { color: var(--as-text); }","js":"","fields":{"label":"Start"},"size":{"width":360,"height":160}},"frame":{"x":48,"y":48,"width":360,"height":160},"summary":"Create a reusable custom component"}
-{"v":1,"seq":8,"op":"done","summary":"Summarize the completed task"}
+{"v":1,"seq":8,"op":"workspaceInit","framework":"react","entry":"src/App.tsx","summary":"Initialize multi-file React workspace"}
+{"v":1,"seq":9,"op":"useAnimateUi","components":["GradientText","RippleButton","CountingNumber","StarsBackground","AnimateCard","AnimateTabs","AnimateModal"],"summary":"Mount Animate UI components into workspace"}
+{"v":1,"seq":10,"op":"writeFile","path":"src/data/items.ts","content":"export const INITIAL_ITEMS = [];","summary":"Add data module"}
+{"v":1,"seq":11,"op":"writeFile","path":"src/styles.css","content":".app-shell { max-width: 1280px; margin: 0 auto; padding: clamp(16px, 3vw, 40px); }","summary":"Write responsive CSS"}
+{"v":1,"seq":12,"op":"writeFile","path":"src/App.tsx","content":"import React, { useState } from 'react';\nimport { GradientText, RippleButton, CountingNumber, StarsBackground, AnimateCard, AnimateTabs, AnimateModal } from 'animate-ui';\nimport './styles.css';\nexport default function App() { return <div className='app-shell'>...</div>; }","summary":"Write main interactive entry with Animate UI"}
+{"v":1,"seq":13,"op":"patchFile","path":"src/App.tsx","search":"const [tab, setTab] = useState('all');","replace":"const [tab, setTab] = useState('featured');","summary":"Patch state in App.tsx"}
+{"v":1,"seq":14,"op":"runTool","tool":"codeCheck","summary":"Run static code check and diagnostics"}
+{"v":1,"seq":15,"op":"deleteFile","path":"src/unused.ts","summary":"Delete unused file"}
+{"v":1,"seq":16,"op":"done","summary":"Summarize the completed task"}
 {"v":1,"seq":1,"op":"ask","text":"Two quick choices before I start:","questions":[{"id":"style","title":"Visual style","options":["Clean minimal","Bold dark tech","Warm editorial"]},{"id":"screen","title":"Canvas","options":["1080p one screen (1920x1080)","1920 wide scrolling page","Mobile 390 wide"]},{"id":"sections","title":"Sections","options":["Features","Pricing","FAQ"],"multiple":true}]}
 Examples illustrate shapes; do not execute example ids. Send only needed operations. There is no whole-page replace. add requires a new stable id, supported type and full frame; defaults are supplied by the editor, so send only changed props. update merges props/frame (a prop set to null is cleared and falls back to the default or inherited style), and optionally replaces bindings/events; omit all unchanged fields. page merges settings; data replaces variables/scripts only when included. IDs never change. For custom source use the explicit component operation, never props.custom. component creates a new custom block or replaces the complete definition of an existing custom block with the same id; it cannot replace a builtin block. A definition is {name,description?,html,css,js,fields?,size?}, with all three code strings required, each <=30000 characters, name <=60, description <=300, size width 40..1920 and height 32..1600. A new frame, when included, must be complete; when omitted the definition size is placed at the page margin. Existing frames and instance field overrides are retained unless changed. Never emit source/id/revision library metadata inside a definition. To reuse an entry from availableComponents, send componentRef:{kind:"local"|"cloud",id:"the listed library id"} instead of component; the host fetches the actual owned definition. Do not invent component references. Source changes are saved to the local reusable library; account upload is a separate user action. selectedBlockIds identifies the user's selection when the task says "this" or "selected"; it is context, not permission to change other components or expand the requested scope. Every block ID is a page anchor: use #block-id only for a block that already exists or will be created in this task. A complete record is validated and shown immediately; order dependencies correctly (create variables before bindings). Every response ends with exactly one terminal record and nothing after it: done when the task is finished, or ask when you need the user's decision. Up to 500 records per response.
 Complete the ENTIRE requested task in one response whenever possible. Emit multiple components continuously; never stop after one component or tell the user to click continue. Emit done ONLY when all requested work is finished, not at an intermediate milestone. Start with one short user-facing plan and send brief message updates when moving between sections; do not expose private reasoning in these messages. If resume is true, the page snapshot is authoritative: continue only unfinished work, correct lastError if present, and restart seq at 1. Never re-add existing IDs or repeat unchanged updates. A missing done or output limit triggers automatic continuation from this snapshot.
@@ -351,6 +526,18 @@ Layout: work on a 12-column grid inside the margins (from x=padding to maxWidth-
 Style: set page settings background (canvas) and accent (brand color) once, or settings.theme, so blocks inherit them. Per block: color = text color; accent = fill and highlight (primary button fill, links, highlight markers, active states); background paints the block's WHOLE frame, so use it only for cards, panels, banners and section bands, never for buttons, badges, headings, text or form fields sitting on the page; theme = preset palette for one block. Use one coherent palette: canvas, one surface tone for cards and panels, one accent, dark ink on light canvases (light ink on dark). Keep text contrast at least 4.5:1 against its real background, one accent everywhere, and one radius family (for example 16 for cards and panels).
 Props allowlist: title,text,label,url,imageUrl,items,variant,align,fontSize,padding,radius,background,color,accent,theme,animation,duration,effect,motion,effectOptions,value,max,checked,brandIcon,contentScale,navigation,sourceId,submitSourceId,dataFields,dataColumns,name,required,format,minLength,maxLength,error,successUrl,successText,errorText,chartType,categoryField,chartColors,showLegend,showGrid,showTooltip,showValues,innerRadius,filterField,filterVariable. chartType is line|area|column|bar|pie; innerRadius is 0..80; chartColors contains hex colors; dataColumns entries may add aggregate sum|count|avg|min|max. Strings: title/label <=300, text <=10000, items <=20000. Colors only #RGB/#RRGGBB. align left|center|right; animation none|fade|slide|scale; fontSize 10..96; padding 0..120; radius 0..80; duration 100..30000. value/max 0..100 (rating 0..5), contentScale 25..400. Theme IDs: nature,tech-blue,violet,warm-editorial,mono,midnight,animate-light,animate-dark. Do not invent motion keys. Items use newline-delimited rows and | separators; navbar uses comma-separated label|URL. Use safe https, /path, #anchor, mailto, tel links.
 Interactions: variables [{name,type,initial,persistent?}] with unique ASCII names starting with letters, type string|number|boolean|object|array. scripts [{id,name,code}] <=20000 chars. Bindings map title/text/label/value/checked/visible/disabled to {kind:"variable"|"expression",value:"name"|"state.name + 1"}. events {click:[],change:[]} hold actions: {type:"set",variable,expression}, {type:"toggle",variable}, {type:"notify",expression}, {type:"navigate",expression}, {type:"script",scriptId}, {type:"reset"}, {type:"condition",expression,then:[],else:[]}. Expressions cannot call functions. Read-only data roots are data.sourceId, data.book.title and data.books[0].title, alongside state, event and route. Scripts run in a sandbox with ctx.state/ctx.setState/ctx.notify/ctx.log. For chart change events, event.value is {category,series,value}; selecting the same category again clears it. filterVariable must reference an existing string variable in the page, and filterField must be a safe record path. Do not use script execution to edit the editor or bypass this protocol.
+Multi-file workspace mode (workspaceInit / writeFile / patchFile / deleteFile / useAnimateUi / runTool): when page.workspace is already present, or when the user asks for a multi-file workspace, code project, or highly interactive complete application, use workspaceInit (framework: "react"|"vue"|"html", entry: "src/App.tsx"|"src/App.vue"|"index.html") and writeFile (path, content) or patchFile (path, search, replace) to build a real multi-file project (e.g., src/data/*, src/components/*, src/styles.css, src/App.tsx). Write dependency files BEFORE files that import them so every relative import resolves immediately.
+Animate UI Components in Workspace: You CAN and SHOULD use official Animate UI components in workspaces! Call {"op":"useAnimateUi","components":["GradientText","RippleButton",...]} or import directly from 'animate-ui' (in React: import { GradientText, ShimmeringText, TypingText, CountingNumber, SlidingNumber, RippleButton, LiquidButton, FlipButton, StarsBackground, BubbleBackground, GradientBackground, HexagonBackground, AnimateCard, AnimateTabs, AnimateAccordion, AnimateModal, CodeBlock } from 'animate-ui'; in Vue: import AnimateUi from './components/AnimateUi.vue').
+Workspace AI Tools (runTool): You can invoke built-in workspace tools via {"op":"runTool","tool":"animateUi"|"inspectAnimateUi"|"codeCheck"|"testRunner"|"searchCode"|"themeTokens"|"responsiveFix"|"mockStore","args":{...}}:
+- animateUi: mounts Animate UI component kit into src/components/animate-ui/index.tsx (or AnimateUi.vue).
+- inspectAnimateUi: queries Animate UI component prop signatures and JSX/Vue usage templates (args: {query?: "keyword"}).
+- codeCheck: runs static analysis (unresolved imports, syntax/tag balance, missing keys, responsive overflow checks).
+- testRunner: runs 5 automated verification suites (module graph, reactive state, interactive events, 1440/768/390 responsive layout, Animate UI integration).
+- searchCode: searches across all workspace files by keyword (args: {query: "searchTerm"}).
+- themeTokens: injects theme CSS variables (args: {preset: "indigo-pro"|"cyber-dark"|"emerald-clean"}).
+- responsiveFix: appends 1440px/768px/390px adaptive media queries and box-sizing guards to CSS.
+- mockStore: generates src/data/storage.ts with localStorage persistence helpers (loadState / saveState).
+Use responsive CSS layouts (CSS Grid auto-fit/minmax, Flexbox, clamp(), max-width: 1280px centered container, media queries for <=960px and <=640px) with 1:1 typography and zero horizontal overflow across 1440px, 768px, and 390px viewports. Every interactive element (search, category tabs, filter controls, detail modals/drawers, creation forms, favorites/toggles) must have working React/Vue/DOM state and event handlers. Available imports in React workspaces: react, react-dom/client, lucide-react, animate-ui, and relative workspace files; in Vue workspaces: vue and relative workspace files.
 Components (type, natural size at contentScale 100, then what it shows; styling props above apply to all):
 ${componentGuide()}
 `;
@@ -358,7 +545,9 @@ ${componentGuide()}
 export function buildAiContext(page: PageDocument, session: AiSession, locale: string, resume: boolean, selectedBlockIds: string[] = [], options: { mode?: AiCreationMode; components?: AiLibraryComponent[] } = {}): { system: string; context: string; estimatedTokens: number } {
   // The current page includes its source so the model can refine its own custom components.
   // The reusable library contributes only bounded metadata, never every component's source.
-  const snapshot = page;
+  const snapshot: PageDocument = page.workspace
+    ? { ...page, workspace: { version: page.workspace.version, framework: page.workspace.framework, runtimeVersion: page.workspace.runtimeVersion, entry: page.workspace.entry, files: page.workspace.files } }
+    : page;
   const availableComponents: AiLibraryComponent[] = [];
   let librarySize = 0;
   for (const item of options.components ?? []) {
@@ -372,7 +561,20 @@ export function buildAiContext(page: PageDocument, session: AiSession, locale: s
   }
   const history = session.messages.slice(-10).map(message => ({ role: message.role, text: message.text.slice(0, 4000), ...(message.questions ? { questions: message.questions } : {}) }));
   const selected = [...new Set(selectedBlockIds)].filter(id => page.blocks.some(block => block.id === id));
-  const context = JSON.stringify({ locale, resume, mode: options.mode ?? session.mode ?? 'page', availableComponents, omittedLibraryComponents: Math.max(0, (options.components?.length ?? 0) - availableComponents.length), selectedBlockIds: selected, task: session.task.slice(0, 12000), summary: session.summary.slice(0, 3000), lastError: session.error,
+  const workspaceToolkit = page.workspace
+    ? {
+        animateUiComponents: ANIMATE_UI_WORKSPACE_COMPONENTS.map(c => ({
+          id: c.id,
+          category: c.category,
+          props: c.propsSignature,
+          react: c.reactUsage,
+          vue: c.vueUsage,
+        })),
+        codeCheck: runWorkspaceCodeCheck(page.workspace),
+        testSuite: runWorkspaceTestSuite(page.workspace),
+      }
+    : undefined;
+  const context = JSON.stringify({ locale, resume, mode: options.mode ?? session.mode ?? 'page', availableComponents, omittedLibraryComponents: Math.max(0, (options.components?.length ?? 0) - availableComponents.length), selectedBlockIds: selected, ...(workspaceToolkit ? { workspaceToolkit } : {}), task: session.task.slice(0, 12000), summary: session.summary.slice(0, 3000), lastError: session.error,
     recentConversation: history, completedOperations: session.receipts.slice(-30).map(({ op, blockId, summary }) => ({ op, blockId, summary })), page: snapshot });
   if (context.length > 240000) throw new Error('当前页面上下文过大，请减少组件内容后再生成。');
   return { system: aiSystemPrompt, context, estimatedTokens: Math.ceil((aiSystemPrompt.length + context.length) / 3) };
