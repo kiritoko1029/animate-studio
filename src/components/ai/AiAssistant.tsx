@@ -86,7 +86,8 @@ export function AiAssistant(props: AiAssistantProps) {
     commit: (page, change, runId) => latest.current.onCommit(page, change, runId),
     checkpoint: saveRecord, onSession: showRecord,
     onRunning: value => {
-      if (value) { setInput(''); setAnswers({}); setProgress(null); latest.current.onProgressChange?.(null); } else setProgress(current => { const next = current ? { ...current, endedAt: Date.now(), streamingFile: null } : null; latest.current.onProgressChange?.(next); return next; });
+      if (value) { setInput(''); setAnswers({}); setProgress(null); } else setProgress(current => current ? { ...current, endedAt: Date.now(), streamingFile: null } : null);
+      latest.current.onProgressChange?.(null);
       // A question needs an answer before work continues, so surface it even if the chat was collapsed.
       if (!value && records.current[0]?.id === latest.current.page.id && records.current[0].status === 'waiting') setOpen(true);
       if (!value) reconcileRecovery(latest.current.getPage());
