@@ -1,7 +1,12 @@
 import type { PageDocument, WorkspaceSpec } from '../../model.ts';
 import type { CustomComponentSnapshot } from '../../../shared/custom-components.mjs';
 import { resetCustomInstance } from '../custom-components/instances.ts';
-import { compileWorkspaceClient, type WorkspaceCompileResult } from '../workspace/compiler-client.ts';
+import {
+  compileWorkspaceClient,
+  verifyWorkspacePreview,
+  type WorkspaceCompileResult,
+  type WorkspacePreviewVerificationReport,
+} from '../workspace/compiler-client.ts';
 import { runWorkspaceCodeCheck } from '../workspace/tools.ts';
 import { streamAi, safeAiError } from './client.ts';
 import { applyAiOperation, AiOperationDecoder, buildAiContext, snapshotAiPage } from './protocol.ts';
@@ -31,6 +36,10 @@ export type AiRunnerOptions = {
   stream?: typeof streamAi;
   yieldFrame?: () => Promise<void>;
   compileWorkspace?: (workspace: WorkspaceSpec, options?: { signal?: AbortSignal }) => Promise<WorkspaceCompileResult>;
+  verifyPreview?: (
+    workspace: WorkspaceSpec,
+    options?: { compiled?: WorkspaceSpec['compiled']; signal?: AbortSignal },
+  ) => Promise<WorkspacePreviewVerificationReport>;
 };
 
 /** Snapshot the page a run produced, so its result survives undo and later edits. */
@@ -219,17 +228,33 @@ export class AiRunner {
                 .join('\n');
               continuation = new AiContinuationError(`工作区代码静态检测发现严重错误，请修复后重新完成任务：\n${details}`);
             } else {
-              const withCompiled: PageDocument = {
-                ...latestPage,
-                workspace: { ...latestPage.workspace, compiled: compiledResult.compiled },
-              };
-              if (new TextEncoder().encode(JSON.stringify(withCompiled)).byteLength <= 500 * 1024) {
-                const seq = ++operationIndex;
-                let updated: AiSession = { ...run.session, page: withCompiled, updatedAt: Date.now() };
-                updated = this.options.checkpoint(updated, run.owner) ?? updated;
-                run.session = updated;
-                this.options.commit(withCompiled, { kind: 'page', summary: '完成工作区构建校验', key: `${run.id}:${seq}`, time: Date.now() }, run.id);
-                this.options.onSession(updated, run.owner);
+              const previewVerifier = this.options.verifyPreview ?? verifyWorkspacePreview;
+              const previewReport = await previewVerifier(latestPage.workspace, {
+                compiled: compiledResult.compiled,
+                signal: run.controller.signal,
+              });
+              guard();
+              if (!previewReport.ok) {
+                continuation = new AiContinuationError(
+                  `工作区预览页面自检未通过（运行时错误或白屏），请修复后重新完成任务：\n${previewReport.summary}`,
+                );
+              } else {
+                const withCompiled: PageDocument = {
+                  ...latestPage,
+                  workspace: { ...latestPage.workspace, compiled: compiledResult.compiled },
+                };
+                if (new TextEncoder().encode(JSON.stringify(withCompiled)).byteLength <= 500 * 1024) {
+                  const seq = ++operationIndex;
+                  let updated: AiSession = { ...run.session, page: withCompiled, updatedAt: Date.now() };
+                  updated = this.options.checkpoint(updated, run.owner) ?? updated;
+                  run.session = updated;
+                  this.options.commit(
+                    withCompiled,
+                    { kind: 'page', summary: `完成工作区构建与预览自检（${previewReport.summary}）`, key: `${run.id}:${seq}`, time: Date.now() },
+                    run.id,
+                  );
+                  this.options.onSession(updated, run.owner);
+                }
               }
             }
           }

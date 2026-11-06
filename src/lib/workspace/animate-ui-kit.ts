@@ -611,28 +611,31 @@ export function ShimmeringText({
 }
 
 export function TypingText({
-  text,
+  text = '',
+  children,
   speed = 45,
   cursor = true,
   className = '',
 }: {
-  text: string;
+  text?: string;
+  children?: React.ReactNode;
   speed?: number;
   cursor?: boolean;
   className?: string;
 }) {
-  const [index, setIndex] = useState(0);
+  const fullText = typeof text === 'string' && text.length > 0 ? text : typeof children === 'string' ? children : '';
+  const [index, setIndex] = useState(fullText.length);
   useEffect(() => {
     setIndex(0);
     const timer = window.setInterval(() => {
-      setIndex(prev => (prev < text.length ? prev + 1 : prev));
+      setIndex(prev => (prev < fullText.length ? prev + 1 : prev));
     }, Math.max(16, speed));
     return () => window.clearInterval(timer);
-  }, [text, speed]);
+  }, [fullText, speed]);
 
   return (
     <span className={className} data-animate-ui="TypingText">
-      {text.slice(0, index)}
+      {fullText.slice(0, index || fullText.length)}
       {cursor && <span className="aui-typing-cursor">|</span>}
     </span>
   );
@@ -640,6 +643,7 @@ export function TypingText({
 
 export function CountingNumber({
   number,
+  value: propValue,
   fromNumber = 0,
   duration = 900,
   decimals = 0,
@@ -647,7 +651,8 @@ export function CountingNumber({
   suffix = '',
   className = '',
 }: {
-  number: number;
+  number?: number;
+  value?: number;
   fromNumber?: number;
   duration?: number;
   decimals?: number;
@@ -655,19 +660,24 @@ export function CountingNumber({
   suffix?: string;
   className?: string;
 }) {
-  const [value, setValue] = useState(fromNumber);
+  const target = typeof number === 'number' && Number.isFinite(number) ? number : typeof propValue === 'number' && Number.isFinite(propValue) ? propValue : 0;
+  const [value, setValue] = useState(target);
   useEffect(() => {
+    if (typeof requestAnimationFrame === 'undefined') {
+      setValue(target);
+      return;
+    }
     let frame = 0;
     const start = performance.now();
     const step = (now: number) => {
       const progress = Math.min(1, (now - start) / Math.max(120, duration));
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(fromNumber + (number - fromNumber) * eased);
+      setValue(fromNumber + (target - fromNumber) * eased);
       if (progress < 1) frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [number, fromNumber, duration]);
+  }, [target, fromNumber, duration]);
 
   const formatted = decimals > 0 ? value.toFixed(decimals) : Math.round(value).toLocaleString();
   return (
@@ -681,19 +691,22 @@ export function CountingNumber({
 
 export function SlidingNumber({
   number,
+  value,
   prefix = '',
   suffix = '',
   className = '',
 }: {
-  number: number;
+  number?: number;
+  value?: number;
   prefix?: string;
   suffix?: string;
   className?: string;
 }) {
+  const target = typeof number === 'number' ? number : typeof value === 'number' ? value : 0;
   return (
     <CountingNumber
-      number={number}
-      decimals={Number.isInteger(number) ? 0 : 1}
+      number={target}
+      decimals={Number.isInteger(target) ? 0 : 1}
       prefix={prefix}
       suffix={suffix}
       className={className}
@@ -755,20 +768,25 @@ export function LiquidButton({
 
 export function FlipButton({
   frontText,
+  text,
   backText,
+  children,
   onClick,
   className = '',
 }: {
-  frontText: string;
+  frontText?: string;
+  text?: string;
   backText?: string;
+  children?: React.ReactNode;
   onClick?: () => void;
   className?: string;
 }) {
+  const front = frontText || text || (typeof children === 'string' ? children : '查看详情');
   return (
     <button type="button" className={\`aui-flip-btn \${className}\`.trim()} onClick={onClick} data-animate-ui="FlipButton">
       <span className="aui-flip-btn-inner">
-        <span className="aui-flip-face aui-flip-front">{frontText}</span>
-        <span className="aui-flip-face aui-flip-back">{backText || frontText}</span>
+        <span className="aui-flip-face aui-flip-front">{front}</span>
+        <span className="aui-flip-face aui-flip-back">{backText || front}</span>
       </span>
     </button>
   );
@@ -879,22 +897,29 @@ export function AnimateCard({
 
 export function AnimateTabs({
   tabs,
+  items,
   activeTab,
   onChange,
   className = '',
 }: {
-  tabs: Array<{ id: string; label: string; badge?: string | number; content?: React.ReactNode }>;
+  tabs?: Array<{ id: string; label: string; badge?: string | number; content?: React.ReactNode }>;
+  items?: Array<{ id: string; label?: string; title?: string; badge?: string | number; content?: React.ReactNode }>;
   activeTab?: string;
   onChange?: (id: string) => void;
   className?: string;
 }) {
-  const [internal, setInternal] = useState(tabs[0]?.id ?? '');
+  const list = Array.isArray(tabs)
+    ? tabs
+    : Array.isArray(items)
+    ? items.map(it => ({ ...it, label: it.label ?? it.title ?? it.id }))
+    : [];
+  const [internal, setInternal] = useState(list[0]?.id ?? '');
   const current = activeTab ?? internal;
-  const activeItem = tabs.find(t => t.id === current) ?? tabs[0];
+  const activeItem = list.find(t => t.id === current) ?? list[0];
   return (
     <div className={className} data-animate-ui="AnimateTabs">
       <div className="aui-tabs-bar" role="tablist">
-        {tabs.map(t => (
+        {list.map(t => (
           <button
             key={t.id}
             type="button"
@@ -917,18 +942,19 @@ export function AnimateTabs({
 }
 
 export function AnimateAccordion({
-  items,
+  items = [],
   defaultOpenId,
   className = '',
 }: {
-  items: Array<{ id: string; title: string; content: string }>;
+  items?: Array<{ id: string; title: string; content: string }>;
   defaultOpenId?: string;
   className?: string;
 }) {
-  const [openId, setOpenId] = useState<string | null>(defaultOpenId ?? items[0]?.id ?? null);
+  const list = Array.isArray(items) ? items : [];
+  const [openId, setOpenId] = useState<string | null>(defaultOpenId ?? list[0]?.id ?? null);
   return (
     <div className={\`aui-accordion \${className}\`.trim()} data-animate-ui="AnimateAccordion">
-      {items.map(item => {
+      {list.map(item => {
         const isOpen = openId === item.id;
         return (
           <div key={item.id} className="aui-accordion-item">
@@ -951,18 +977,20 @@ export function AnimateAccordion({
 
 export function AnimateModal({
   open,
-  title,
+  isOpen,
+  title = '详情',
   onClose,
   children,
   footer,
 }: {
-  open: boolean;
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
+  open?: boolean;
+  isOpen?: boolean;
+  title?: string;
+  onClose?: () => void;
+  children?: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  if (!open) return null;
+  if (!(open ?? isOpen)) return null;
   return (
     <div className="aui-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" data-animate-ui="AnimateModal">
       <div className="aui-modal-dialog" onClick={e => e.stopPropagation()}>
@@ -985,15 +1013,18 @@ export function AnimateModal({
 }
 
 export function CodeBlock({
-  code,
+  code = '',
+  children,
   title,
   lang = 'tsx',
 }: {
-  code: string;
+  code?: string;
+  children?: React.ReactNode;
   title?: string;
   lang?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const textContent = typeof code === 'string' && code ? code : typeof children === 'string' ? children : '';
   return (
     <div className="aui-code-block" data-animate-ui="CodeBlock" data-lang={lang}>
       {title && (
@@ -1002,7 +1033,7 @@ export function CodeBlock({
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard?.writeText(code);
+              navigator.clipboard?.writeText(textContent);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
@@ -1013,11 +1044,284 @@ export function CodeBlock({
         </div>
       )}
       <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-        <code>{code}</code>
+        <code>{textContent}</code>
       </pre>
     </div>
   );
 }
+
+export const HighlightText = GradientText;
+export const SlidingText = GradientText;
+export const RollingText = GradientText;
+export const MorphingText = GradientText;
+export const RotatingText = GradientText;
+export const SplittingText = ShimmeringText;
+export const SwappingText = GradientText;
+export const ScrollingNumber = CountingNumber;
+export const FireworksBackground = StarsBackground;
+export const GravityStarsBackground = StarsBackground;
+export const HoleBackground = BubbleBackground;
+export const TopographyBackground = GradientBackground;
+export const GlyphBackground = HexagonBackground;
+export const Card = AnimateCard;
+export const Button = RippleButton;
+export const Tabs = AnimateTabs;
+export const Accordion = AnimateAccordion;
+export const Modal = AnimateModal;
+export const Dialog = AnimateModal;
+
+export function Badge({
+  children,
+  text,
+  label,
+  className = '',
+  style,
+}: {
+  children?: React.ReactNode;
+  text?: string;
+  label?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span className={\`aui-card-badge \${className}\`.trim()} style={style} data-animate-ui="Badge">
+      {label ?? text ?? children}
+    </span>
+  );
+}
+
+export function Alert({
+  title,
+  text,
+  children,
+  className = '',
+  style,
+}: {
+  title?: string;
+  text?: string;
+  children?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div className={\`aui-card \${className}\`.trim()} style={style} data-animate-ui="Alert">
+      {title && <strong style={{ display: 'block', marginBottom: 4 }}>{title}</strong>}
+      <div>{text ?? children}</div>
+    </div>
+  );
+}
+
+export const SpotlightCard = AnimateCard;
+export const GlowCard = AnimateCard;
+export const TiltCard = AnimateCard;
+export const MarqueeBanner = AnimateCard;
+export const AuroraBackground = GradientBackground;
+export const ParticlesBackground = StarsBackground;
+export const GridBackground = HexagonBackground;
+export const MagneticButton = RippleButton;
+export const AnimateProgress = CountingNumber;
+export const AnimateSwitch = RippleButton;
+export const AnimateBadge = Badge;
+export const AnimateAvatarGroup = AnimateCard;
+export const AnimateTooltip = AnimateCard;
+export const SpringContainer = AnimateCard;
+export const StaggerGroup = AnimateCard;
+export const Progress = CountingNumber;
+export const Switch = RippleButton;
+export const Tooltip = AnimateCard;
+
+export function AnimateUi(props: Record<string, unknown>) {
+  return <AnimateCard {...(props as any)} />;
+}
+
+export default AnimateUi;
+`;
+
+export const ANIMATE_UI_VUE_MODULE_SOURCE = `import { defineComponent, h, ref } from 'vue';
+
+function makeVueAui(defaultType = 'AnimateCard') {
+  return defineComponent({
+    name: defaultType,
+    props: {
+      type: { type: String, default: defaultType },
+      text: { type: String, default: '' },
+      frontText: { type: String, default: '' },
+      backText: { type: String, default: '' },
+      title: { type: String, default: '' },
+      subtitle: { type: String, default: '' },
+      badge: { type: [String, Number], default: '' },
+      label: { type: String, default: '' },
+      number: { type: Number, default: 0 },
+      value: { type: Number, default: undefined },
+      prefix: { type: String, default: '' },
+      suffix: { type: String, default: '' },
+      open: { type: Boolean, default: false },
+      code: { type: String, default: '' },
+      tabs: { type: Array, default: () => [] },
+      activeTab: { type: String, default: '' },
+      items: { type: Array, default: () => [] },
+      variant: { type: String, default: 'primary' },
+    },
+    emits: ['click', 'close', 'change'],
+    setup(props, { slots, emit }) {
+      const openAccordionId = ref(props.items?.[0]?.id ?? '');
+      return () => {
+        const kind = props.type || defaultType;
+        if (kind === 'GradientText' || kind === 'HighlightText' || kind === 'SlidingText' || kind === 'RollingText' || kind === 'MorphingText' || kind === 'RotatingText' || kind === 'SwappingText') {
+          return h('span', { class: 'aui-gradient-text', 'data-animate-ui': kind }, [props.text, slots.default?.()]);
+        }
+        if (kind === 'ShimmeringText' || kind === 'SplittingText') {
+          return h('span', { class: 'aui-shimmer-text', 'data-animate-ui': kind }, [props.text, slots.default?.()]);
+        }
+        if (kind === 'TypingText') {
+          return h('span', { 'data-animate-ui': 'TypingText' }, [props.text, slots.default?.(), h('span', { class: 'aui-typing-cursor' }, '|')]);
+        }
+        if (kind === 'CountingNumber' || kind === 'SlidingNumber' || kind === 'ScrollingNumber') {
+          const num = typeof props.value === 'number' ? props.value : Number(props.number || 0);
+          return h('span', { class: 'aui-number-counter', 'data-animate-ui': kind }, \`\${props.prefix}\${num.toLocaleString()}\${props.suffix}\`);
+        }
+        if (kind === 'RippleButton' || kind === 'Button') {
+          return h('button', { type: 'button', class: \`aui-ripple-btn aui-ripple-btn--\${props.variant || 'primary'}\`, 'data-animate-ui': 'RippleButton', onClick: () => emit('click') }, [props.text || props.label, slots.default?.()]);
+        }
+        if (kind === 'LiquidButton') {
+          return h('button', { type: 'button', class: 'aui-liquid-btn', 'data-animate-ui': 'LiquidButton', onClick: () => emit('click') }, [props.text || props.label, slots.default?.()]);
+        }
+        if (kind === 'FlipButton') {
+          const front = props.frontText || props.text || props.label || '查看详情';
+          return h('button', { type: 'button', class: 'aui-flip-btn', 'data-animate-ui': 'FlipButton', onClick: () => emit('click') }, [
+            h('span', { class: 'aui-flip-btn-inner' }, [
+              h('span', { class: 'aui-flip-face aui-flip-front' }, front),
+              h('span', { class: 'aui-flip-face aui-flip-back' }, props.backText || front),
+            ]),
+          ]);
+        }
+        if (kind === 'StarsBackground' || kind === 'BubbleBackground' || kind === 'GradientBackground' || kind === 'HexagonBackground' || kind === 'FireworksBackground' || kind === 'GravityStarsBackground' || kind === 'HoleBackground' || kind === 'TopographyBackground' || kind === 'GlyphBackground') {
+          const bgClass = kind.includes('Bubble') || kind.includes('Hole') ? 'aui-bg-bubble' : kind.includes('Gradient') || kind.includes('Topography') ? 'aui-bg-gradient' : kind.includes('Hexagon') || kind.includes('Glyph') ? 'aui-bg-hexagon' : 'aui-bg-stars';
+          return h('div', { class: ['aui-bg-surface', bgClass], 'data-animate-ui': kind }, [
+            h('div', { class: 'aui-bg-content' }, slots.default?.()),
+          ]);
+        }
+        if (kind === 'AnimateTabs' || kind === 'Tabs') {
+          const list = Array.isArray(props.tabs) && props.tabs.length ? props.tabs : Array.isArray(props.items) ? props.items : [];
+          return h('div', { class: 'aui-tabs-bar', role: 'tablist', 'data-animate-ui': 'AnimateTabs' }, list.map((t) =>
+            h('button', {
+              key: t.id,
+              type: 'button',
+              class: ['aui-tab-btn', props.activeTab === t.id ? 'active' : ''],
+              onClick: () => emit('change', t.id),
+            }, [
+              h('span', t.label || t.title),
+              t.badge !== undefined ? h('span', { class: 'aui-tab-badge' }, String(t.badge)) : null,
+            ])
+          ));
+        }
+        if (kind === 'AnimateAccordion' || kind === 'Accordion') {
+          const list = Array.isArray(props.items) ? props.items : [];
+          return h('div', { class: 'aui-accordion', 'data-animate-ui': 'AnimateAccordion' }, list.map((item) =>
+            h('div', { key: item.id, class: 'aui-accordion-item' }, [
+              h('button', {
+                type: 'button',
+                class: 'aui-accordion-trigger',
+                onClick: () => { openAccordionId.value = openAccordionId.value === item.id ? '' : item.id; },
+              }, [
+                h('span', item.title),
+                h('span', openAccordionId.value === item.id ? '−' : '+'),
+              ]),
+              openAccordionId.value === item.id ? h('div', { class: 'aui-accordion-body' }, item.content) : null,
+            ])
+          ));
+        }
+        if (kind === 'AnimateModal' || kind === 'Modal' || kind === 'Dialog') {
+          if (!props.open) return null;
+          return h('div', { class: 'aui-modal-backdrop', 'data-animate-ui': 'AnimateModal', onClick: () => emit('close') }, [
+            h('div', { class: 'aui-modal-dialog', onClick: (e) => e.stopPropagation() }, [
+              h('div', { class: 'aui-modal-header' }, [
+                h('h3', { style: 'margin:0;font-size:18px;font-weight:700' }, props.title || '详情'),
+                h('button', { type: 'button', onClick: () => emit('close') }, '✕'),
+              ]),
+              slots.default?.(),
+            ]),
+          ]);
+        }
+        if (kind === 'CodeBlock') {
+          return h('div', { class: 'aui-code-block', 'data-animate-ui': 'CodeBlock' }, [
+            h('pre', { style: 'margin:0;white-space:pre-wrap' }, [h('code', props.code || slots.default?.())]),
+          ]);
+        }
+        if (kind === 'Badge') {
+          return h('span', { class: 'aui-card-badge', 'data-animate-ui': 'Badge' }, [props.label || props.text, slots.default?.()]);
+        }
+        return h('article', { class: 'aui-card', 'data-animate-ui': 'AnimateCard', onClick: () => emit('click') }, [
+          (props.title || props.badge) ? h('div', { class: 'aui-card-head' }, [
+            props.title ? h('h3', { style: 'margin:0;font-size:16px;font-weight:700' }, props.title) : null,
+            props.badge ? h('span', { class: 'aui-card-badge' }, String(props.badge)) : null,
+          ]) : null,
+          props.subtitle ? h('p', { style: 'margin:0 0 12px;font-size:13px;opacity:0.72' }, props.subtitle) : null,
+          slots.default?.(),
+        ]);
+      };
+    },
+  });
+}
+
+export const AnimateUi = makeVueAui('AnimateCard');
+export const GradientText = makeVueAui('GradientText');
+export const ShimmeringText = makeVueAui('ShimmeringText');
+export const TypingText = makeVueAui('TypingText');
+export const CountingNumber = makeVueAui('CountingNumber');
+export const SlidingNumber = makeVueAui('SlidingNumber');
+export const ScrollingNumber = makeVueAui('ScrollingNumber');
+export const RippleButton = makeVueAui('RippleButton');
+export const LiquidButton = makeVueAui('LiquidButton');
+export const FlipButton = makeVueAui('FlipButton');
+export const StarsBackground = makeVueAui('StarsBackground');
+export const BubbleBackground = makeVueAui('BubbleBackground');
+export const GradientBackground = makeVueAui('GradientBackground');
+export const HexagonBackground = makeVueAui('HexagonBackground');
+export const FireworksBackground = makeVueAui('FireworksBackground');
+export const GravityStarsBackground = makeVueAui('GravityStarsBackground');
+export const HoleBackground = makeVueAui('HoleBackground');
+export const TopographyBackground = makeVueAui('TopographyBackground');
+export const GlyphBackground = makeVueAui('GlyphBackground');
+export const AnimateCard = makeVueAui('AnimateCard');
+export const AnimateTabs = makeVueAui('AnimateTabs');
+export const AnimateAccordion = makeVueAui('AnimateAccordion');
+export const AnimateModal = makeVueAui('AnimateModal');
+export const CodeBlock = makeVueAui('CodeBlock');
+export const HighlightText = GradientText;
+export const SlidingText = GradientText;
+export const RollingText = GradientText;
+export const MorphingText = GradientText;
+export const RotatingText = GradientText;
+export const SplittingText = ShimmeringText;
+export const SwappingText = GradientText;
+export const Card = AnimateCard;
+export const SpotlightCard = AnimateCard;
+export const GlowCard = AnimateCard;
+export const TiltCard = AnimateCard;
+export const MarqueeBanner = AnimateCard;
+export const AuroraBackground = GradientBackground;
+export const ParticlesBackground = StarsBackground;
+export const GridBackground = HexagonBackground;
+export const MagneticButton = RippleButton;
+export const AnimateProgress = CountingNumber;
+export const AnimateSwitch = RippleButton;
+export const AnimateBadge = makeVueAui('Badge');
+export const AnimateAvatarGroup = AnimateCard;
+export const AnimateTooltip = AnimateCard;
+export const SpringContainer = AnimateCard;
+export const StaggerGroup = AnimateCard;
+export const Progress = CountingNumber;
+export const Switch = RippleButton;
+export const Tooltip = AnimateCard;
+export const Button = RippleButton;
+export const Tabs = AnimateTabs;
+export const Accordion = AnimateAccordion;
+export const Modal = AnimateModal;
+export const Dialog = AnimateModal;
+export const Badge = makeVueAui('Badge');
+export const Alert = AnimateCard;
+export default AnimateUi;
 `;
 
 export const ANIMATE_UI_VUE_SOURCE = `<script setup lang="ts">
@@ -1058,8 +1362,10 @@ const typedLen = ref(0);
 const openAccordionId = ref(props.items?.[0]?.id ?? '');
 
 function animateNumber(target: number) {
+  displayNum.value = target;
+  if (typeof requestAnimationFrame === 'undefined') return;
   const start = performance.now();
-  const from = displayNum.value;
+  const from = 0;
   const step = (now: number) => {
     const p = Math.min(1, (now - start) / 800);
     displayNum.value = Math.round(from + (target - from) * (1 - Math.pow(1 - p, 3)));
@@ -1073,11 +1379,7 @@ onMounted(() => {
     animateNumber(props.number ?? 0);
   }
   if (props.type === 'TypingText' && props.text) {
-    typedLen.value = 0;
-    const timer = setInterval(() => {
-      if (typedLen.value < (props.text?.length ?? 0)) typedLen.value++;
-      else clearInterval(timer);
-    }, 45);
+    typedLen.value = props.text.length;
   }
 });
 
@@ -1089,7 +1391,7 @@ watch(() => props.number, val => {
 <template>
   <span v-if="type === 'GradientText'" class="aui-gradient-text" data-animate-ui="GradientText">{{ text }}<slot /></span>
   <span v-else-if="type === 'ShimmeringText'" class="aui-shimmer-text" data-animate-ui="ShimmeringText">{{ text }}<slot /></span>
-  <span v-else-if="type === 'TypingText'" data-animate-ui="TypingText">{{ (text || '').slice(0, typedLen) }}<span class="aui-typing-cursor">|</span></span>
+  <span v-else-if="type === 'TypingText'" data-animate-ui="TypingText">{{ (text || '').slice(0, typedLen || (text || '').length) }}<span class="aui-typing-cursor">|</span></span>
   <span v-else-if="type === 'CountingNumber' || type === 'SlidingNumber'" class="aui-number-counter" :data-animate-ui="type">{{ prefix }}{{ displayNum.toLocaleString() }}{{ suffix }}</span>
   <button v-else-if="type === 'RippleButton'" type="button" class="aui-ripple-btn aui-ripple-btn--primary" data-animate-ui="RippleButton" @click="emit('click')">{{ text }}<slot /></button>
   <button v-else-if="type === 'LiquidButton'" type="button" class="aui-liquid-btn" data-animate-ui="LiquidButton" @click="emit('click')">{{ text }}<slot /></button>
@@ -1182,8 +1484,9 @@ export function scaffoldAnimateUiIntoWorkspace(
     importSnippet = `import { ${selected.map(c => c.id).join(', ')} } from 'animate-ui';`;
   }
 
+  const { compiled: _staleCompiled, ...restWorkspace } = workspace;
   const nextWs: WorkspaceSpec = {
-    ...workspace,
+    ...restWorkspace,
     files: nextFiles,
   };
 

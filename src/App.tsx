@@ -395,6 +395,8 @@ export default function App() {
       onState:(state,error)=>{if(version===persistenceVersion.current){const pending=error instanceof Error&&error.name==='AiCloudPending';setSaveState(pending?'pending':state);setSaveError(pending?'':error instanceof Error?error.message:'');}},
     });
     activateWorkspace(nextSite,nextSite.homePageId,resetHistory);setSavedAt(record.savedAt);setSaveState(record.page?'saved':'pending');
+    const initialHomePage=nextSite.pages.find(entry=>entry.id===nextSite.homePageId)?.page;
+    if(initialHomePage?.workspace){setView('split');setInspector(false);}
     if(resetHistory){setSelected(null);setInsertAfterId(null);}
     autosave.current.schedule(nextSite);
   },[setSelected,activateWorkspace]);
@@ -728,6 +730,8 @@ export default function App() {
 
   const activeEntry=site?.pages.find(entry=>entry.id===siteTarget);
   const editorNavigation=useMemo<SiteNavigation|null>(()=>site?{navigate:()=>false,href:raw=>raw,isCurrent:raw=>matchSiteRoute(site,raw)?.entry.id===siteTarget,back:()=>{},params:{},siteName:site.name,pages:site.pages,currentPageId:siteTarget,currentPath:activeEntry?.path??'/',route:activeEntry?{path:activeEntry.path,pageId:siteTarget,pattern:activeEntry.path,params:{}}:undefined}:null,[site,siteTarget,activeEntry?.path]);
+  const hasWorkspace=Boolean(document?.workspace);
+  useEffect(()=>{if(hasWorkspace){setView(v=>v==='edit'?'split':v);setInspector(false);}},[hasWorkspace,document?.id]);
   if(!site||!document)return <div className="loading-screen"><Brand phase={loadError?'idle':'loading'}/>{loadError?<><AlertCircle size={28}/><p role="alert">{translateMessage(loadError)}</p><StudioButton className="primary-button" onClick={()=>void load()}>{t("重新读取")}</StudioButton></>:<p role="status">{t("正在打开你的创作空间…")}</p>}</div>;
   const editorDocument=pageAtDevice(document,device),previewWidth=device==='mobile'?390:device==='tablet'?768:document.settings.maxWidth;
   const selectedBlock=document.blocks.find(b=>b.id===selected),editorSelectedBlock=selectedBlock?editorDocument.blocks.find(block=>block.id===selectedBlock.id)??{...selectedBlock,frame:undefined}:undefined;
@@ -786,7 +790,7 @@ export default function App() {
           {saveState==='error'&&<div className="save-error-banner" role="alert"><AlertCircle size={14}/><span>{translateMessage(saveError)}{t("，修改仍保留在画布中。")}</span><StudioButton onClick={()=>void save(document)}>{t("重新保存")}</StudioButton></div>}
           <div className={`canvas-workspace view-${view}`} role="tabpanel" id="workspace-canvas-panel" aria-labelledby={`view-tab-${view}`}>
             {document.workspace ? (
-              <WorkspaceEditor workspace={document.workspace} title={document.name} view={view} device={device} studioTheme={studioTheme} aiBusy={aiBusy} aiStreamingFile={aiStreamingFile} aiBaselineFiles={aiBaselineFiles} replayKey={replay} onChange={ws => update({ ...document, workspace: ws })} notify={notify} />
+              <WorkspaceEditor workspace={document.workspace} title={document.name} view={view} device={device} studioTheme={studioTheme} aiBusy={aiBusy} aiStreamingFile={aiStreamingFile} aiBaselineFiles={aiBaselineFiles} replayKey={replay} onChange={ws => update({ ...document, workspace: ws })} onChangeView={setView} notify={notify} />
             ) : (
               <>
                 {view!=='preview'&&<section className={`canvas-pane edit-pane ${aiBusy ? 'ai-operating' : ''}`} aria-busy={aiBusy}><div className="pane-heading"><span><MousePointer2 size={13}/><strong>{t("编辑画布")}</strong><span className="pane-tag">{aiBusy ? t("AI 编辑中") : t("可编辑")}</span></span><span className="pane-hint">{aiBusy ? t("暂停后可手动编辑") : t("自由摆放 · 网格吸附")}</span></div><FreeCanvas aiBusy={aiBusy} aiChanges={aiChanges} revealKey={canvasReveal} document={editorDocument} selected={selected} selectedIds={selectedIds} onSelect={selectComponent} onSelectAll={()=>{setSelection(document.blocks.map(block=>block.id));setInspector(true);}} onFramesChange={frames=>update(updateDeviceFrames(document,frames,device))} onInspect={inspectComponent} onCreateVariable={id=>{setSelected(id);setVariableBlockId(id);}} onPageMarginChange={padding=>updateSettings({padding})} onPageSettings={inspectPage} onFrameChange={updateFrame} onBlockChange={block=>update({...document,blocks:document.blocks.map(b=>b.id===block.id?{...block,frame:b.frame}:b)})} onAlign={alignComponent} onFillWidth={fillComponentWidth} onLayerChange={changeLayer} onCanvasSizeChange={({width,height})=>updateSettings({maxWidth:width,canvasHeight:height})} onDelete={remove} onDuplicate={duplicate} onInsertAfter={startInsert} isDragging={!!dragging} device={device}/></section>}
@@ -809,18 +813,18 @@ export default function App() {
     <Suspense fallback={null}><AiAssistant key={user?.id ?? 'guest'} page={document} owner={user ? `account:${user.id}` : 'guest'} signedIn={!!user} cloudPageId={cloudTarget?.id ?? null}
       pageRequest={aiPageRequest} componentRequest={aiComponentRequest} onAddComponent={addCustom} onOpenDesigner={openDesigner} onRequestLogin={() => setLoginOpen(true)}
       selectedBlockIds={selectedIds}
-      getSurface={() => window.document.querySelector<HTMLElement>('.free-canvas-stage') ?? window.document.querySelector<HTMLElement>('.preview-pane .page-surface')}
-      onRevealBlock={id => { if (!aiBusyRef.current) { setView('edit'); setSelected(id); setCanvasReveal(value => value + 1); } }}
+      getSurface={() => window.document.querySelector<HTMLElement>('.workspace-preview-surface') ?? window.document.querySelector<HTMLElement>('.free-canvas-stage') ?? window.document.querySelector<HTMLElement>('.preview-pane .page-surface')}
+      onRevealBlock={id => { if (!aiBusyRef.current) { setView(current.current?.workspace ? 'split' : 'edit'); setSelected(id); setCanvasReveal(value => value + 1); } }}
       getPage={() => current.current!}
       onRunningChange={running => changeAiRunning('page', running)}
       onProgressChange={progress => setAiStreamingFile(progress?.streamingFile ?? null)}
       onCommit={(next, change, runId) => {
         if (!aiBusyRef.current || !current.current || next.id !== current.current.id) throw new Error(t('页面已切换，AI 已暂停。'));
-        if (next.workspace) setInspector(false);
+        if (next.workspace) { setInspector(false); setView(v => v === 'edit' ? 'split' : v); }
         commitWorkspace(next, runId);setAiChanges(values => [...values.filter(value => value.blockId !== change.blockId && Date.now() - value.time < 3000), change].slice(-5));
         if (change.blockId && change.kind !== 'remove') { setSelected(change.blockId); setCanvasReveal(value => value + 1); }
       }}
-      onRestorePage={page => { if (page.id === current.current?.id && !aiBusyRef.current) { update(page); notify(t('已恢复所选页面版本，可撤销')); } }}
+      onRestorePage={page => { if (page.id === current.current?.id && !aiBusyRef.current) { if (page.workspace) { setView('split'); setInspector(false); } update(page); notify(t('已恢复所选页面版本，可撤销')); } }}
       onOpenLocal={async page => { const expected = current.current; const owner = userRef.current?.id; await flushCurrent(); if (owner !== userRef.current?.id || expected !== current.current) throw new Error(t('当前页面又有新修改，请保存后重试。')); activateDocument(toFreeDocument(page), { page: null, savedAt: null }, null); }}
       onOpenCloud={openCloud}
       onCreatePage={() => { const next = createDocument(true); next.settings.customThemes = current.current?.settings.customThemes ?? []; return startNewDocument(next); }}

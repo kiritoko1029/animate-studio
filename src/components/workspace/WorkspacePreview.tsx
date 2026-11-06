@@ -12,6 +12,9 @@ export type WorkspaceRuntimeMetrics = {
   scrollWidth: number;
   overflowX: boolean;
   interactiveCount: number;
+  rootChildCount?: number;
+  textLength?: number;
+  rendered?: boolean;
 };
 
 type Props = {
@@ -100,6 +103,9 @@ export function WorkspacePreview({
           scrollWidth: typeof data.scrollWidth === 'number' ? data.scrollWidth : 0,
           overflowX: Boolean(data.overflowX),
           interactiveCount: typeof data.interactiveCount === 'number' ? data.interactiveCount : 0,
+          rootChildCount: typeof data.rootChildCount === 'number' ? data.rootChildCount : 1,
+          textLength: typeof data.textLength === 'number' ? data.textLength : 0,
+          rendered: typeof data.rendered === 'boolean' ? data.rendered : true,
         };
         setMetrics(nextMetrics);
         onMetrics?.(nextMetrics);
@@ -129,6 +135,8 @@ export function WorkspacePreview({
       data-workspace-compiling={compiling ? 'true' : 'false'}
       data-workspace-overflow-x={metrics.overflowX ? 'true' : 'false'}
       data-workspace-interactive-count={metrics.interactiveCount}
+      data-workspace-root-children={metrics.rootChildCount ?? 1}
+      data-workspace-rendered={metrics.rendered === false ? 'false' : 'true'}
       style={{ width: '100%', minHeight: `${Math.max(minHeight, metrics.height)}px`, position: 'relative' }}
     >
       {compileErrors.length > 0 && (

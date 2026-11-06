@@ -46,7 +46,7 @@ export type AiOperation = {
   sharedLayout?: SiteRegion[]; deletes?: string[]; region?: SiteRegion; source?: AiPublicDataSource; dataSources?: AiPublicDataSource[];
   framework?: WorkspaceFramework; entry?: string; path?: string; content?: string;
   search?: string; replace?: string; components?: string[];
-  tool?: 'animateUi' | 'codeCheck' | 'testRunner' | 'themeTokens' | 'responsiveFix' | 'mockStore';
+  tool?: 'animateUi' | 'inspectAnimateUi' | 'inspectPreview' | 'codeCheck' | 'testRunner' | 'searchCode' | 'themeTokens' | 'responsiveFix' | 'mockStore';
   args?: Record<string, unknown>;
 };
 /** Thinking text is provider-returned display content; summaries take precedence within each request. */

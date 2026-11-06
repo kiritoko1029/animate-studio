@@ -7,7 +7,8 @@ import { createDocument, createWorkspaceDocument, createDefaultWorkspace } from 
 import { isSafeWorkspacePath, validateWorkspace, workspaceLimits } from '../shared/workspace.mjs';
 import { validatePage, validateSite } from '../server/validation.mjs';
 import { toSiteDocument, composeSitePage } from '../shared/site-document.mjs';
-import { compileWorkspace } from '../server/workspace-compiler.ts';
+import { compileWorkspace, verifyWorkspacePreviewOnServer } from '../server/workspace-compiler.ts';
+import { verifyWorkspacePreview } from '../src/lib/workspace/compiler-client.ts';
 import { applyAiOperation, parseAiOperation, AiOperationDecoder, buildAiContext } from '../src/lib/ai/protocol.ts';
 import { AiRunner } from '../src/lib/ai/runner.ts';
 import { newAiSession } from '../src/lib/ai/storage.ts';
@@ -491,4 +492,155 @@ export default function App() {
   rippleBtn.click();
   await until(() => Boolean(dom.document.querySelector('[data-animate-ui="AnimateModal"]')), 'clicking RippleButton opens AnimateModal');
   assert.match(dom.document.querySelector('[data-testid="modal-text"]').textContent, /2600/);
+});
+
+test('verifyWorkspacePreview detects blank/crashing previews and AiRunner automatically self-heals until preview renders visible DOM', async () => {
+  // 1. Free-canvas block operations are rejected when page.workspace is active
+  const wsPage = createWorkspaceDocument('vue');
+  assert.throws(
+    () =>
+      applyAiOperation(
+        wsPage,
+        parseAiOperation(
+          JSON.stringify({
+            v: 1,
+            seq: 1,
+            op: 'add',
+            id: 'hero-1',
+            type: 'hero',
+            props: { title: 'Wrong mode' },
+            frame: { x: 48, y: 48, width: 800, height: 400 },
+            summary: 'Wrong mode',
+          }),
+        ),
+      ),
+    /不支持自由画布组件操作/,
+  );
+
+  // 2. Vue 3 workspace with lucide-vue-next, animate-ui, and unimported ref/computed compiles and renders non-empty preview
+  const vueWs = createDefaultWorkspace('vue', 'Vue 3 Preview Test');
+  vueWs.files['src/App.vue'] = {
+    content: `<script setup>
+import { Rocket, Compass, CustomMagicIcon } from 'lucide-vue-next';
+import { GradientText, RippleButton, SpotlightCard } from 'animate-ui';
+const count = ref(42);
+const doubled = computed(() => count.value * 2);
+</script>
+<template>
+  <main class="vue-preview-shell">
+    <GradientText text="Vue 3 智能预览工作台" />
+    <SpotlightCard>
+      <Rocket :size="20" />
+      <Compass :size="20" />
+      <CustomMagicIcon :size="20" />
+      <p>计数：{{ count }} / 双倍：{{ doubled }}</p>
+      <RippleButton @click="count++">增加</RippleButton>
+    </SpotlightCard>
+  </main>
+</template>`,
+  };
+  const vuePreviewReport = await verifyWorkspacePreviewOnServer(vueWs);
+  assert.equal(vuePreviewReport.ok, true, `Vue 3 preview should succeed: ${vuePreviewReport.summary}`);
+  assert.equal(vuePreviewReport.rendered, true);
+  assert.ok(vuePreviewReport.rootChildCount >= 1);
+  assert.ok(vuePreviewReport.textLength >= 5);
+
+  // 3. Blank React workspace (returns null) is caught by verifyWorkspacePreview
+  const blankWs = createDefaultWorkspace('react', 'Blank App');
+  blankWs.files['src/App.tsx'] = {
+    content: `import React from 'react';
+export default function App() {
+  return null;
+}`,
+  };
+  const blankReport = await verifyWorkspacePreview(blankWs);
+  assert.equal(blankReport.ok, false, 'Blank component returning null must fail preview verification');
+  assert.equal(blankReport.rendered, false);
+  assert.match(blankReport.summary, /为空|空白/);
+
+  // 4. AiRunner automatically rejects done when preview crashes at runtime and continues into round 2 to heal the preview
+  let currentPage = createWorkspaceDocument('react');
+  let currentSession = newAiSession(currentPage);
+  let round = 0;
+  let secondRoundError = '';
+
+  const runner = new AiRunner({
+    getPage: () => currentPage,
+    getOwner: () => 'guest',
+    commit: next => {
+      currentPage = next;
+    },
+    checkpoint: session => {
+      currentSession = session;
+      return session;
+    },
+    onSession: session => {
+      currentSession = session;
+    },
+    onRunning: () => {},
+    compileWorkspace,
+    async *stream(_provider, _profile, context) {
+      round += 1;
+      const parsedContext = JSON.parse(context.context);
+      if (round === 1) {
+        // Round 1: compiles statically, but crashes at runtime when rendering (undefined property access)
+        const ops = [
+          {
+            v: 1,
+            seq: 1,
+            op: 'writeFile',
+            path: 'src/App.tsx',
+            content: `import React, { useState } from 'react';
+export default function App() {
+  const [items] = useState(undefined as any);
+  return <div className="crash-shell"><h1>{items.nonExistentMap.title}</h1><button onClick={() => {}}>操作</button></div>;
+}`,
+            summary: '写入存在运行时白屏错误的组件',
+          },
+          { v: 1, seq: 2, op: 'done', summary: 'First attempt done' },
+        ];
+        yield { type: 'text', text: ops.map(o => JSON.stringify(o)).join('\n') + '\n' };
+        yield { type: 'complete' };
+      } else {
+        secondRoundError = parsedContext.lastError || '';
+        const ops = [
+          {
+            v: 1,
+            seq: 1,
+            op: 'writeFile',
+            path: 'src/App.tsx',
+            content: `import React from 'react';
+import { Sparkles, UncommonChartIcon } from 'lucide-react';
+import { GradientText, RippleButton } from 'animate-ui';
+export default function App() {
+  const [count, setCount] = useState(1);
+  return (
+    <main className="healed-shell">
+      <GradientText text="自愈后的多文件预览画面" />
+      <Sparkles size={18} />
+      <UncommonChartIcon size={18} />
+      <p>当前状态：{count}</p>
+      <RippleButton onClick={() => setCount(c => c + 1)}>点击交互</RippleButton>
+    </main>
+  );
+}`,
+            summary: '根据预览自检诊断修复运行时错误',
+          },
+          { v: 1, seq: 2, op: 'runTool', tool: 'inspectPreview', summary: '执行预览前置自检' },
+          { v: 1, seq: 3, op: 'done', summary: 'Healed runtime crash and verified preview' },
+        ];
+        yield { type: 'text', text: ops.map(o => JSON.stringify(o)).join('\n') + '\n' };
+        yield { type: 'complete' };
+      }
+    },
+  });
+
+  await runner.start(currentSession, 'openai', profile, '生成带实时预览自检的多文件应用', 'zh-CN');
+  assert.equal(round, 2, 'AiRunner automatically triggered round 2 when round 1 preview crashed into blank screen');
+  assert.match(secondRoundError, /工作区预览页面自检未通过/, 'Round 2 received preview verification failure diagnostic');
+  assert.equal(currentSession.status, 'complete');
+  const finalPreview = await verifyWorkspacePreview(currentPage.workspace);
+  assert.equal(finalPreview.ok, true);
+  assert.equal(finalPreview.rendered, true);
+  assert.ok(finalPreview.rootChildCount >= 1);
 });

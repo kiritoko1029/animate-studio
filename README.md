@@ -1,6 +1,6 @@
 # Animate Studio
 
-**Current release: [v2026.11.5](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.11.5)** · [Changelog (中文 / English)](CHANGELOG.md)
+**Current release: [v2026.11.6](https://github.com/kiritoko1029/animate-studio/releases/tag/v2026.11.6)** · [Changelog (中文 / English)](CHANGELOG.md)
 
 **A visual page builder with a free-form canvas, interactive scripts, and portable code exports.**
 

@@ -149,7 +149,7 @@ export function parseAiOperation(raw: string): AiOperation {
     }
   }
   if (op.op === 'runTool') {
-    const validTools: WorkspaceToolName[] = ['animateUi', 'inspectAnimateUi', 'codeCheck', 'testRunner', 'searchCode', 'themeTokens', 'responsiveFix', 'mockStore'];
+    const validTools: WorkspaceToolName[] = ['animateUi', 'inspectAnimateUi', 'inspectPreview', 'codeCheck', 'testRunner', 'searchCode', 'themeTokens', 'responsiveFix', 'mockStore'];
     if (typeof op.tool !== 'string' || !validTools.includes(op.tool as WorkspaceToolName)) {
       throw new Error('AI 调用了不支持的工作区工具。');
     }
@@ -310,6 +310,9 @@ export function applyAiOperation(page: PageDocument, op: AiOperation, resolvedCo
   let frame: Block['frame'];
   const index = op.id ? page.blocks.findIndex(block => block.id === op.id) : -1;
   if (op.op === 'message' || op.op === 'done' || op.op === 'ask' || op.op === 'sitePlan') return { page, change: null };
+  if (page.workspace && ['add', 'update', 'remove', 'component', 'data'].includes(op.op)) {
+    throw new Error(`当前页面处于多文件代码工作区 (${page.workspace.framework.toUpperCase()}) 模式，不支持自由画布组件操作 "${op.op}"。请使用 writeFile、patchFile、useAnimateUi 或 runTool 修改工作区文件（入口文件：${page.workspace.entry}）。`);
+  }
   if (op.op === 'component') {
     const old = index < 0 ? undefined : page.blocks[index];
     if (old && old.type !== 'custom') throw new Error('自定义组件不能覆盖已有的内置组件。');
@@ -527,17 +530,18 @@ Style: set page settings background (canvas) and accent (brand color) once, or s
 Props allowlist: title,text,label,url,imageUrl,items,variant,align,fontSize,padding,radius,background,color,accent,theme,animation,duration,effect,motion,effectOptions,value,max,checked,brandIcon,contentScale,navigation,sourceId,submitSourceId,dataFields,dataColumns,name,required,format,minLength,maxLength,error,successUrl,successText,errorText,chartType,categoryField,chartColors,showLegend,showGrid,showTooltip,showValues,innerRadius,filterField,filterVariable. chartType is line|area|column|bar|pie; innerRadius is 0..80; chartColors contains hex colors; dataColumns entries may add aggregate sum|count|avg|min|max. Strings: title/label <=300, text <=10000, items <=20000. Colors only #RGB/#RRGGBB. align left|center|right; animation none|fade|slide|scale; fontSize 10..96; padding 0..120; radius 0..80; duration 100..30000. value/max 0..100 (rating 0..5), contentScale 25..400. Theme IDs: nature,tech-blue,violet,warm-editorial,mono,midnight,animate-light,animate-dark. Do not invent motion keys. Items use newline-delimited rows and | separators; navbar uses comma-separated label|URL. Use safe https, /path, #anchor, mailto, tel links.
 Interactions: variables [{name,type,initial,persistent?}] with unique ASCII names starting with letters, type string|number|boolean|object|array. scripts [{id,name,code}] <=20000 chars. Bindings map title/text/label/value/checked/visible/disabled to {kind:"variable"|"expression",value:"name"|"state.name + 1"}. events {click:[],change:[]} hold actions: {type:"set",variable,expression}, {type:"toggle",variable}, {type:"notify",expression}, {type:"navigate",expression}, {type:"script",scriptId}, {type:"reset"}, {type:"condition",expression,then:[],else:[]}. Expressions cannot call functions. Read-only data roots are data.sourceId, data.book.title and data.books[0].title, alongside state, event and route. Scripts run in a sandbox with ctx.state/ctx.setState/ctx.notify/ctx.log. For chart change events, event.value is {category,series,value}; selecting the same category again clears it. filterVariable must reference an existing string variable in the page, and filterField must be a safe record path. Do not use script execution to edit the editor or bypass this protocol.
 Multi-file workspace mode (workspaceInit / writeFile / patchFile / deleteFile / useAnimateUi / runTool): when page.workspace is already present, or when the user asks for a multi-file workspace, code project, or highly interactive complete application, use workspaceInit (framework: "react"|"vue"|"html", entry: "src/App.tsx"|"src/App.vue"|"index.html") and writeFile (path, content) or patchFile (path, search, replace) to build a real multi-file project (e.g., src/data/*, src/components/*, src/styles.css, src/App.tsx). Write dependency files BEFORE files that import them so every relative import resolves immediately.
-Animate UI Components in Workspace: You CAN and SHOULD use official Animate UI components in workspaces! Call {"op":"useAnimateUi","components":["GradientText","RippleButton",...]} or import directly from 'animate-ui' (in React: import { GradientText, ShimmeringText, TypingText, CountingNumber, SlidingNumber, RippleButton, LiquidButton, FlipButton, StarsBackground, BubbleBackground, GradientBackground, HexagonBackground, AnimateCard, AnimateTabs, AnimateAccordion, AnimateModal, CodeBlock } from 'animate-ui'; in Vue: import AnimateUi from './components/AnimateUi.vue').
-Workspace AI Tools (runTool): You can invoke built-in workspace tools via {"op":"runTool","tool":"animateUi"|"inspectAnimateUi"|"codeCheck"|"testRunner"|"searchCode"|"themeTokens"|"responsiveFix"|"mockStore","args":{...}}:
+Animate UI Components in Workspace: You CAN and SHOULD use official Animate UI components in workspaces! Call {"op":"useAnimateUi","components":["GradientText","RippleButton",...]} or import directly from 'animate-ui' (in React: import { GradientText, ShimmeringText, TypingText, CountingNumber, SlidingNumber, RippleButton, LiquidButton, FlipButton, SpotlightCard, GlowCard, TiltCard, MarqueeBanner, AuroraBackground, ParticlesBackground, StarsBackground, GridBackground, AnimateTabs, AnimateAccordion, AnimateProgress, AnimateSwitch, AnimateBadge, AnimateAvatarGroup, AnimateModal, AnimateTooltip, CodeBlock, SpringContainer, StaggerGroup } from 'animate-ui'; in Vue: import AnimateUi, { GradientText, RippleButton, SpotlightCard } from 'animate-ui' or from './components/AnimateUi.vue').
+Workspace AI Tools (runTool): You can invoke built-in workspace tools via {"op":"runTool","tool":"animateUi"|"inspectAnimateUi"|"inspectPreview"|"codeCheck"|"testRunner"|"searchCode"|"themeTokens"|"responsiveFix"|"mockStore","args":{...}}:
 - animateUi: mounts Animate UI component kit into src/components/animate-ui/index.tsx (or AnimateUi.vue).
 - inspectAnimateUi: queries Animate UI component prop signatures and JSX/Vue usage templates (args: {query?: "keyword"}).
+- inspectPreview: checks workspace preview readiness (static module graph, entry exports, and preview assertions). Before emitting {"op":"done"} in a workspace, run {"op":"runTool","tool":"inspectPreview"} or {"op":"runTool","tool":"codeCheck"} to verify your code. When you emit {"op":"done"}, the host automatically compiles and mounts the preview page in a real DOM and verifies that #workspace-root renders visible nodes with zero runtime errors.
 - codeCheck: runs static analysis (unresolved imports, syntax/tag balance, missing keys, responsive overflow checks).
 - testRunner: runs 5 automated verification suites (module graph, reactive state, interactive events, 1440/768/390 responsive layout, Animate UI integration).
 - searchCode: searches across all workspace files by keyword (args: {query: "searchTerm"}).
 - themeTokens: injects theme CSS variables (args: {preset: "indigo-pro"|"cyber-dark"|"emerald-clean"}).
 - responsiveFix: appends 1440px/768px/390px adaptive media queries and box-sizing guards to CSS.
 - mockStore: generates src/data/storage.ts with localStorage persistence helpers (loadState / saveState).
-Use responsive CSS layouts (CSS Grid auto-fit/minmax, Flexbox, clamp(), max-width: 1280px centered container, media queries for <=960px and <=640px) with 1:1 typography and zero horizontal overflow across 1440px, 768px, and 390px viewports. Every interactive element (search, category tabs, filter controls, detail modals/drawers, creation forms, favorites/toggles) must have working React/Vue/DOM state and event handlers. Available imports in React workspaces: react, react-dom/client, lucide-react, animate-ui, and relative workspace files; in Vue workspaces: vue and relative workspace files.
+Use responsive CSS layouts (CSS Grid auto-fit/minmax, Flexbox, clamp(), max-width: 1280px centered container, media queries for <=960px and <=640px) with 1:1 typography and zero horizontal overflow across 1440px, 768px, and 390px viewports. Every interactive element (search, category tabs, filter controls, detail modals/drawers, creation forms, favorites/toggles) must have working React/Vue/DOM state and event handlers. Available imports in React workspaces: react, react-dom/client, lucide-react, animate-ui, and relative workspace files; in Vue workspaces: vue, lucide-vue-next, animate-ui, and relative workspace files.
 Components (type, natural size at contentScale 100, then what it shows; styling props above apply to all):
 ${componentGuide()}
 `;
@@ -574,8 +578,12 @@ export function buildAiContext(page: PageDocument, session: AiSession, locale: s
         testSuite: runWorkspaceTestSuite(page.workspace),
       }
     : undefined;
+  const workspaceDirective = page.workspace
+    ? `CRITICAL WORKSPACE MODE DIRECTIVE: The current page is a multi-file ${page.workspace.framework.toUpperCase()} code workspace (entry: "${page.workspace.entry}"). You MUST use workspace operations (writeFile, patchFile, useAnimateUi, deleteFile, runTool) to edit files in page.workspace.files. NEVER emit free-canvas block operations (add, update, remove, component, data). Write every imported helper/data/component file BEFORE writing the file that imports it. Ensure ${page.workspace.entry} renders rich, visible DOM content into #workspace-root with zero runtime errors, and run {"v":1,"seq":...,"op":"runTool","tool":"inspectPreview","summary":"检查工作区预览与代码健康度"} before {"op":"done"}.\n\n`
+    : '';
+  const system = workspaceDirective + aiSystemPrompt;
   const context = JSON.stringify({ locale, resume, mode: options.mode ?? session.mode ?? 'page', availableComponents, omittedLibraryComponents: Math.max(0, (options.components?.length ?? 0) - availableComponents.length), selectedBlockIds: selected, ...(workspaceToolkit ? { workspaceToolkit } : {}), task: session.task.slice(0, 12000), summary: session.summary.slice(0, 3000), lastError: session.error,
     recentConversation: history, completedOperations: session.receipts.slice(-30).map(({ op, blockId, summary }) => ({ op, blockId, summary })), page: snapshot });
   if (context.length > 240000) throw new Error('当前页面上下文过大，请减少组件内容后再生成。');
-  return { system: aiSystemPrompt, context, estimatedTokens: Math.ceil((aiSystemPrompt.length + context.length) / 3) };
+  return { system, context, estimatedTokens: Math.ceil((system.length + context.length) / 3) };
 }

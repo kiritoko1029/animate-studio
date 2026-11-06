@@ -13,6 +13,7 @@ import {
 export type WorkspaceToolName =
   | 'animateUi'
   | 'inspectAnimateUi'
+  | 'inspectPreview'
   | 'codeCheck'
   | 'testRunner'
   | 'searchCode'
@@ -70,9 +71,11 @@ const ALLOWED_PACKAGES = new Set([
   'react-dom/client',
   'vue',
   'lucide-react',
+  'lucide-vue-next',
   'animate-ui',
   '@animate-ui/studio',
   'motion/react',
+  'framer-motion',
 ]);
 
 function normalizePosixPath(baseDir: string, relativePath: string): string {
@@ -95,7 +98,12 @@ function resolveImportInFiles(files: WorkspaceSpec['files'], candidate: string):
     const joined = clean ? `${clean}/${idx}` : idx;
     if (Object.hasOwn(files, joined)) return joined;
   }
-  if (clean === 'src/components/animate-ui' || clean.startsWith('src/components/animate-ui/')) {
+  if (
+    clean === 'src/components/animate-ui'
+    || clean.startsWith('src/components/animate-ui/')
+    || clean === 'src/components/AnimateUi.vue'
+    || clean === 'src/components/animate-ui.vue'
+  ) {
     return 'virtual:animate-ui';
   }
   return null;
@@ -386,8 +394,9 @@ export function applyWorkspacePatch(
     throw new Error(`在文件 ${params.path} 中未找到匹配的待替换代码片段`);
   }
 
+  const { compiled: _discardCompiled, ...restWorkspace } = workspace;
   const nextWs = validateWorkspace({
-    ...workspace,
+    ...restWorkspace,
     files: {
       ...workspace.files,
       [params.path]: { ...workspace.files[params.path], content: nextContent },
@@ -460,8 +469,9 @@ export function applyWorkspaceThemeTokens(
     nextCss = `${nextCss.trimEnd()}\n\n${ANIMATE_UI_BASE_CSS.trim()}\n`;
   }
 
+  const { compiled: _discardCompiled, ...restWorkspace } = workspace;
   const nextWs = validateWorkspace({
-    ...workspace,
+    ...restWorkspace,
     files: {
       ...workspace.files,
       [cssPath]: { content: nextCss },
@@ -504,8 +514,9 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
     currentCss = `${currentCss.trimEnd()}\n${responsiveGuard}`;
   }
 
+  const { compiled: _discardCompiled, ...restWorkspace } = workspace;
   const nextWs = validateWorkspace({
-    ...workspace,
+    ...restWorkspace,
     files: {
       ...workspace.files,
       [cssPath]: { content: currentCss },
@@ -533,8 +544,9 @@ export function scaffoldWorkspaceMockStore(
       ? `export function loadState(key, fallback) {\n  try {\n    const raw = localStorage.getItem('${storeKey}:' + key);\n    return raw ? JSON.parse(raw) : fallback;\n  } catch {\n    return fallback;\n  }\n}\n\nexport function saveState(key, value) {\n  try {\n    localStorage.setItem('${storeKey}:' + key, JSON.stringify(value));\n  } catch {}\n}\n`
       : `export function loadState<T>(key: string, fallback: T): T {\n  try {\n    const raw = localStorage.getItem(\`${storeKey}:\${key}\`);\n    return raw ? (JSON.parse(raw) as T) : fallback;\n  } catch {\n    return fallback;\n  }\n}\n\nexport function saveState<T>(key: string, value: T): void {\n  try {\n    localStorage.setItem(\`${storeKey}:\${key}\`, JSON.stringify(value));\n  } catch {\n    // ignore storage quota errors\n  }\n}\n`;
 
+  const { compiled: _discardCompiled, ...restWorkspace } = workspace;
   const nextWs = validateWorkspace({
-    ...workspace,
+    ...restWorkspace,
     files: {
       ...workspace.files,
       [storePath]: { content },
@@ -569,6 +581,27 @@ export function executeWorkspaceTool(
       mutated: res.workspace !== workspace,
       summary: `已注入 ${res.components.length} 个 Animate UI 动效组件至 ${res.modulePath}（可直接 ${res.importSnippet}）`,
       details: res.components.map(c => `${c.id}: ${c.reactUsage}`),
+    };
+  }
+
+  if (tool === 'inspectPreview') {
+    const codeReport = runWorkspaceCodeCheck(workspace);
+    const testReport = runWorkspaceTestSuite(workspace);
+    const ok = codeReport.ok && testReport.ok;
+    return {
+      tool,
+      ok,
+      workspace,
+      mutated: false,
+      summary: ok
+        ? `预览前置检查通过：${codeReport.summary}；${testReport.summary}（完成任务时将自动执行真实 DOM 挂载与渲染自检）`
+        : `预览前置检查发现问题：${codeReport.summary}`,
+      codeCheck: codeReport,
+      testReport,
+      details: [
+        ...codeReport.errors.map(e => `[错误] ${e.file}${e.line ? `:${e.line}` : ''}: ${e.message}`),
+        ...testReport.assertions.map(a => `${a.passed ? 'PASS' : 'FAIL'} [${a.name}] — ${a.detail}`),
+      ],
     };
   }
 

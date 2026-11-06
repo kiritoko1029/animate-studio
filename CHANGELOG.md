@@ -1,5 +1,33 @@
 # 更新日志 / Changelog
 
+## v2026.11.6 — 2026-11-06
+
+### 中文
+
+本次版本为多文件代码工作区引入 AI 预览真实 DOM 挂载自检与自动自愈机制，并修复工作区模式下实时预览分栏展示、动态图标/组件导出及二次编译缓存问题。
+
+- 新增工作区预览真实 DOM 挂载验证（`verifyWorkspacePreview` / `verifyWorkspacePreviewOnServer`）与 AI 内部工具 `inspectPreview`。AI 在多文件代码工作区输出 `done` 前，系统自动将编译产物挂载至真实 DOM（浏览器离屏沙箱 `iframe` / 服务端 `JSDOM`）并检查 `#workspace-root` 可见节点、文本与交互控件数量及运行期异常（React `ErrorBoundary`、Vue `app.config.errorHandler`、`window.__reportWorkspaceRuntimeError`）；若检测到运行时报错或白屏，自动拦截完成并触发续写自愈。
+- 修复工作区页面在草稿恢复、AI 写入文件及点击变更记录时停留在纯代码编辑视图（`view === 'edit'`）导致右侧实时预览面板被隐藏的问题；启用或切换到工作区页面时自动进入代码与预览并排视图（`split`），并在代码工具栏提供「实时预览」快捷展开按钮。
+- 编译器支持按工作区源码自动扫描并动态导出任意 `lucide-react`、`lucide-vue-next` 图标与 `animate-ui` 组件（同时支持 React 19 与 Vue 3），并通过 `virtual:workspace-prelude` 预注入常用 React Hooks（`useState`、`useMemo` 等）和 Vue 响应式 API（`ref`、`computed` 等），消除漏写导入或非常规图标引发的运行期白屏。
+- 优化工作区编译请求与状态同步：发往 `/api/workspace/compile` 的请求自动剔除旧 `compiled` 产物与 `git` 历史并按文件签名缓存，避免二次生成时请求体过大（413）或命中陈旧编译产物；工作区模式激活时禁止 AI 误发自由画布组件操作（`add` / `update` / `remove`）。
+
+**升级说明**：`PageDocument` 与 `SiteDocument` 版本号保持 `1`，无需数据库迁移。既有自由画布与多文件代码工作区草稿、分享链接及导出格式完全兼容。
+
+**验证**：544 项自动化测试全部通过，双端 TypeScript 类型检查（`tsconfig.json` 与 `tsconfig.cloudflare.json`）及 Node / Cloudflare 生产构建通过。自动化测试覆盖 React 19 与 Vue 3 工作区真实 DOM 预览验证、白屏与运行时异常自动续写自愈、动态图标与 Animate UI 组件导入及工作区模式协议保护。
+
+### English
+
+This release introduces real-DOM preview verification and automatic self-healing for AI-generated multi-file code workspaces, while fixing split-pane preview visibility, dynamic icon/component exports, and second-run compilation caching.
+
+- Added real-DOM workspace preview verification (`verifyWorkspacePreview` / `verifyWorkspacePreviewOnServer`) and the internal AI tool `inspectPreview`. Before `AiRunner` accepts `done` on a workspace page, it mounts and executes the compiled bundle in a real DOM environment (offscreen sandboxed `iframe` in browsers / `JSDOM` on the server) to verify that `#workspace-root` renders visible nodes with zero runtime errors (capturing React `ErrorBoundary`, Vue `app.config.errorHandler`, and `window.__reportWorkspaceRuntimeError`). Blank screens or runtime crashes automatically trigger a self-healing continuation round.
+- Fixed workbench view transitions so pages with `page.workspace` automatically open in side-by-side `split` mode (code editor + live preview) upon draft load, AI file commits, version restoration, and receipt clicks, and added a quick "Live Preview" toggle button in the code editor header when in `edit` view.
+- Enhanced the workspace compiler to scan workspace files and dynamically export any requested `lucide-react` / `lucide-vue-next` icons and `animate-ui` components for both React 19 and Vue 3, while pre-injecting common React hooks (`useState`, `useMemo`, etc.) and Vue reactivity APIs (`ref`, `computed`, etc.) via `virtual:workspace-prelude`.
+- Stripped stale `compiled` bundles and `git` history from `/api/workspace/compile` requests with file-signature caching, guarded `WorkspaceEditor` against stale compile callbacks during AI streaming, and rejected free-canvas block operations (`add` / `update` / `remove`) when `page.workspace` is active.
+
+**Upgrade notes**: `PageDocument` and `SiteDocument` schema versions remain `1` with no database migrations required. Existing free-canvas and multi-file workspace drafts, share links, and exports remain fully compatible.
+
+**Validation**: All 544 automated tests passed, along with both TypeScript checks (`tsconfig.json` and `tsconfig.cloudflare.json`) and Node/Cloudflare production builds. Tests cover React 19 and Vue 3 preview DOM verification, automatic AI self-healing on blank/crashing renders, dynamic `lucide-react` / `lucide-vue-next` / `animate-ui` imports, and workspace-mode protocol guards.
+
 ## v2026.11.5 — 2026-11-05
 
 ### 中文

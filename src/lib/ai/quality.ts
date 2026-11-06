@@ -108,10 +108,20 @@ export function inspectAiPage(page: PageDocument, surface?: HTMLElement | null):
   const cache = new Map<Element, CSSStyleDeclaration>();
   const style = (node: Element) => { let value = cache.get(node); if (!value) { value = win.getComputedStyle(node); cache.set(node, value); } return value; };
   const frames = new Map(Array.from(surface.querySelectorAll<HTMLElement>('[data-block-id]')).map(node => [node.dataset.blockId, node]));
-  const wsPreview = surface.querySelector<HTMLElement>('[data-workspace-preview]');
+  const wsPreview = surface.matches?.('[data-workspace-preview]')
+    ? surface
+    : surface.querySelector<HTMLElement>('[data-workspace-preview]');
   let measured = page.blocks.length === 0 || Boolean(wsPreview), remainingText = 5000;
-  if (wsPreview && wsPreview.scrollWidth > wsPreview.clientWidth + 2) {
-    add({ kind: 'overflow', blockIds: [page.workspace?.entry ?? 'workspace'] });
+  if (wsPreview) {
+    if (wsPreview.scrollWidth > wsPreview.clientWidth + 2 || wsPreview.getAttribute('data-workspace-overflow-x') === 'true') {
+      add({ kind: 'overflow', blockIds: [page.workspace?.entry ?? 'workspace'] });
+    }
+    const runtimeAlert = wsPreview.querySelector<HTMLElement>('[data-workspace-runtime-error], [data-workspace-compile-error]');
+    if (runtimeAlert?.textContent?.trim()) {
+      add({ kind: 'compile', blockIds: [page.workspace?.entry ?? 'workspace'], detail: runtimeAlert.textContent.trim() });
+    } else if (wsPreview.getAttribute('data-workspace-rendered') === 'false') {
+      add({ kind: 'compile', blockIds: [page.workspace?.entry ?? 'workspace'], detail: '预览页面为空白画面，未渲染任何可见节点' });
+    }
   }
   for (let i = 0; i < positioned.length; i++) {
     const { block, frame: bounds } = positioned[i], frame = frames.get(block.id), content = frame?.querySelector<HTMLElement>('.page-block');

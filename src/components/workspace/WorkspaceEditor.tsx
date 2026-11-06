@@ -51,6 +51,7 @@ type Props = {
   aiBaselineFiles?: Record<string, { content: string }> | null;
   replayKey?: number;
   onChange: (next: WorkspaceSpec) => void;
+  onChangeView?: (view: 'edit' | 'split' | 'preview') => void;
   notify: (message: string) => void;
 };
 
@@ -113,6 +114,7 @@ export function WorkspaceEditor({
   aiBaselineFiles = null,
   replayKey = 0,
   onChange,
+  onChangeView,
   notify,
 }: Props) {
   const [activeFile, setActiveFile] = useState<string>(workspace.entry);
@@ -128,9 +130,12 @@ export function WorkspaceEditor({
   const [filesCollapsed, setFilesCollapsed] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const diffScrollRef = useRef<HTMLDivElement>(null);
+  const latestWorkspaceRef = useRef<WorkspaceSpec>(workspace);
+  latestWorkspaceRef.current = workspace;
 
   // Ensure every workspace automatically forms a Git repository with an initial commit
   useEffect(() => {
+    if (aiBusy) return;
     if (!workspace.git || !workspace.git.commits?.length) {
       const initialized = commitWorkspaceGit(workspace, {
         author: 'System',
@@ -140,7 +145,7 @@ export function WorkspaceEditor({
         onChange(initialized);
       }
     }
-  }, [workspace, onChange]);
+  }, [aiBusy, workspace, onChange]);
 
   const filePaths = useMemo(() => {
     const keys = new Set(Object.keys(workspace.files));
@@ -454,19 +459,21 @@ export function WorkspaceEditor({
 
   const handleCompiled = useCallback(
     (compiled: WorkspaceCompiledBundle) => {
+      if (aiBusy) return;
+      const current = latestWorkspaceRef.current;
       if (
-        workspace.compiled?.js === compiled.js &&
-        workspace.compiled?.css === compiled.css &&
-        workspace.compiled?.html === compiled.html
+        current.compiled?.js === compiled.js &&
+        current.compiled?.css === compiled.css &&
+        current.compiled?.html === compiled.html
       ) {
         return;
       }
       onChange({
-        ...workspace,
+        ...current,
         compiled,
       });
     },
-    [onChange, workspace],
+    [aiBusy, onChange],
   );
 
   function handleAddFile(event: React.FormEvent) {
@@ -819,6 +826,15 @@ export function WorkspaceEditor({
               <span className="workspace-metrics-pill">
                 {(currentFile?.content.length ?? 0).toLocaleString()} 字符
               </span>
+              {view === 'edit' && onChangeView && (
+                <StudioButton
+                  className="secondary-button"
+                  aria-label="展开实时预览面板"
+                  onClick={() => onChangeView('split')}
+                >
+                  <Eye size={12} /> 实时预览
+                </StudioButton>
+              )}
             </div>
           </div>
 
@@ -931,7 +947,7 @@ export function WorkspaceEditor({
               <Eye size={14} style={{ verticalAlign: '-2px', marginRight: 6 }} />
               <strong>实时响应式预览</strong>
               <span className="workspace-metrics-pill" style={{ marginLeft: 8 }}>
-                {diagnostics.length > 0 || runtimeError ? (
+                {diagnostics.length > 0 || runtimeError || metrics?.rendered === false ? (
                   <>
                     <AlertCircle size={12} /> 待修复
                   </>
